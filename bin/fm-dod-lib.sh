@@ -74,7 +74,17 @@
 # That selector skips fenced blocks and indented examples like the heading
 # reader, so a quoted `Captain:` sample is never authorized intent.
 # Previously stored speaker labels remain readable for compatibility only.
-# Never scrub literal examples or other content the captain actually supplied.
+# The pipeline publishes `--intent` as the pull request body, so the worker runs
+# bin/fm-intent-check.sh (fm_intent_check, fm_intent_scrub) on the exact string
+# before the run starts. It strips or refuses whole sentences and never rewords
+# the captain's words: speaker labels, direct address, attributed quotes, fleet
+# terms the repository does not use, and any sentence outside the authorized
+# words; fenced and indented examples and inline code are exempt from all but
+# the last. It requires `Refs #<n>` for every issue of the repository's
+# github.com origin the brief links by URL and refuses a reference the brief
+# does not name. It does not authenticate the content of --resolved substance
+# beyond those classes, nor catch a worker-directed imperative without
+# second-person or fleet words.
 # The string passed must be self-sufficient - it plus the codebase reconstructs
 # roughly the same specification - so a report, decision, or PR the intent
 # refers to is written into it as substance, never left as a pointer.
@@ -97,6 +107,7 @@
 # It takes the same optional trailing forge argument, because the rule that keeps
 # a worker off a remote is exactly the rule that changes when the forge does.
 
+FM_DOD_LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=bin/fm-pr-lib.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-pr-lib.sh"
 # shellcheck source=bin/fm-classify-lib.sh
@@ -221,7 +232,7 @@ fm_brief_intent_overlay() {  # <captain-intent>
 
 # Current no-mistakes intent contract
 This section supersedes every earlier brief instruction about constructing `--intent`, but not later clarifications actually supplied by the captain.
-Use everything under `## Captain intent authorized for --intent` through the end of this brief, including any nested subheadings but excluding that heading, plus any later words the captain actually supplied as `--intent`; never include Firstmate specification or other mixed Task content.
+Use everything under `## Captain intent authorized for --intent` through the end of this brief, including any nested subheadings but excluding that heading, plus any later words the captain actually supplied as `--intent`, less every sentence the Definition of done's intent check refuses; never include Firstmate specification or other mixed Task content.
 Preserve those words without adding speaker labels or direct address.
 Firstmate-authored constraints, acceptance criteria, implementation details, decisions, and tradeoffs are specification, not captain intent.
 The Definition of done's rule that `--intent` must be self-sufficient still governs the string you pass: resolve any report, decision, or PR the intent below refers to into its substance rather than passing the pointer.
@@ -259,6 +270,241 @@ fm_brief_intent_address_line() {  # <file>
   '
 }
 
+# The pipeline publishes the `--intent` string as the pull request body, so the
+# words a worker may pass are checked before the run starts. One term per line;
+# a term the repository's own tracked files already use is that project's
+# vocabulary rather than the fleet's and is not refused there.
+FM_INTENT_FLEET_TERMS='captain
+firstmate
+first mate
+crewmate
+secondmate
+second mate
+supervisor
+fleet
+no-mistakes
+the brief
+this brief
+firstmate spec
+status file
+the worker
+the user'
+
+# Print the words authorized for `--intent` in a brief or ship-instructions
+# file: the launch overlay's authorized section when present, else the
+# `## Captain's intent` body, else a legacy `# Task` body's marked words.
+fm_intent_authorized_text() {  # <file>
+  local file=$1
+  [ -f "$file" ] && [ -r "$file" ] || return 1
+  if grep -qx "## Captain intent authorized for --intent" "$file"; then
+    awk '
+      $0 == "## Captain intent authorized for --intent" { n = 0; delete buf; on = 1; next }
+      on { buf[++n] = $0 }
+      END { for (i = 1; i <= n; i++) print buf[i] }
+    ' "$file"
+  elif fm_brief_task_heading_present "$file" "## Captain's intent"; then
+    fm_brief_task_heading_body "$file" "## Captain's intent"
+  else
+    fm_brief_marked_captain_words "$(fm_brief_heading_body "$file" "# Task")"
+  fi
+}
+
+# Resolve the file a task's worker was given its intent in: the launch brief
+# once it carries the authorized overlay, else a promotion's ship instructions,
+# else the launch brief or the brief itself.
+fm_intent_source_file() {  # <task-data-dir>
+  local dir=$1
+  if [ -f "$dir/launch-brief.md" ] && grep -qx "## Captain intent authorized for --intent" "$dir/launch-brief.md"; then
+    printf '%s\n' "$dir/launch-brief.md"
+  elif [ -f "$dir/ship-instructions.md" ]; then
+    printf '%s\n' "$dir/ship-instructions.md"
+  elif [ -f "$dir/launch-brief.md" ]; then
+    printf '%s\n' "$dir/launch-brief.md"
+  elif [ -f "$dir/brief.md" ]; then
+    printf '%s\n' "$dir/brief.md"
+  else
+    return 1
+  fi
+}
+
+# Print the numbers of this repository's issues the file links by full URL,
+# one per line. Only a github.com origin is recognized; anything else links
+# nothing, so no reference is ever required or invented for it.
+fm_intent_linked_issues() {  # <file> [repo-dir]
+  local file=$1 repo=${2:-.} url slug
+  url=$(git -C "$repo" remote get-url origin 2>/dev/null) || return 0
+  slug=$(printf '%s\n' "$url" | sed -nE 's#^(https://|ssh://git@|git@)github\.com[:/]([^/]+/[^/]+)$#\2#p' | sed 's/\.git$//')
+  [ -n "$slug" ] || return 0
+  grep -oE "https://github\.com/[^/[:space:]]+/[^/[:space:]]+/issues/[0-9]+" "$file" 2>/dev/null |
+    awk -v slug="$slug" '
+      { n = split($0, p, "/"); if (tolower(p[4] "/" p[5]) == tolower(slug) && !seen[p[7]]++) print p[7] }
+    '
+}
+
+# Print the fleet terms the repository's tracked files do not use, one per line.
+fm_intent_foreign_terms() {  # [repo-dir]
+  local repo=${1:-.} term
+  printf '%s\n' "$FM_INTENT_FLEET_TERMS" | while IFS= read -r term; do
+    [ -n "$term" ] || continue
+    if git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
+      git -C "$repo" grep -q -I -i -w -F -e "$term" -- . 2>/dev/null; then
+      continue
+    fi
+    printf '%s\n' "$term"
+  done
+}
+
+# The one scanner behind fm_intent_check and fm_intent_scrub. Text splits into
+# sentences at terminal punctuation followed by space, the same way on every
+# side, so a sentence stripped from a line leaves the rest of that line
+# authorized. Lines in a ``` or ~~~ fence or indented as an example are single
+# units exempt from the refusal classes, as is inline code, because the
+# captain's literal examples are never scrubbed.
+# mode=check reads authorized files (role=auth) then the candidate (role=cand)
+# and reports every refused sentence; mode=scrub reads the authorized text as
+# role=cand and prints it without refused sentences.
+fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
+  local mode=$1 terms=$2 linked=$3 mentioned=$4
+  shift 4
+  LC_ALL=C awk -v mode="$mode" -v terms="$terms" -v linked="$linked" -v mentioned="$mentioned" '
+    function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
+    function ukey(s) {
+      s = tolower(trim(s)); gsub(/[ \t]+/, " ", s)
+      sub(/^(> ?)+/, "", s); sub(/^([-*+]|[0-9]+[.)]) /, "", s); sub(/^#+ /, "", s)
+      return s
+    }
+    function fence_line(line,   scan, spaces, marker, len) {
+      scan = line; spaces = 0
+      while (spaces < 3 && substr(scan, 1, 1) == " ") { scan = substr(scan, 2); spaces++ }
+      marker = substr(scan, 1, 1); len = 0
+      if (marker == "`" || marker == "~") while (substr(scan, len + 1, 1) == marker) len++
+      if (len < 3) return 0
+      if (!fenced) { fenced = 1; fmark = marker; flen = len }
+      else if (marker == fmark && len >= flen && substr(scan, len + 1) ~ /^[ \t]*$/) fenced = 0
+      return 1
+    }
+    # Fill u[1..n] with the line'"'"'s units; return n. Sets is_code.
+    function units(line,   n, rest) {
+      delete u; n = 0; is_code = 0
+      if (fence_line(line) || fenced || line ~ /^(    |\t)/) { is_code = 1; u[1] = line; return 1 }
+      rest = line
+      while (match(rest, /[.!?]+["'"'"')\]]*[ \t]+/)) {
+        u[++n] = substr(rest, 1, RSTART + RLENGTH - 1)
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+      if (rest ~ /[^ \t]/) u[++n] = rest
+      return n
+    }
+    function has_word(l, w) { return l ~ ("(^|[^a-z0-9_])" w "([^a-z0-9_]|$)") }
+    # Print the refused class of one prose unit, or "" when it passes.
+    function refused(unit,   s, l, t, i) {
+      s = unit; gsub(/`[^`]*`/, "", s); l = tolower(s)
+      t = l; sub(/^[ \t]*(>[ \t]*)*([-*+][ \t]+|[0-9]+[.)][ \t]+)?[*_]*/, "", t)
+      if (t ~ /^\[[a-z][a-z'"'"' -]*\]/ || t ~ /^(captain|captain'"'"'s (words|ask|intent)|the user|user|firstmate|first mate|supervisor|operator|owner|crewmate|worker|assistant|me)[*_]*[ \t]*:/)
+        return "speaker label"
+      if (has_word(l, "(you|your|yours|yourself|yourselves)") || t ~ /^captain[ \t]*,/ || l ~ /[,;][ \t]*captain[ \t]*[,.!?]/)
+        return "direct address"
+      if (unit ~ /^[ \t]*>/ || ((s ~ /"[^"]+"/ || s ~ /\342\200\234/) && has_word(l, "(said|says|say|saying|wrote|words|asked|told|replied|answered|quote|quoted|authori[sz]ed|approved)")))
+        return "quote"
+      for (i = 1; i <= nterm; i++) if (has_word(l, term[i])) return "fleet vocabulary \"" term[i] "\""
+      return ""
+    }
+    function refs_unit(k) { return k ~ /^refs (#[0-9]+|https:\/\/[^ ,]+)(,? (#[0-9]+|https:\/\/[^ ,]+))*\.?$/ }
+    BEGIN {
+      nterm = split(terms, term, ";")
+      split(linked, lk, " "); for (i in lk) if (lk[i] != "") need[lk[i]] = 1
+      split(mentioned, mk, " "); for (i in mk) if (mk[i] != "") known[mk[i]] = 1
+      bad = 0; cand_units = 0
+    }
+    FNR == 1 { fenced = 0 }
+    role == "auth" { n = units($0); for (i = 1; i <= n; i++) auth[ukey(u[i])] = 1; next }
+    role == "cand" {
+      n = units($0); kept = ""
+      for (i = 1; i <= n; i++) {
+        k = ukey(u[i]); if (k == "") { if (mode == "scrub") kept = kept u[i]; continue }
+        why = ""
+        if (!is_code && refs_unit(k)) {
+          rest = k; sub(/^refs /, "", rest); gsub(/,/, " ", rest); m = split(rest, r, " ")
+          for (j = 1; j <= m; j++) {
+            sub(/\.$/, "", r[j]); num = r[j]; sub(/^#/, "", num); sub(/^.*\//, "", num)
+            if (!(num in known)) why = "reference not named by the brief: " r[j]
+            delete need[num]
+          }
+        } else {
+          if (!is_code) why = refused(u[i])
+          if (why == "" && mode == "check" && !(k in auth)) why = "outside the authorized intent"
+        }
+        if (!is_code || mode == "check") cand_units++
+        if (why != "") {
+          bad++
+          if (mode == "check") printf "intent-check: line %d: %s: %s\n", FNR, why, $0
+          else printf "intent-scrub: removed %s: %s\n", why, trim(u[i]) > "/dev/stderr"
+          continue
+        }
+        kept = (kept == "" ? u[i] : (kept ~ /[ \t]$/ ? kept : kept " ") u[i])
+      }
+      if (mode == "scrub" && (n == 0 || trim(kept) != "" || is_code)) { sub(/[ \t]+$/, "", kept); print (is_code ? $0 : kept) }
+    }
+    END {
+      if (mode == "check") {
+        for (num in need) { printf "intent-check: missing reference: add \"Refs #%s\" as the last line\n", num; bad++ }
+        if (cand_units == 0) { print "intent-check: the intent is empty"; exit 1 }
+        exit bad > 0
+      }
+      exit 0
+    }
+  ' "$@"
+}
+
+# Refuse a candidate `--intent` file unless every sentence is in the
+# authorized words and none is a speaker label, direct address, attributed
+# quote, or foreign fleet term, and unless it carries `Refs #<n>` for every
+# issue of this repository the source links. Each refusal prints its line.
+# Later captain words and the resolved substance of a referenced report,
+# decision, or PR are authorized by file but still pass the refusal classes.
+# The repository is the working directory.
+fm_intent_check() {  # <source-file> <intent-file> [--captain-words <file>]... [--resolved <file>]...
+  local src=$1 cand=$2 auth terms linked mentioned rc
+  shift 2
+  [ -f "$cand" ] && [ -r "$cand" ] || { echo "intent-check: cannot read intent file $cand" >&2; return 2; }
+  auth=$(mktemp "${TMPDIR:-/tmp}/fm-intent-auth.XXXXXX") || return 2
+  if ! fm_intent_authorized_text "$src" >"$auth"; then
+    rm -f -- "$auth"; echo "intent-check: cannot read authorized intent from $src" >&2; return 2
+  fi
+  set -- role=auth "$auth" "$@"
+  local args=() prev='' a
+  for a in "$@"; do
+    case "$prev" in
+      --captain-words|--resolved) args+=(role=auth "$a"); prev=''; continue ;;
+    esac
+    case "$a" in
+      --captain-words|--resolved) prev=$a ;;
+      *) args+=("$a") ;;
+    esac
+  done
+  if [ -n "$prev" ]; then rm -f -- "$auth"; echo "intent-check: $prev needs a file" >&2; return 2; fi
+  terms=$(fm_intent_foreign_terms . | paste -sd';' -)
+  linked=$(fm_intent_linked_issues "$src" . | tr '\n' ' ')
+  mentioned=$(grep -oE '(#|/issues/|/pull/)[0-9]+' "$src" 2>/dev/null | grep -oE '[0-9]+' | tr '\n' ' ')
+  fm_intent_scan check "$terms" "$linked" "$mentioned" "${args[@]}" role=cand "$cand"
+  rc=$?
+  rm -f -- "$auth"
+  return "$rc"
+}
+
+# Print the authorized words without refused sentences, then a `Refs #<n>` line
+# for each issue of this repository the source links. Removed sentences go to
+# stderr; nothing is reworded.
+fm_intent_scrub() {  # <source-file>
+  local src=$1 auth terms linked
+  auth=$(fm_intent_authorized_text "$src") || { echo "intent-scrub: cannot read authorized intent from $src" >&2; return 2; }
+  terms=$(fm_intent_foreign_terms . | paste -sd';' -)
+  linked=$(fm_intent_linked_issues "$src" . | sed 's/^/#/' | paste -sd',' - | sed 's/,/, /g')
+  printf '%s\n' "$auth" | fm_intent_scan scrub "$terms" "" "" role=cand - |
+    awk 'NF { if (!first) first = NR; last = NR } { l[NR] = $0 } END { for (i = first; first && i <= last; i++) print l[i] }'
+  [ -z "$linked" ] || printf '\nRefs %s\n' "$linked"
+}
+
 # The `nm-<run>-<step>` decision key this block mandates is load-bearing beyond
 # the brief itself: the watcher binds an open `needs-decision` to the run a
 # crew's current state reports by matching exactly that shape
@@ -291,8 +537,11 @@ EOF
 # the pipeline, what `--intent` may carry, and the two firstmate-specific rules.
 # Written once; only the two sentences about a green PR depend on the forge,
 # because on gerrit the ci step is skipped and there is no PR to report.
-fm_nm_driving_block() {  # <forge>
+fm_nm_driving_block() {  # <forge> <task-data-dir>
   local pr_return_line='' pr_reattach_clause=';'
+  local check_cmd terms_list
+  check_cmd="$FM_DOD_LIB_DIR/fm-intent-check.sh"
+  terms_list=$(printf '%s\n' "$FM_INTENT_FLEET_TERMS" | paste -sd',' - | sed 's/,/, /g')
   if [ "$1" != gerrit ]; then
     pr_return_line="Only a drive call's return reports the green PR: \`no-mistakes axi status\` shows progress but never reports \`checks-passed\` while the ci step is still monitoring the PR for merge, so never wait on a status poll for the next gate or outcome.
 "
@@ -309,6 +558,11 @@ Do not include \`## Firstmate spec\`, later Firstmate build constraints, or your
 The \`--intent\` string you pass must be self-sufficient: that string plus the codebase must let a reader reconstruct roughly the same specification, without depending on a separate report, a PR, or context that lives only in this conversation.
 When the captain's intent refers to a report, decision, or PR ("do items 1, 2, 3, and 7 of the report"), write the substance of the referenced items into \`--intent\` in the captain's terms, not only the pointer; that substance is the captain's ask by reference, while Firstmate's build instructions and your own decisions still stay out.
 This replaces the no-mistakes skill's advice to enrich \`--intent\` with decisions and tradeoffs; that advice does not apply to Firstmate-dispatched work.
+The pipeline publishes the \`--intent\` string as the pull request body, so check it before the run starts.
+From this repository, run \`$check_cmd scrub $2\` to print the authorized words with every refused sentence removed, never reworded, and with a \`Refs #<n>\` last line for each issue of this repository the brief links; never add a reference the brief does not name.
+Write the exact string you will pass to a file, run \`$check_cmd check $2 <file>\`, and pass that file's content unchanged only when the check passes.
+The check refuses speaker labels, direct address, attributed quotes, these fleet terms where this repository's own files do not use them ($terms_list), and any sentence outside the authorized words; name later captain words with \`--captain-words <file>\` and the resolved substance of a referenced report, decision, or PR with \`--resolved <file>\`, which still pass every other rule.
+When the check refuses a sentence the specification needs, stop and ask firstmate rather than start the run with a failing string.
 Do not hand-edit, commit, or fix findings yourself while a run is active - the pipeline applies every fix.
 
 One drive call blocks until the next gate or outcome, which routinely outlives what your harness lets a single command run: Claude Code kills a command at ten minutes maximum, while one fix round is capped around thirty minutes and up to three rounds chain.
@@ -362,9 +616,9 @@ Keep the whole ready line on one line, with the URL as the first word after \`PR
 EOF
 }
 
-fm_dod_block() {  # <mode> <task-id> [branch] [<forge>]
+fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<data-dir>]
   local mode=$1 id=$2 forge=${4:-none}
-  local branch=${3:-fm/$id}
+  local branch=${3:-fm/$id} intent_dir=${5:-data}/$2
   fm_forge_valid_for_mode "$forge" "$mode" fm_dod_block || return 1
   case "$mode:$forge" in
     direct-PR:gerrit)
@@ -396,7 +650,7 @@ Firstmate will then instruct you to run /no-mistakes to validate.
 That first \`done:\` is the handoff that starts the pipeline; it is not a request to publish.
 
 EOF
-      fm_nm_driving_block "$forge"
+      fm_nm_driving_block "$forge" "$intent_dir"
       cat <<EOF
 
 Because \`push\` is skipped, the pipeline's fixes DO NOT arrive in your checkout: each fix round commits onto a branch inside no-mistakes' own local gate repository, and with no push nothing carries those commits back to you.
@@ -457,7 +711,7 @@ Firstmate will then instruct you to run /no-mistakes to validate and ship a PR.
 That first \`done:\` is the handoff that starts the pipeline, which owns the push; it is not a request to push from this copy.
 
 EOF
-      fm_nm_driving_block "$forge"
+      fm_nm_driving_block "$forge" "$intent_dir"
       cat <<EOF
 
 Your ready return point and ready line depend on whether this repository declares no CI.
