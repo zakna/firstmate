@@ -1237,12 +1237,14 @@ test_forge_gerrit_changes_what_no_mistakes_means() {
   FM_HOME="$home" "$BRIEF" forge-dod-n1 other-project --mode no-mistakes >/dev/null \
     || fail "a default-forge no-mistakes brief should scaffold"
   plain="$home/data/forge-dod-n1/brief.md"
+  # The intent check names each task's own data directory, so the task ids
+  # are normalized before the comparison.
   awk '/^You drive no-mistakes by responding to its gates/ { emit = 1 }
        emit { print }
-       emit && /hard rule violation\.$/ { exit }' "$brief" > "$TMP_ROOT/forge-dod/gerrit-middle"
+       emit && /hard rule violation\.$/ { exit }' "$brief" | sed 's#/data/forge-dod-g1#/data/TASK#g' > "$TMP_ROOT/forge-dod/gerrit-middle"
   awk '/^You drive no-mistakes by responding to its gates/ { emit = 1 }
        emit { print }
-       emit && /hard rule violation\.$/ { exit }' "$plain" > "$TMP_ROOT/forge-dod/plain-middle"
+       emit && /hard rule violation\.$/ { exit }' "$plain" | sed 's#/data/forge-dod-n1#/data/TASK#g' > "$TMP_ROOT/forge-dod/plain-middle"
   [ -s "$TMP_ROOT/forge-dod/gerrit-middle" ] || fail "the gerrit brief carries no pipeline-driving section to compare"
   # Only the two statements about a green PR differ: the ci step is skipped on
   # this forge, so there is no checks-passed return to wait for.
