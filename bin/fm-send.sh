@@ -699,7 +699,7 @@ fi
 # or a worker line the fold read but never listed, leave the watcher's wake
 # path untouched.
 fm_send_close_resolved_keys() { # <answer-text>
-  local note=$1 k close_note append_rc still manual_close_cmd close_lines=() i=0
+  local note=$1 k close_note append_rc still manual_close_cmd close_lines=() manual_lines=() line i=0
   note=$(printf '%s' "$note" | tr '\n\r\t' '   ' | LC_ALL=C tr -d '\000-\037\177')
   for k in $RESOLVE_STATUS_KEYS; do
     close_note=$(fm_send_resolve_close_note "$k" "$note")
@@ -709,8 +709,13 @@ fm_send_close_resolved_keys() { # <answer-text>
   [ "${#close_lines[@]}" -gt 0 ] || return 0
   append_rc=0
   fm_wake_status_append_self_announced "$STATE" "$RESOLVE_STATUS_FILE" "${close_lines[@]}" || append_rc=$?
+  # A manual close is the same close event, so it carries the emission stamp
+  # the guarded append would have written.
   if [ "$append_rc" -eq 2 ]; then
-    printf -v manual_close_cmd ' %q' "${close_lines[@]}"
+    for line in "${close_lines[@]}"; do
+      manual_lines+=("$(status_stamp_line "$line")")
+    done
+    printf -v manual_close_cmd ' %q' "${manual_lines[@]}"
     printf -v manual_close_cmd "printf '%%s\\n'%s >> %q" "$manual_close_cmd" "$RESOLVE_STATUS_FILE"
     echo "error: the answer was delivered to $T, but the close for decision key(s) '$RESOLVE_STATUS_KEYS' could not be appended to $RESOLVE_STATUS_FILE. Close it manually with: $manual_close_cmd - do not resend the answer." >&2
     return 1
@@ -719,7 +724,7 @@ fm_send_close_resolved_keys() { # <answer-text>
   for k in $RESOLVE_STATUS_KEYS; do
     case "$still" in
     "$k"$'\t'* | *$'\n'"$k"$'\t'*)
-      printf -v manual_close_cmd "printf '%%s\\n' %q >> %q" "${close_lines[$i]}" "$RESOLVE_STATUS_FILE"
+      printf -v manual_close_cmd "printf '%%s\\n' %q >> %q" "$(status_stamp_line "${close_lines[$i]}")" "$RESOLVE_STATUS_FILE"
       echo "error: the answer was delivered to $T, but decision key '$k' is still open in $RESOLVE_STATUS_FILE; it may have been reopened concurrently or the fold did not accept the close. Close it manually with: $manual_close_cmd - do not resend the answer." >&2
       return 1
       ;;

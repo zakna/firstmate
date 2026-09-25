@@ -789,7 +789,7 @@ test_stamped_close_line_stays_within_the_status_line_cap() {
 }
 
 test_failed_close_recovery_command_is_shell_safe() {
-  local dir fb log home err marker answer rc diagnostic manual out
+  local dir fb log home err marker answer rc diagnostic manual out line
   dir="$TMP_ROOT/manual-close"; mkdir -p "$dir"
   fb=$(make_stubs "$dir"); log="$dir/send.log"; err="$dir/send.err"
   home=$(setup_home "manual close")
@@ -809,6 +809,10 @@ test_failed_close_recovery_command_is_shell_safe() {
   manual=${diagnostic#*Close it manually with: }
   manual=${manual% - do not resend the answer.}
   bash -c "$manual" || fail "the generated manual close command should execute successfully"
+  line=$(grep -F 'resolved [key=quote-safety]' "$home/state/t1.status") \
+    || fail "the manual close command wrote no close line:"$'\n'"$(cat "$home/state/t1.status")"
+  bash -c '. "$1"; status_line_at_epoch "$2"' _ "$ROOT/bin/fm-classify-lib.sh" "$line" >/dev/null \
+    || fail "the manual close command wrote a close with no emission stamp: $line"
   [ ! -e "$marker" ] || fail "the generated manual close command executed answer text as shell code"
   out=$(drain_out "$home")
   if printf '%s' "$out" | grep -F 'OPEN DECISIONS' >/dev/null; then
