@@ -610,8 +610,7 @@ You are a crewmate: an autonomous worker agent managed by firstmate. Work on you
 
 $TASK_SECTION
 
-# Scope allowance
-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's \`$FM_ROOT/AGENTS.md\` section 7 owns this allowance.
+$(fm_scope_allowance_block "$FM_ROOT")
 
 $HERDR_SECTION
 
