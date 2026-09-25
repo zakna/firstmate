@@ -149,7 +149,9 @@
 #   what lets teardown leave a slot reassigned since untouched; bin/fm-wake-lib.sh
 #   owns the claim and bin/fm-teardown.sh owns what it protects. A slot that
 #   cannot be claimed refuses the spawn rather than launching a worker whose slot
-#   could later be released out from under its successor. A spawn that aborts
+#   could later be released out from under its successor, and a pool slot that
+#   is a worktree of another clone of the same origin refuses the spawn by name
+#   before the base refresh touches that clone. A spawn that aborts
 #   while it still holds the allocation lock drops its own claim; an abort after
 #   metadata publication has released that lock leaves the claim in place, and
 #   the next spawn's claim replaces it.
@@ -4110,13 +4112,23 @@ elif [ "$KIND" != secondmate ] && [ "$BACKEND" != orca ]; then
   # under its successor.
   # Written under the Treehouse project lock held from before slot allocation
   # through metadata publication, so no other spawn or return sees a half-claim.
-  if fm_treehouse_pool_slot "$PROJ_ABS" "$WT"; then
+  # A pool slot anchored to another clone of the same origin passes the
+  # isolation screen above, so it is refused here, for every harness, before the
+  # base refresh below fetches into and resets that other clone's worktree.
+  fm_treehouse_pool_slot_state "$PROJ_ABS" "$WT"
+  case "$FM_TREEHOUSE_POOL_SLOT" in
+  mine)
     if ! fm_treehouse_slot_owner_claim "$WT" "$ID" "$FM_HOME"; then
       echo "error: could not claim Treehouse pool slot $WT for task $ID; refusing to launch a worker whose slot cannot later be proved to be its own; inspect window $T" >&2
       exit 1
     fi
     SPAWN_SLOT_CLAIMED=1
-  fi
+    ;;
+  foreign)
+    echo "error: Treehouse pool slot $WT is a worktree of clone '$FM_TREEHOUSE_POOL_SLOT_CLONE', not of clone '$FM_TREEHOUSE_POOL_PROJECT_CLONE' this spawn is for; two clones of one origin share a Treehouse pool, so refusing to launch task $ID in the other clone's slot (free the pool with 'treehouse return' and then 'treehouse destroy' on that slot after reading its preview); inspect window $T" >&2
+    exit 1
+    ;;
+  esac
 fi
 if [ "$RELAUNCH" -eq 0 ] && [ "$KIND" != secondmate ]; then
   freshen_spawn_worktree_base "$WT" || exit 1
