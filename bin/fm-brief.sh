@@ -10,7 +10,9 @@
 # under `## Firstmate spec` (build instructions, which are never the captain's
 # intent). bin/fm-dod-lib.sh owns the no-mistakes `--intent` contract those
 # subsections feed; bin/fm-spawn.sh refuses leftover placeholders and a
-# `## Captain's intent` line opening with a Captain label or address. Secondmate
+# `## Captain's intent` line opening with a Captain label or address. A ship
+# brief follows `# Task` with a `# Scope allowance` pointer to AGENTS.md
+# section 7, so a narrow scope sentence cannot hide it. Secondmate
 # charters still use a single `{TASK}` charter fill. Firstmate may adjust other
 # sections when the task genuinely deviates (e.g. working an existing external
 # PR instead of shipping a new one).
@@ -607,6 +609,9 @@ cat > "$BRIEF" <<EOF
 You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
 
 $TASK_SECTION
+
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's \`$FM_ROOT/AGENTS.md\` section 7 owns this allowance.
 
 $HERDR_SECTION
 
