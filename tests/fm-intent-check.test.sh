@@ -82,6 +82,7 @@ test_repository_vocabulary_is_not_fleet_vocabulary() {
 
 test_examples_and_inline_code_are_exempt() {
   local dir="$TMP_ROOT/examples" body out
+  # shellcheck disable=SC2016 # Backticks are literal Markdown inline code.
   body='Reject a label such as `Captain:` in the parser.
 ```
 Captain: you said "ship it"
