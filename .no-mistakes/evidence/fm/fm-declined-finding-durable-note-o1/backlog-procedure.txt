@@ -1,0 +1,131 @@
+## Lab home: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bLvuw9
+$ bin/fm-tasks-axi.sh add "Author note: rollup simplification" --body "<multi-line note with parens>"
+  --kind <ship|scout|docs|...>, --repo <name>, --body <text> or --body-file <path>
+  tasks-axi add lavish-foo-q9 "fix summary toggle" --kind ship --repo lavish-axi --start
+### Step 1: file the item with the full multi-line note (with parentheses) in its body
+$ bin/fm-tasks-axi.sh add ha-72-author-note-rollup Author note: rollup physical-test simplification --kind docs --body Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.
+Why declined: author call; a Fix would expand the contract (DO NOT CHANGE).
+Suggested change: drop propagate_physical(x) and its test.
+ok: added ha-72-author-note-rollup (docs) -> Queued
+task:
+  id: ha-72-author-note-rollup
+  title: "Author note: rollup physical-test simplification"
+  state: queued
+  blocked: no
+  blocked_by: none
+  held: no
+  hold_reason: "-"
+  hold_kind: "-"
+  hold_until: "-"
+  kind: docs
+  repo: "-"
+  priority: "-"
+  created: 2026-09-26
+  closed: "-"
+  deps: none
+  links: none
+  body: "Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.\nWhy declined: author call; a Fix would expand the contract (DO NOT CHANGE).\nSuggested change: drop propagate_physical(x) and its test."
+help[2]:
+  - Run `tasks-axi start ha-72-author-note-rollup` to move it to in flight
+  - Run `tasks-axi block ha-72-author-note-rollup --by <other>` to record a dependency
+[exit 0]
+
+### Step 2: hold it with a one-line reason naming the origin task
+$ bin/fm-captain-hold.sh hold ha-72-author-note-rollup --reason declined simplification finding left as author call from ha-72-retro-s1 --origin ha-72-retro-s1
+fm-captain-hold: compatible tasks-axi is required
+[exit 1]
+
+### Durable result in $FM_HOME/data/backlog.md
+# Backlog
+
+## In flight
+## Queued
+- [ ] ha-72-author-note-rollup - Author note: rollup physical-test simplification (kind: docs) (since 2026-09-26)
+  Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.
+  Why declined: author call; a Fix would expand the contract (DO NOT CHANGE).
+  Suggested change: drop propagate_physical(x) and its test.
+## Done
+
+### Held item as seen by tasks-axi
+$ bin/fm-tasks-axi.sh show ha-72-author-note-rollup
+task:
+  id: ha-72-author-note-rollup
+  title: "Author note: rollup physical-test simplification"
+  state: queued
+  blocked: no
+  blocked_by: none
+  held: no
+  hold_reason: "-"
+  hold_kind: "-"
+  hold_until: "-"
+  kind: docs
+  repo: "-"
+  priority: "-"
+  created: 2026-09-26
+  closed: "-"
+  deps: none
+  links: none
+  body: "Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.\nWhy declined: author call; a Fix would expand the contract (DO NOT CHANGE).\nSuggested change: drop propagate_physical(x) and its test."
+[exit 0]
+
+### Adversarial: putting the full note in --reason instead (the form the skill avoids)
+$ bin/fm-captain-hold.sh hold ha-72-author-note-bad --title bad form --reason Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.
+Why declined: author call; a Fix would expand the contract (DO NOT CHANGE).
+Suggested change: drop propagate_physical(x) and its test. --origin ha-72-retro-s1
+fm-captain-hold: reason must be one line
+[exit 1]
+
+=================== RE-RUN with tasks-axi 0.2.6 (host has 0.2.5 < required 0.2.6; 0.2.6 installed into a temp prefix) ===================
+### Step 2: hold it with a one-line reason naming the origin task
+$ bin/fm-captain-hold.sh hold ha-72-author-note-rollup --reason declined simplification finding left as author call from ha-72-retro-s1 --origin ha-72-retro-s1
+ha-72-author-note-rollup
+[exit 0]
+
+### Durable result in $FM_HOME/data/backlog.md
+# Backlog
+
+## In flight
+## Queued
+- [ ] ha-72-author-note-rollup - Author note: rollup physical-test simplification (kind: docs) (since 2026-09-26) (hold: declined simplification finding left as author call from ha-72-retro-s1) (hold-kind: captain)
+  Captain hold set: 2026-09-26T01:24:07Z
+
+  Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.
+  Why declined: author call; a Fix would expand the contract (DO NOT CHANGE).
+  Suggested change: drop propagate_physical(x) and its test.
+## Done
+
+$ bin/fm-tasks-axi.sh show ha-72-author-note-rollup
+task:
+  id: ha-72-author-note-rollup
+  title: "Author note: rollup physical-test simplification"
+  state: queued
+  blocked: no
+  blocked_by: none
+  held: yes
+  hold_reason: declined simplification finding left as author call from ha-72-retro-s1
+  hold_kind: captain
+  hold_until: "-"
+  kind: docs
+  repo: "-"
+  priority: "-"
+  created: 2026-09-26
+  closed: "-"
+  deps: none
+  links: none
+  body: "Captain hold set: 2026-09-26T01:24:07Z\n\nFinding: rollup physical-test propagation component (see rollup.py:42) looks removable.\nWhy declined: author call; a Fix would expand the contract (DO NOT CHANGE).\nSuggested change: drop propagate_physical(x) and its test."
+[exit 0]
+
+### Adversarial: full multi-line note as --reason (form the skill steers away from)
+$ bin/fm-captain-hold.sh hold ha-72-author-note-bad --title bad form --reason Finding: rollup physical-test propagation component (see rollup.py:42) looks removable.
+Why declined: author call; a Fix would expand the contract (DO NOT CHANGE).
+Suggested change: drop propagate_physical(x) and its test. --origin ha-72-retro-s1
+fm-captain-hold: reason must be one line
+[exit 1]
+
+### Adversarial: one-line note with parentheses as --reason
+$ bin/fm-captain-hold.sh hold ha-72-author-note-bad --title bad form --reason drop propagate_physical(x) --origin ha-72-retro-s1
+fm-captain-hold: reason must not contain parentheses (tasks-axi hold contract)
+[exit 1]
+
+### No stray row created by the rejected forms
+0

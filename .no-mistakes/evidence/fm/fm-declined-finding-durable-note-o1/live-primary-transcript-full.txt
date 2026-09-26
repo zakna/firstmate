@@ -1,0 +1,60 @@
+  Follow-through in this lab home:
+  - Done: ha-climate has no issue tracker I can write to, so the note went on the backlog as ha-99-author-note-rollup. It says what the finding was, why I declined it, and what change it suggests. It
+    also points to an older note on the same component, ha-72-author-note-rollup. I left that older item untouched, but its text contradicts itself: it says "DO NOT CHANGE" while also suggesting the
+    component be dropped.
+  - Failed: holding the item for you. bin/fm-captain-hold.sh refused with "compatible tasks-axi is required". The installed tasks-axi is 0.2.5 and the minimum is 0.2.6 (bin/fm-tasks-axi-lib.sh:45). So
+    the item exists but is not held yet. I did not hand-edit the backlog to get around this, and I did not install anything without your go-ahead.
+
+  To finish: approve upgrading tasks-axi to 0.2.6 or newer. Then I'll run:
+  bin/fm-captain-hold.sh hold ha-99-author-note-rollup --reason "declined simplification finding to remove rollup physical-test propagation, left as author call from ha-99-rollup-s1"
+
+  Decision text I would send the worker (not sent). The worker's report didn't include the decision key, the review step name or the finding ID, so those are placeholders taken from its open decision
+  record:
+
+  Decision for <decision-key> (review step, finding <finding-id>: simplification - remove the rollup physical-test propagation component in rollup.py).
+  Decided: keep the code as is. Removing that component would change the rollup contract, and this task's accepted scope does not authorize a rollup contract change. Do not edit rollup.py for this
+  finding.
+  The author note is filed durably as backlog item ha-99-author-note-rollup; do not file it yourself.
+  Respond with exactly:
+    no-mistakes axi respond --step <review-step> --action approve
+  Do not pass --yes. Keep processing every synchronous return from the pipeline until it completes or raises a genuinely new escalation, and confirm the matching resolved event for <decision-key>.
+
+  When actually sending, I would pass bin/fm-send.sh ha-99-rollup-s1 --resolve-key <decision-key> so the open decision record closes when the answer lands.
+
+✻ Cooked for 55s · done 3:26 AM
+
+❯ Do not upgrade or install anything globally. A compatible tasks-axi 0.2.6 already exists at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//tasksaxi.R0t85T/node_modules/.bin - prepend that
+  directory to PATH for the hold command only, finish the hold with --origin ha-99-rollup-s1, then show the held row.
+
+  Ran 1 shell command
+
+⏺ Captain, the author note is now held for you. I used the local tasks-axi 0.2.6 for that one command only and installed nothing. The hold command exited cleanly, which finishes everything the
+  decision needed except sending it.
+
+  Held row:
+
+  - [ ] ha-99-author-note-rollup - Author note: rollup physical-test propagation simplification (repo: ha-climate) (kind: docs) (since 2026-09-26) (hold: declined simplification finding to remove
+  rollup physical-test propagation, left as author call from ha-99-rollup-s1) (hold-kind: captain)
+    Captain hold set: 2026-09-26T01:28:21Z
+
+    Author note from ha-99-rollup-s1 (declined ask-user simplification finding, ha-climate).
+
+    Finding: the rollup physical-test propagation component in rollup.py could be removed; the task's instructions never asked for it.
+    Why declined: removing it changes the rollup contract, and the accepted task scope does not authorize a rollup contract change, so the ship keeps the component as is and leaves removal to the
+  author.
+    Suggested change: if the author decides the propagation is unwanted, remove the physical-test propagation component from rollup.py together with its tests, and update any rollup contract
+  documentation and callers that rely on propagated physical-test results, as its own deliberate contract change.
+    Related: ha-72-author-note-rollup records an earlier note on the same component from ha-72-retro-s1.
+
+  --origin added nothing to the note, because the hold script only writes the origin into the body when it creates a new item. This item already existed, but its body and hold reason both already name
+  ha-99-rollup-s1.
+
+  The decision text in my previous reply is unchanged and ready to send. It keeps the code as is, points the worker to ha-99-author-note-rollup and responds with --action approve.
+
+✻ Cooked for 22s · done 3:28 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ show the full decision text again
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M3DMRTJEXV1HB3PN0CN9TWTQ ctx 72822/1000000  Opus medium | 5h [█░░░░░] 16% →04:30 | 7d [████░░] 60% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
