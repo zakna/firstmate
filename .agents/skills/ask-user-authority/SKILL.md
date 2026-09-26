@@ -46,7 +46,9 @@ The durable home is exactly one of two:
 
 - A project issue on the task's repository.
   Prefer it whenever that repository has an issue tracker firstmate can write to.
-- A backlog item filed with `bin/fm-tasks-axi.sh add` and held with `bin/fm-captain-hold.sh hold`, when the repository has no usable issue tracker.
+- A held backlog item created in one step with `bin/fm-captain-hold.sh hold <new-id> --title <title> --reason <note> --origin <task-id>`, when the repository has no usable issue tracker.
+
+A decision made under the away posture by the supervision branch always uses the held backlog item and never files a project issue.
 
 The note states the finding, the reason it was declined, and the suggested change, so it stands alone without the task's records.
 Put the filed reference, the issue URL or the backlog task id, in the decision text sent to the worker.
