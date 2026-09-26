@@ -2787,6 +2787,11 @@ EOF
             triage_log "merge outcome for $id could not be recorded (rc=$merge_outcome_rc)"
             exit 1
           fi
+          if [ "$merge_authority" = external ] \
+            && ! fm_merge_external_record "$STATE" "$id" \
+              "$provider" "$host" "$path" "$number"; then
+            triage_log "published the external merge outcome for $id but could not record its details"
+          fi
           if [ -n "$merge_authority_record_identity" ] \
             && ! fm_merge_authority_remove_if_matches "$STATE" "$id" \
               "$provider" "$host" "$path" "$number" "$merge_authority" \

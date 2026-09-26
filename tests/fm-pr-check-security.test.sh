@@ -141,6 +141,18 @@ SH
 printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
 case "${1:-} ${2:-}" in
   "api graphql")
+    case " $* " in
+      *mergeCommit*)
+        # The PR record read, answered in its --jq output shape.
+        [ "${FM_TEST_GH_RECORD_FAIL:-0}" = 0 ] || exit 1
+        printf '%s\n' "state=MERGED" "merged=true" \
+          "merge_commit=${FM_TEST_GH_MERGE_COMMIT-93c689e0123456789abcdef0123456789abcdef0}" \
+          "merge_parents=${FM_TEST_GH_MERGE_PARENTS-2}" \
+          "merge_actor=${FM_TEST_GH_MERGE_ACTOR-octocat}" \
+          "merged_at=${FM_TEST_GH_MERGED_AT-2026-09-20T10:00:00Z}"
+        exit 0
+        ;;
+    esac
     printf '%s\n' \
       "state=${FM_TEST_GH_GRAPHQL_STATE:-MERGED}" \
       "merged=${FM_TEST_GH_GRAPHQL_MERGED:-true}" \
@@ -2147,7 +2159,11 @@ test_merged_poll_retires_once() {
   case "$first" in check:*task-a.check.sh:*merged) ;; *) fail "first merged notification was not preserved: $first" ;; esac
   ack_watcher_cycle "$state" || fail "first merged notification handling acknowledgement failed"
   assert_poll_absent "$state" task-a
-  [ "$(cat "$state/task-a.meta")" = "$meta_before" ] || fail "merged retirement changed canonical metadata"
+  # The external merge adds only its own record fields.
+  [ "$(grep -Ev '^(merge_origin|merge_commit|merge_parents|merge_actor|merged_at)=' "$state/task-a.meta")" = "$meta_before" ] \
+    || fail "merged retirement changed canonical metadata"
+  grep -qxF merge_origin=external "$state/task-a.meta" \
+    || fail "merged retirement did not record the external merge"
 
   rm -f "$state/.last-check"
   set +e
@@ -2914,6 +2930,8 @@ test_merged_poll_row_carries_the_merge_authority() {
       || fail "$posture: archived posture lost persisted authority: $(merged_ledger_row "$state" task-a)"
     [ ! -e "$state/task-a.merge-authority" ] \
       || fail "$posture: published merge left its authority record behind"
+    ! grep -q '^merge_origin=' "$state/task-a.meta" \
+      || fail "$posture: a fleet merge was recorded as an external merge"
   done
 
   pass "queued merges retain their away authority after captain return"
@@ -2944,6 +2962,56 @@ test_merged_poll_row_names_no_authority_when_no_record_grants_one() {
   assert_poll_absent "$state" task-a
 
   pass "poll distinguishes attended authorization from external landing"
+}
+
+test_external_merge_records_the_forge_merge_details() {
+  local dir state url meta expected
+  url=https://github.com/o/r/pull/1
+
+  dir=$(make_case external-merge-details)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  run_merged_poll_cycle "$dir"
+  [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
+    || fail "details: external merge outcome changed: $(merged_ledger_row "$state" task-a)"
+  expected=$(printf '%s\n' merge_origin=external \
+    merge_commit=93c689e0123456789abcdef0123456789abcdef0 merge_parents=2 \
+    merge_actor=octocat merged_at=2026-09-20T10:00:00Z "pr=$url")
+  [ "$(grep -A5 '^merge_origin=' "$meta")" = "$expected" ] \
+    || fail "details: task record lacks the merge details before pr=: $(cat "$meta")"
+  assert_poll_absent "$state" task-a
+
+  # A failed forge read, and a value the forge should never send, record
+  # unknown and leave the outcome delivery unchanged.
+  dir=$(make_case external-merge-details-unreadable)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GH_RECORD_FAIL=1 run_merged_poll_cycle "$dir"
+  [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
+    || fail "unreadable: a failed detail read changed the outcome: $(merged_ledger_row "$state" task-a)"
+  expected=$(printf '%s\n' merge_origin=external merge_commit=unknown merge_parents=unknown \
+    merge_actor=unknown merged_at=unknown "pr=$url")
+  [ "$(grep -A5 '^merge_origin=' "$meta")" = "$expected" ] \
+    || fail "unreadable: a failed read did not record unknown: $(cat "$meta")"
+  assert_poll_absent "$state" task-a
+
+  dir=$(make_case external-merge-details-invalid)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GH_MERGE_ACTOR='bad actor' FM_TEST_GH_MERGE_COMMIT='' \
+    run_merged_poll_cycle "$dir"
+  if ! { grep -qxF merge_actor=unknown "$meta" && grep -qxF merge_commit=unknown "$meta" \
+    && grep -qxF merge_parents=2 "$meta"; }; then
+    fail "invalid: forge values were not validated field by field: $(cat "$meta")"
+  fi
+
+  pass "an external merge records its commit, parents, actor, and time, or unknown"
 }
 
 test_authority_persistence_refuses_rebound_metadata() {
@@ -3451,6 +3519,7 @@ test_merged_poll_retries_a_failed_upward_report
 test_self_merge_and_poll_publish_one_outcome
 test_merged_poll_row_carries_the_merge_authority
 test_merged_poll_row_names_no_authority_when_no_record_grants_one
+test_external_merge_records_the_forge_merge_details
 test_authority_persistence_refuses_rebound_metadata
 test_authority_persists_before_control_unlock
 test_teardown_cannot_race_authority_consumption

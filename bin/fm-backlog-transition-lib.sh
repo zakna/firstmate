@@ -845,6 +845,21 @@ fm_backlog_atomic_transition() {
   esac
 }
 
+# The Done note a teardown records for a pull request that landed outside
+# bin/fm-pr-merge.sh, built from the external-merge fields the merged poll wrote
+# into the task record (bin/fm-merge-authority-lib.sh owns those fields):
+#   external merge: commit <sha>, parents <count>, by <login>, at <time>
+# Each value is the recorded one or `unknown`. The pending-close record carries
+# it as the `--note` after `--pr`, with every space written as %20.
+fm_backlog_external_merge_note() {  # <commit> <parents> <actor> <merged-at>
+  printf 'external merge: commit %s, parents %s, by %s, at %s\n' "$1" "$2" "$3" "$4"
+}
+
+fm_backlog_external_merge_note_valid() {  # <note>
+  local LC_ALL=C
+  [[ "$1" =~ ^external\ merge:\ commit\ (unknown|[0-9a-f]{40}|[0-9a-f]{64}),\ parents\ (unknown|[0-9]{1,3}),\ by\ (unknown|[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?),\ at\ (unknown|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)$ ]]
+}
+
 fm_backlog_close_marker_path() {  # <state-dir> <id>
   printf '%s/%s.backlog-close\n' "$1" "$2"
 }
@@ -946,7 +961,7 @@ fm_backlog_close_marker_validate() {  # <marker-path> <authorized-data-dir> <exp
   fi
   case "${#args[@]}" in
     0) ;;
-    2)
+    2|4)
       case "${args[0]}" in
         --note) [ "${args[1]}" = "local%20main" ] ;;
         --pr)
@@ -1010,6 +1025,15 @@ fm_backlog_close_marker_validate() {  # <marker-path> <authorized-data-dir> <exp
           ;;
         *) false ;;
       esac || { FM_BACKLOG_TRANSITION_ERROR="invalid pending-close arguments in $marker"; return 1; }
+      # A second pair is only the external-merge note after a pull request.
+      if [ "${#args[@]}" -eq 4 ]; then
+        if ! { [ "${args[0]}" = --pr ] && [ "${args[2]}" = --note ] \
+          && case "${args[3]}" in *[[:space:]]*) false ;; *) true ;; esac \
+          && fm_backlog_external_merge_note_valid "${args[3]//%20/ }"; }; then
+          FM_BACKLOG_TRANSITION_ERROR="invalid pending-close arguments in $marker"
+          return 1
+        fi
+      fi
       ;;
     *) FM_BACKLOG_TRANSITION_ERROR="invalid pending-close arguments in $marker"; return 1 ;;
   esac
@@ -1046,8 +1070,8 @@ fm_backlog_close_marker_stage() {  # <temporary-path> <id> <data-dir> <spawn-gen
     shift
   fi
   for arg in "$@"; do
-    if [ "$previous_arg" = --note ] && [ "$arg" = "local main" ]; then
-      serialized_args+=("local%20main")
+    if [ "$previous_arg" = --note ]; then
+      serialized_args+=("${arg// /%20}")
     else
       serialized_args+=("$arg")
     fi
@@ -1104,7 +1128,7 @@ fm_backlog_close_marker_clear() {  # <state-dir> <id>
 # any meta or backlog mutation.
 fm_backlog_close_marker_replay() {  # <state-dir> <marker-path> <authorized-data-dir>
   local state=$1 marker=$2 marker_name expected_id
-  local id data marker_spawn_gen meta meta_spawn_gen row_state cleanup_incomplete mode
+  local id data marker_spawn_gen meta meta_spawn_gen row_state cleanup_incomplete mode i
   local args=() mode_flags=()
   FM_BACKLOG_CLOSE_REPLAY_RESULT=noop
   fm_backlog_directory_present "$state" "state directory" || return 1
@@ -1122,9 +1146,10 @@ fm_backlog_close_marker_replay() {  # <state-dir> <marker-path> <authorized-data
   mode=$FM_BACKLOG_CLOSE_VALIDATED_MODE
   [ "$mode" = close ] || mode_flags=(--retain)
   args=("${FM_BACKLOG_CLOSE_VALIDATED_ARGS[@]+"${FM_BACKLOG_CLOSE_VALIDATED_ARGS[@]}"}")
-  if [ "${args[0]-}" = --note ]; then
-    args[1]="local main"
-  fi
+  for i in "${!args[@]}"; do
+    [ "$i" -gt 0 ] && [ "${args[$((i - 1))]}" = --note ] || continue
+    args[i]=${args[i]//%20/ }
+  done
   meta="$state/$id.meta"
   if [ -e "$meta" ] || [ -L "$meta" ]; then
     if ! fm_backlog_record_present "$meta" "task record" "$state"; then
