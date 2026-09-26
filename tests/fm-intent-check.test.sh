@@ -47,6 +47,21 @@ test_clean_intent_passes() {
   pass "a clean intent and a sentence-level subset pass"
 }
 
+test_product_sentences_are_not_refused() {
+  local dir="$TMP_ROOT/product" body out
+  body='Show the temperature so you can see drift.
+[Fan docs](https://example.com/fan) describe the night curve.
+- [x] Keep the column order.'
+  write_launch_brief "$dir" "$body"
+  out=$(run_check "$dir" "$body") || fail "product sentences were refused: $out"
+  out=$(run_check "$dir" '[Captain] make exports UTF-8.
+You must rebase your branch first.')
+  [ $? -eq 1 ] || fail "a bracketed speaker tag and a worker instruction passed"
+  assert_contains "$out" 'line 1: speaker label' "a bracketed speaker tag was not refused"
+  assert_contains "$out" 'line 2: direct address' "a worker instruction was not refused"
+  pass "second-person product wording, links, and task items pass; worker address does not"
+}
+
 test_each_forbidden_class_names_the_line() {
   local dir="$TMP_ROOT/classes" out rc
   write_launch_brief "$dir" 'Captain: make exports UTF-8.
@@ -124,28 +139,46 @@ Refs #42, #99')
   rc=$?
   [ "$rc" -eq 1 ] || fail "an invented reference was accepted"
   assert_contains "$out" 'reference not named by the brief: #99' "invented reference was not named"
-  pass "the linked issue reference is required and an invented one refused"
+  out=$(run_check "$dir" 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
+
+Refs #42, #7')
+  [ $? -eq 1 ] || fail "another repository's issue number passed as this repository's"
+  assert_contains "$out" 'reference not named by the brief: #7' "another repository's number was not refused"
+  out=$(run_check "$dir" 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
+
+Refs https://github.com/other/repo/issues/42')
+  [ $? -eq 1 ] || fail "another repository's URL satisfied this repository's reference"
+  assert_contains "$out" 'reference to another repository' "another repository's URL was not refused"
+  assert_contains "$out" 'missing reference: add "Refs #42"' "another repository's URL satisfied #42"
+  pass "only this repository's named issues count as references"
 }
 
-test_scrub_strips_without_rewording() {
-  local dir="$TMP_ROOT/scrub" out err
+test_scrub_refuses_instead_of_dropping() {
+  local dir="$TMP_ROOT/scrub" out err rc
   write_launch_brief "$dir" 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8. Confirm that yourself on main first.
 The owner authorised this with the words "Yes implement".
 
 Keep the column order.'
-  out=$(cd "$REPO" && "$CHECK" scrub "$dir" 2>"$TMP_ROOT/scrub.err") || fail "scrub failed"
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir" 2>"$TMP_ROOT/scrub.err")
+  rc=$?
   err=$(cat "$TMP_ROOT/scrub.err")
+  [ "$rc" -eq 1 ] || fail "scrub exited $rc on refused lines, want 1"
+  assert_equals '' "$out" "scrub printed a string despite refused lines"
+  assert_contains "$err" 'line 1: direct address: Fix https://github.com/acme/widgets/issues/42' "scrub did not name the address line"
+  assert_contains "$err" 'line 2: quote: The owner authorised' "scrub did not name the quote line"
+  write_launch_brief "$dir" 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
+
+Keep the column order.'
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir") || fail "scrub refused a clean intent"
   assert_equals 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
 
 Keep the column order.
 
-Refs #42' "$out" "scrub did not keep exactly the passing sentences plus Refs"
-  assert_contains "$err" 'removed direct address: Confirm that yourself on main first.' "scrub did not report the address"
-  assert_contains "$err" 'removed quote: The owner authorised' "scrub did not report the quote"
+Refs #42' "$out" "scrub did not return the words plus Refs"
   printf '%s\n' "$out" > "$TMP_ROOT/scrubbed.txt"
   (cd "$REPO" && "$CHECK" check "$dir" "$TMP_ROOT/scrubbed.txt" >/dev/null 2>&1) \
     || fail "the scrubbed string did not pass the check"
-  pass "scrub strips refused sentences without rewording and its output passes"
+  pass "scrub refuses and names each refused line, and a clean scrub passes the check"
 }
 
 test_scrub_keeps_the_captains_refs_line() {
@@ -176,8 +209,8 @@ test_later_words_and_resolved_substance() {
 Item 1 makes exports UTF-8. Item 2 keeps the column order.
 Also keep the CSV header.' --captain-words "$words" --resolved "$resolved") \
     || fail "authorized later words and resolved substance were refused: $out"
-  printf 'Item 1 is what you asked the crewmate for.\n' > "$resolved"
-  out=$(run_check "$dir" 'Item 1 is what you asked the crewmate for.' --resolved "$resolved") \
+  printf 'Item 1 is what you must build first.\n' > "$resolved"
+  out=$(run_check "$dir" 'Item 1 is what you must build first.' --resolved "$resolved") \
     && fail "resolved substance skipped the refusal classes"
   assert_contains "$out" 'direct address' "resolved substance with direct address was not refused"
   pass "later captain words and resolved substance are authorized but still checked"
@@ -233,12 +266,13 @@ test_no_mistakes_brief_names_the_check() {
 }
 
 test_clean_intent_passes
+test_product_sentences_are_not_refused
 test_each_forbidden_class_names_the_line
 test_a_mentioned_quote_is_not_an_attributed_quote
 test_repository_vocabulary_is_not_fleet_vocabulary
 test_examples_and_inline_code_are_exempt
 test_issue_reference_is_required_and_never_invented
-test_scrub_strips_without_rewording
+test_scrub_refuses_instead_of_dropping
 test_scrub_keeps_the_captains_refs_line
 test_later_words_and_resolved_substance
 test_legacy_marked_task_uses_only_marked_words
