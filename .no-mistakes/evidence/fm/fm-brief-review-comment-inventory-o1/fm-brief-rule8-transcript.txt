@@ -1,0 +1,51 @@
+=== $ FM_HOME=$LAB bin/fm-brief.sh inv-no-mistakes alpha --mode no-mistakes  (exit follows)
+scaffolded: $LAB/data/inv-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- rules 7..8 region of generated brief.md:
+54:7. Never administer infrastructure that every lane shares. Two things are shared:
+76:8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `$LAB/data/inv-no-mistakes/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, $LAB/data/inv-no-mistakes/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DMWS2JJ3155S2SY6SZMBV0/bin/fm-brief.sh --help` owns the procedure).
+--- occurrences of 'wording' / 'not instructions' in brief: 0
+=== $ FM_HOME=$LAB bin/fm-brief.sh inv-direct-PR alpha --mode direct-PR  (exit follows)
+scaffolded: $LAB/data/inv-direct-PR/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- rules 7..8 region of generated brief.md:
+51:7. Never administer infrastructure that every lane shares. Two things are shared:
+73:8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `$LAB/data/inv-direct-PR/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, $LAB/data/inv-direct-PR/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DMWS2JJ3155S2SY6SZMBV0/bin/fm-brief.sh --help` owns the procedure).
+--- occurrences of 'wording' / 'not instructions' in brief: 0
+=== $ FM_HOME=$LAB bin/fm-brief.sh inv-local-only alpha --mode local-only  (exit follows)
+scaffolded: $LAB/data/inv-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- rules 7..8 region of generated brief.md:
+51:7. Never administer infrastructure that every lane shares. Two things are shared:
+73:8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `$LAB/data/inv-local-only/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, $LAB/data/inv-local-only/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DMWS2JJ3155S2SY6SZMBV0/bin/fm-brief.sh --help` owns the procedure).
+--- occurrences of 'wording' / 'not instructions' in brief: 0
+=== scout
+scaffolded: $LAB/data/inv-scout/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- 'automated-review' lines in scout brief: 0
+--- scout numbered rules:
+22:1. Never push to any remote and never open a PR.
+23:2. Stay inside this worktree; the only files you may write outside it are the
+24:3. Use gh-axi for GitHub operations and chrome-devtools-axi for browser opera
+25:4. Report status by appending one line:
+41:5. If you hit the same obstacle twice, append `blocked [at=<epoch>]: {why}` a
+42:6. If a decision belongs to a human (product choices, destructive actions),
+46:7. Never administer infrastructure that every lane shares. Two things are sha
+=== --help excerpt (rule 8 procedure)
+Ship tasks carry rule 8, the existing-review-comment inventory, which applies
+only when the task continues an existing branch or PR:
+  - Before the first commit, the worker writes every automated-review comment
+    already on that PR to data/<task-id>/review-comments.md under the
+    firstmate home, one entry per comment: reviewer, file, line, and a
+    one-line claim in the worker's own reading. The list is complete; the
+    worker never filters it by how minor a comment looks.
+  - The inventory never goes in the status file. The worker appends exactly
+    one status line pointing at it:
+    note [at=<epoch>]: review-comment inventory: N comments, data/<task-id>/review-comments.md
+  - At ready time the PR body states, for each listed comment, one of: the
+    pipeline covered it, the worker fixed it, or it is left open with a
+    reason. The ready line stays a single line.
+  - Firstmate's guidance in the brief is limited to naming the PR. The brief
+    never classifies a comment's nature in advance (for example as "wording"
+    or "not instructions"), because a pre-classified comment is read as
+    ignorable even when it argues the change misses its stated purpose.

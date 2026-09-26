@@ -1,0 +1,2 @@
+last_status_line => note [at=1790386170]: review-comment inventory: 3 comments, $HOME/data/x/review-comments.md
+verb note: recognized
