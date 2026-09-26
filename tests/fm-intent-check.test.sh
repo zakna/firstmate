@@ -70,6 +70,20 @@ ${pair#*|}")
   pass "each forbidden class is refused and names its line"
 }
 
+test_a_mentioned_quote_is_not_an_attributed_quote() {
+  local dir="$TMP_ROOT/mentioned" body out
+  body='Keep a quote and three "the owner" attributions out of the body.
+The owner said: "ship it".
+"Ship it," said the owner.'
+  write_launch_brief "$dir" "$body"
+  out=$(run_check "$dir" 'Keep a quote and three "the owner" attributions out of the body.') \
+    || fail "a sentence that only mentions quotes was refused: $out"
+  out=$(run_check "$dir" 'The owner said: "ship it".') && fail "a said-then-quote passed"
+  out=$(run_check "$dir" '"Ship it," said the owner.') && fail "a quote-then-said passed"
+  assert_contains "$out" 'quote' "quote-then-said was not refused as a quote"
+  pass "only a quote a speech word attributes is refused"
+}
+
 test_repository_vocabulary_is_not_fleet_vocabulary() {
   local dir="$TMP_ROOT/vocab" out
   write_launch_brief "$dir" 'Pin the captain dependency list. Keep the supervisor restart logic.'
@@ -203,6 +217,7 @@ test_no_mistakes_brief_names_the_check() {
 
 test_clean_intent_passes
 test_each_forbidden_class_names_the_line
+test_a_mentioned_quote_is_not_an_attributed_quote
 test_repository_vocabulary_is_not_fleet_vocabulary
 test_examples_and_inline_code_are_exempt
 test_issue_reference_is_required_and_never_invented
