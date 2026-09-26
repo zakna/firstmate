@@ -1,0 +1,12 @@
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RAW4MI/data/unraid-logs-full-s1/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+$ FM_HOME=$LAB bin/fm-promote.sh unraid-logs-full-s1 --mode direct-PR --yolo off
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+promoted unraid-logs-full-s1 to ship mode=direct-PR yolo=off (teardown protection restored)
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RAW4MI/data/unraid-logs-full-s1/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RAW4MI bin/fm-send.sh unraid-logs-full-s1 "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RAW4MI/data/unraid-logs-full-s1/ship-instructions.md)"
