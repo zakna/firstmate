@@ -45,6 +45,10 @@ test_slot_anchored_to_another_clone_refuses() {
   git -C "$clone_b" worktree add --quiet --detach "$slot" HEAD
   printf '{"worktrees":[{"name":"1","path":"%s"}]}\n' "$slot" > "$pool/treehouse-state.json"
   before=$(git -C "$slot" rev-parse HEAD)
+  printf 'advanced\n' >> "$seed/README.md"
+  git -C "$seed" -c user.name='Firstmate Tests' -c user.email='tests@example.invalid' commit -qam advance
+  git -C "$seed" push --quiet "$origin" main
+  [ "$(git -C "$origin" rev-parse main)" != "$before" ] || fail "fixture origin did not advance past the slot"
 
   id='pool-anchor-foreign-r1'
   fm_test_spawn_brief "$home" "$id"
@@ -61,7 +65,7 @@ test_slot_anchored_to_another_clone_refuses() {
     "the refusal did not name the clone the spawn wanted"
   [ ! -e "$home/state/$id.meta" ] || fail "the refused spawn published task metadata"
   [ ! -e "$pool/1/.fm-slot-owner" ] || fail "the refused spawn claimed the foreign slot"
-  [ ! -e "$clone_b/.git/FETCH_HEAD" ] || fail "the refused spawn fetched into the foreign clone"
+  [ ! -e "$(git -C "$slot" rev-parse --path-format=absolute --git-path FETCH_HEAD)" ] || fail "the refused spawn fetched into the foreign clone"
   [ "$(git -C "$slot" rev-parse HEAD)" = "$before" ] || fail "the refused spawn moved the foreign slot's HEAD"
   pass "a spawn for one clone refuses a Treehouse slot anchored to another clone of the same origin"
 
