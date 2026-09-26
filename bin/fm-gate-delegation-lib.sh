@@ -19,7 +19,10 @@
 #
 # The list catches explicit delegation wording and its close variants, such as
 # an instruction to the worker to decide the ask-user findings or a waiver of
-# the wait for firstmate's decision; it does not try to catch every paraphrase
+# the wait for firstmate's decision. A waiver counts only when the same clause
+# ties the wait to a gate decision ("to decide", "ask-user", "gate",
+# "finding"), so "don't wait for me; push the branch" is not a match. It does
+# not try to catch every paraphrase
 # of implied delegation. A bare "decide the ask-user findings" counts only as
 # an instruction to the worker: at the start of the text or of a clause, or
 # with "you" as its subject, so "wait for firstmate to decide the ask-user
@@ -50,7 +53,7 @@ you (now )?own (each|every|all|any|the|your) ask-user (finding|findings|decision
 (answer|decide|resolve|handle|respond to) (each|every|all|any|the|your)? ?(of the )?ask-user (finding|findings|gate|gates|question|questions|decision|decisions) (yourself|on your own|without escalating)
 (^|[.;:!?,*-] )((and|then|please|now|just) )?decide (each|every|all|any|the|your) (of the )?ask-user (finding|findings)
 you('ll|( (can|may|should|will|must))?) decide (each|every|all|any|the|your) (of the )?ask-user (finding|findings)
-(do not|don't|never|no need to) wait for (firstmate|the captain|a decision|my decision|me)
+(do not|don't|never|no need to) wait for (firstmate|the captain|me)[^.;:!?,]*( to decide|ask-user|gates?|findings?)
 no need for (firstmate|the captain|me) to decide
 (no longer|not) up to (firstmate|the captain|me) to decide
 (do not|don't|no need to|you need not|you don't need to) escalate (the |any |each |your )?ask-user
