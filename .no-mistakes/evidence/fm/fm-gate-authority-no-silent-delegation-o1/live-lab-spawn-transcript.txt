@@ -1,0 +1,42 @@
+== spawn: delegating Firstmate spec (must refuse) ==
+$ fm-spawn.sh deleg /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/projects/proj claude --mode no-mistakes --yolo off
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/data/deleg/brief.md ## Firstmate spec hands gate responses to the worker: "You own each gate response"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead
+[exit=1]
+(no deleg task state written)
+brief.md
+
+== spawn: spec restating/quoting the rule (must pass the delegation check) ==
+$ fm-spawn.sh okspec /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/projects/proj claude --mode no-mistakes --yolo off
+spawned okspec harness=claude kind=ship mode=no-mistakes yolo=off window=fm:fm-okspec worktree=/Users/olivier/.treehouse/proj-f4140e/1/proj
+[exit=0]
+brief.md
+launch-brief.md
+okspec.busy-gen
+okspec.busy-state
+okspec.git-hooks
+okspec.meta
+fm:1: shell#* (1 panes) [80x24] 
+fm:2: fm-okspec# (1 panes) [80x24] 
+main:1: editor#* (2 panes) [80x24] 
+main:2: counter# (1 panes) [80x24] 
+main:3: work# (1 panes) [80x24] 
+main:4: runner# (1 panes) [80x24] 
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/post-commit: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/post-checkout: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/commit-msg: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-push: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/post-merge: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks/pre-commit: Permission denied
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state/okspec.git-hooks: Directory not empty
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG/state: Directory not empty
+rm: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tij3NG: Directory not empty
+lab removed: no

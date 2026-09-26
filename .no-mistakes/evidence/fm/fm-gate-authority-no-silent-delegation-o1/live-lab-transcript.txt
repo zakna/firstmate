@@ -1,0 +1,138 @@
+== PR 58 steer 003 wording (must refuse) ==
+$ fm-send.sh lane Run\ /no-mistakes\ to\ a\ green\ PR.\ You\ own\ each\ gate\ response\;\ do\ not\ pass\ --yes.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the requested message WILL still be sent.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: steer hands gate responses to the worker: "You own each gate response"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+== close variants (must refuse) ==
+$ fm-send.sh lane Follow\ the\ pipeline\ and\ drive\ every\ gate\ response\ yourself.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "drive every gate response yourself"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane You\ can\ decide\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "You can decide the ask-user findings"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane Once\ promoted\,\ decide\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "decide the ask-user findings"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane Don\'t\ wait\ for\ firstmate\ to\ decide\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "Don't wait for firstmate to decide the ask-user findings"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane No\ need\ for\ the\ captain\ to\ decide\ each\ ask-user\ finding.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "No need for the captain to decide"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane It\ is\ no\ longer\ up\ to\ firstmate\ to\ decide\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "no longer up to firstmate to decide"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+$ fm-send.sh lane Do\ not\ escalate\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: steer hands gate responses to the worker: "Do not escalate the ask-user"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; nothing was sent
+[exit=1]
+
+== legitimate steers (must send) ==
+$ fm-send.sh lane Decision\ for\ nm-r1-review\ under\ ask-user-authority:\ fix\ finding\ F2.\ Feed\ it\ via\ no-mistakes\ axi\ respond\ --action\ fix\ --ids\ F2\;\ never\ answer\ the\ ask-user\ findings\ yourself.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+[exit=0]
+
+$ fm-send.sh lane Stop\ and\ wait\ for\ firstmate\ to\ decide\ the\ ask-user\ findings.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+[exit=0]
+
+$ fm-send.sh lane Don\'t\ wait\ for\ me\;\ push\ the\ branch\ once\ tests\ pass.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+[exit=0]
+
+$ fm-send.sh lane Do\ not\ wait\ for\ the\ captain\ to\ merge\ the\ PR.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+[exit=0]
+
+$ fm-send.sh lane Never\ wait\ for\ a\ decision\ on\ naming\;\ pick\ one.
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+[exit=0]
+
+== inbox after run ==
+001.msg
+002.msg
+003.msg
+004.msg
+005.msg
+handled
+
+== worker pane (lab tmux) ==
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+: Firstmate instruction waiting: list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+: Firstmate instruction waiting: list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+: Firstmate instruction waiting: list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+: Firstmate instruction waiting: list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+: Firstmate instruction waiting: list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180
+000gn/T/fm-lab.OLiu7F/state/lane.inbox'/*.msg and, in numeric order, read and ac
+t on each, then mv each handled file to '/var/folders/hk/lxr6ppq904ng8dxkxskjs51
+80000gn/T/fm-lab.OLiu7F/state/lane.inbox'/handled/.
+
+== spawn: brief with delegating Firstmate spec ==
+[brief exit=0]
+## Firstmate spec
+Run the pipeline to a green PR. You own each gate
+response; do not pass --yes.
+
+# Herdr lifecycle declaration - NOT ENABLED
+$ fm-spawn.sh deleg proj claude --mode no-mistakes --yolo off
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+bin/fm-spawn.sh: line 2842: cd: proj: No such file or directory
+[exit=1]
+(no deleg task state written)
+
+== promote: scout brief with delegating spec ==
+[brief exit=0]
+$ fm-promote.sh sc --mode no-mistakes --yolo off
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.OLiu7F/data/sc/brief.md ## Firstmate spec hands gate responses to the worker: "decide the ask-user findings"; ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead; it would carry into the promoted brief
+[exit=1]
+kind=scout
+brief.md
+lab removed: yes
