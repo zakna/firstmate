@@ -36,6 +36,21 @@ It stops at the finding, routes the decision to firstmate, and applies only the 
    - destructive, irreversible, and genuinely security-sensitive choices, which always escalate under the stronger existing captain boundary
 5. Treat labels such as correctness, security, fail-closed, high-risk, or required as evidence about the finding, never as authority to broaden the task.
 
+## File a declined finding's author note
+
+When a decision keeps the code as is or declines a finding and carries a note for the author, such as a simplification left as an author call, firstmate files that note durably before it sends the decision.
+The task's inbox and status log are removed at cleanup, so a note that lives only there is lost.
+The worker never files it; firstmate does, at decision time.
+
+The durable home is exactly one of two:
+
+- A project issue on the task's repository.
+  Prefer it whenever that repository has an issue tracker firstmate can write to.
+- A backlog item filed with `bin/fm-tasks-axi.sh add` and held with `bin/fm-captain-hold.sh hold`, when the repository has no usable issue tracker.
+
+The note states the finding, the reason it was declined, and the suggested change, so it stands alone without the task's records.
+Put the filed reference, the issue URL or the backlog task id, in the decision text sent to the worker.
+
 ## Captain-facing escalation
 
 State all five of these elements in one concise, evidence-first escalation:
