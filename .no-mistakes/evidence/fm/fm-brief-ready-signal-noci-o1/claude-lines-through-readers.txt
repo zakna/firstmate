@@ -1,0 +1,12 @@
+line: done [at=1790000000]: PR https://github.com/zakna/unraid/pull/58 no CI: test step 12/13 scenarios live; untested: real reboot of the host (the premise of the change); held: fresh independent review of this final head still required before merge
+  fm_dod_note_reports_ci_ready: yes
+  fm_dod_pr_url_from_done_note: https://github.com/zakna/unraid/pull/58
+line: done [at=1790000000]: PR https://github.com/zakna/ha/pull/71 checks green: typecheck, actionlint; read changed files: no
+  fm_dod_note_reports_ci_ready: yes
+  fm_dod_pr_url_from_done_note: https://github.com/zakna/ha/pull/71
+line: done [at=1790000000]: PR https://github.com/zakna/unraid/pull/58 no CI: test step 12/13 scenarios live; untested: real reboot of the host (the premise of the change); held: fresh independent review of this final head still required before merge
+  inactive-reconcile pr_for_task scrape @base: []
+  inactive-reconcile pr_for_task scrape @target: [https://github.com/zakna/unraid/pull/58]
+line: done [at=1790000000]: PR https://github.com/zakna/ha/pull/71 checks green: typecheck, actionlint; read changed files: no
+  inactive-reconcile pr_for_task scrape @base: []
+  inactive-reconcile pr_for_task scrape @target: [https://github.com/zakna/ha/pull/71]

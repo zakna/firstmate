@@ -1,0 +1,16 @@
+note=PR https://github.com/o/dotagents/pull/245 no CI: test step 12/13 scenarios live; untested: real reboot (premise of the change)
+  ci_ready=yes url=https://github.com/o/dotagents/pull/245
+note=PR https://github.com/o/ha/pull/71 checks green: typecheck, actionlint; read changed files: no
+  ci_ready=yes url=https://github.com/o/ha/pull/71
+note=PR https://github.com/o/ha/pull/71 checks green: typecheck; read changed files: no; held: fresh independent review still required on this head
+  ci_ready=yes url=https://github.com/o/ha/pull/71
+note=PR https://github.com/o/portfolio/pull/43 held: fresh independent review still required on final head
+  ci_ready=no url=https://github.com/o/portfolio/pull/43
+note=PR https://github.com/o/x/pull/9 checks green
+  ci_ready=yes url=https://github.com/o/x/pull/9
+note=PR https://github.com/o/x/pull/9
+  ci_ready=no url=https://github.com/o/x/pull/9
+note=implemented the fix; no CI: configured for this repo
+  ci_ready=no url=<none>
+note=opened PR https://github.com/o/x/pull/9 no CI: yet
+  ci_ready=no url=<none>
