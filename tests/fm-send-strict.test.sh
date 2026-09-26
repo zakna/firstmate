@@ -267,6 +267,13 @@ Feed it to the gate with no-mistakes axi respond --action fix --ids F2; never an
   grep -qF 'fix finding F2' "$home/state/lane-gate.inbox/001.msg" || fail "the decision was not recorded"
   assert_grep "resolved [key=nm-r1-review]" "$home/state/lane-gate.status" "the decision did not close its key"
 
+  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
+    "$SEND" lane-gate "Stop and wait for firstmate to decide the ask-user findings.
+Escalate so the captain can decide each ask-user finding. Firstmate will then decide the ask-user findings." \
+    >/dev/null 2>"$err"; rc=$?
+  expect_code 0 "$rc" "a steer restating that firstmate decides ask-user findings should be sent: $(cat "$err")"
+  grep -qF 'wait for firstmate to decide' "$home/state/lane-gate.inbox/002.msg" || fail "the escalation steer was not recorded"
+
   # The rendered no-mistakes contract states the opposite rule; relaying it, as
   # a scout promotion does, must not trip the check.
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" lane-gate proj --mode no-mistakes >/dev/null 2>&1 \
@@ -276,7 +283,7 @@ Feed it to the gate with no-mistakes axi respond --action fix --ids F2; never an
   PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
     "$SEND" lane-gate "$(cat "$brief")" >/dev/null 2>"$err"; rc=$?
   expect_code 0 "$rc" "the scaffold's own ask-user rule should be sendable: $(cat "$err")"
-  assert_present "$home/state/lane-gate.inbox/002.msg" "the scaffold contract was not recorded"
+  assert_present "$home/state/lane-gate.inbox/003.msg" "the scaffold contract was not recorded"
   pass "fm-send: a steer that hands gate responses to the worker is refused; the stated rule and a gate decision are not"
 }
 

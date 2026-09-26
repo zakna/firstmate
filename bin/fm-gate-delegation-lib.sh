@@ -20,7 +20,8 @@
 # A match is skipped when it only mentions or forbids the wording rather than
 # granting it: the phrase opens right after a quote or backtick, an immediately
 # preceding negation ("never", "do not", "don't") inverts it, or firstmate, the
-# captain, "I", or "we" is its subject. That keeps the rendered scaffold's own
+# captain, "I", or "we" is its subject, directly or through a modal ("to",
+# "can", "will then"). That keeps the rendered scaffold's own
 # rule and a decision message answering a named finding through the gate from
 # tripping it. Matching is case-insensitive and on whole words, over the whole
 # text with every run of whitespace folded to one space, so a phrase wrapped
@@ -74,7 +75,7 @@ fm_gate_delegation_match() {  # <text>
           if (prev ~ /["`'\''\342\200\234]/) skip = 1
           if (prefix ~ /(^|[^a-z])(never|not|cannot|no longer)( ever)? $/) skip = 1
           if (prefix ~ /n'\''t $/) skip = 1
-          if (prefix ~ /(^|[^a-z])(firstmate|the captain|captain|i|we)('\''ll| will| shall| alone| itself| myself)? $/) skip = 1
+          if (prefix ~ /(^|[^a-z])(firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/) skip = 1
           if (!skip) {
             print substr(text, start, len)
             exit 0
