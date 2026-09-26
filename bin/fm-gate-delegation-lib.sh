@@ -17,17 +17,20 @@
 # every steer to a task worker; each refuses and prints the matched phrase with
 # FM_GATE_DELEGATION_RULE.
 #
-# A match is skipped when it only mentions or forbids the wording rather than
-# granting it: the phrase opens right after a quote or backtick, an immediately
-# preceding negation ("never", "do not", "don't") inverts it, or firstmate, the
-# captain, "I", or "we" is its subject, directly or through a modal ("to",
-# "can", "will then"), unless a removal ("don't wait for", "no need for", "no
-# longer up to", "instead of", "rather than", "without") takes that subject out
-# of the decision. That keeps the rendered scaffold's own
-# rule and a decision message answering a named finding through the gate from
-# tripping it. Matching is case-insensitive and on whole words, over the whole
-# text with every run of whitespace folded to one space, so a phrase wrapped
-# across lines still matches.
+# The list catches explicit delegation wording and its close variants, such as
+# an instruction to the worker to decide the ask-user findings or a waiver of
+# the wait for firstmate's decision; it does not try to catch every paraphrase
+# of implied delegation. A bare "decide the ask-user findings" counts only as
+# an instruction to the worker: at the start of the text or of a clause, or
+# with "you" as its subject, so "wait for firstmate to decide the ask-user
+# findings" is not a match. A match is skipped when it only mentions or forbids
+# the wording rather than granting it: the phrase opens right after a quote or
+# backtick, or an immediately preceding negation ("never", "do not", "don't")
+# inverts it. That keeps the rendered scaffold's own rule and a decision
+# message answering a named finding through the gate from tripping it.
+# Matching is case-insensitive and on whole words, over the whole text with
+# every run of whitespace folded to one space, so a phrase wrapped across lines
+# still matches.
 # No side effects on source. set -u / set -e safe.
 
 # shellcheck source=bin/fm-brief-heading-lib.sh
@@ -45,7 +48,11 @@ you (now )?own (each|every|all|any|the|your) ((no-mistakes|pipeline|ask-user) )?
 you (now )?own (each|every|all|any|the|your) ask-user (finding|findings|decision|decisions|question|questions)
 (drive|handle|answer|decide|resolve|make|own) (each|every|all|any|the|your) ((no-mistakes|pipeline) )?gate (response|responses|decision|decisions|answer|answers|call|calls) (yourself|on your own|without escalating)
 (answer|decide|resolve|handle|respond to) (each|every|all|any|the|your)? ?(of the )?ask-user (finding|findings|gate|gates|question|questions|decision|decisions) (yourself|on your own|without escalating)
-decide (each|every|all|any|the|your) (of the )?ask-user (finding|findings)
+(^|[.;:!?,*-] )((and|then|please|now|just) )?decide (each|every|all|any|the|your) (of the )?ask-user (finding|findings)
+you('ll|( (can|may|should|will|must))?) decide (each|every|all|any|the|your) (of the )?ask-user (finding|findings)
+(do not|don't|never|no need to) wait for (firstmate|the captain|a decision|my decision|me)
+no need for (firstmate|the captain|me) to decide
+(no longer|not) up to (firstmate|the captain|me) to decide
 (do not|don't|no need to|you need not|you don't need to) escalate (the |any |each |your )?ask-user
 EOF
 }
@@ -69,6 +76,7 @@ fm_gate_delegation_match() {  # <text>
         while (match(rest, pats[i])) {
           start = offset + RSTART
           len = RLENGTH
+          while (len > 0 && substr(lower, start, 1) !~ /[a-z]/) { start++; len-- }
           prefix = substr(lower, 1, start - 1)
           prev = substr(prefix, length(prefix), 1)
           skip = 0
@@ -77,7 +85,6 @@ fm_gate_delegation_match() {  # <text>
           if (prev ~ /["`'\''\342\200\234]/) skip = 1
           if (prefix ~ /(^|[^a-z])(never|not|cannot|no longer)( ever)? $/) skip = 1
           if (prefix ~ /n'\''t $/) skip = 1
-          if (prefix ~ /(^|[^a-z])(firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/ && prefix !~ /(n'\''t wait for|(^|[^a-z])(not wait for|never wait for|no need for|not up to|no longer up to|instead of|rather than|without)) (firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/) skip = 1
           if (!skip) {
             print substr(text, start, len)
             exit 0
