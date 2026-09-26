@@ -148,6 +148,23 @@ Refs #42' "$out" "scrub did not keep exactly the passing sentences plus Refs"
   pass "scrub strips refused sentences without rewording and its output passes"
 }
 
+test_scrub_keeps_the_captains_refs_line() {
+  local dir="$TMP_ROOT/scrub-refs" out
+  write_launch_brief "$dir" 'Make the fan quieter at night.
+Refs #43'
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir" 2>/dev/null) || fail "scrub failed"
+  assert_equals 'Make the fan quieter at night.
+Refs #43' "$out" "scrub dropped the captain's Refs line"
+  write_launch_brief "$dir" 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
+
+Refs #42'
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir" 2>/dev/null) || fail "scrub failed"
+  assert_equals 'Fix https://github.com/acme/widgets/issues/42 so exports are UTF-8.
+
+Refs #42' "$out" "scrub repeated a reference the captain's Refs line already names"
+  pass "scrub keeps a Refs line the brief names without repeating it"
+}
+
 test_later_words_and_resolved_substance() {
   local dir="$TMP_ROOT/later" out words resolved
   write_launch_brief "$dir" 'Do items 1 and 2 of the audit report.'
@@ -222,6 +239,7 @@ test_repository_vocabulary_is_not_fleet_vocabulary
 test_examples_and_inline_code_are_exempt
 test_issue_reference_is_required_and_never_invented
 test_scrub_strips_without_rewording
+test_scrub_keeps_the_captains_refs_line
 test_later_words_and_resolved_substance
 test_legacy_marked_task_uses_only_marked_words
 test_task_dir_prefers_the_launch_overlay

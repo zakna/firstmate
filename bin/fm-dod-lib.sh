@@ -414,7 +414,7 @@ fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
     function refs_unit(k) { return k ~ /^refs (#[0-9]+|https:\/\/[^ ,]+)(,? (#[0-9]+|https:\/\/[^ ,]+))*\.?$/ }
     BEGIN {
       nterm = split(terms, term, ";")
-      split(linked, lk, " "); for (i in lk) if (lk[i] != "") need[lk[i]] = 1
+      nlk = split(linked, lk, " "); for (i in lk) if (lk[i] != "") need[lk[i]] = 1
       split(mentioned, mk, " "); for (i in mk) if (mk[i] != "") known[mk[i]] = 1
       bad = 0; cand_units = 0
     }
@@ -424,13 +424,13 @@ fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
       n = units($0); kept = ""
       for (i = 1; i <= n; i++) {
         k = ukey(u[i]); if (k == "") { if (mode == "scrub") kept = kept u[i]; continue }
-        why = ""
+        why = ""; nref = 0
         if (!is_code && refs_unit(k)) {
           rest = k; sub(/^refs /, "", rest); gsub(/,/, " ", rest); m = split(rest, r, " ")
           for (j = 1; j <= m; j++) {
             sub(/\.$/, "", r[j]); num = r[j]; sub(/^#/, "", num); sub(/^.*\//, "", num)
             if (!(num in known)) why = "reference not named by the brief: " r[j]
-            delete need[num]
+            ref[++nref] = num
           }
         } else {
           if (!is_code) why = refused(u[i])
@@ -443,6 +443,7 @@ fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
           else printf "intent-scrub: removed %s: %s\n", why, trim(u[i]) > "/dev/stderr"
           continue
         }
+        for (j = 1; j <= nref; j++) delete need[ref[j]]
         kept = (kept == "" ? u[i] : (kept ~ /[ \t]$/ ? kept : kept " ") u[i])
       }
       if (mode == "scrub" && (n == 0 || trim(kept) != "" || is_code)) { sub(/[ \t]+$/, "", kept); print (is_code ? $0 : kept) }
@@ -453,6 +454,9 @@ fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
         if (cand_units == 0) { print "intent-check: the intent is empty"; exit 1 }
         exit bad > 0
       }
+      refs = ""
+      for (i = 1; i <= nlk; i++) if (lk[i] in need) { refs = refs (refs == "" ? "" : ", ") "#" lk[i]; delete need[lk[i]] }
+      if (refs != "") printf "\nRefs %s\n", refs
       exit 0
     }
   ' "$@"
@@ -487,24 +491,28 @@ fm_intent_check() {  # <source-file> <intent-file> [--captain-words <file>]... [
   if [ -n "$prev" ]; then rm -f -- "$auth"; echo "intent-check: $prev needs a file" >&2; return 2; fi
   terms=$(fm_intent_foreign_terms . | paste -sd';' -)
   linked=$(fm_intent_linked_issues "$src" . | tr '\n' ' ')
-  mentioned=$(grep -oE '(#|/issues/|/pull/)[0-9]+' "$src" 2>/dev/null | grep -oE '[0-9]+' | tr '\n' ' ')
+  mentioned=$(fm_intent_mentioned "$src")
   fm_intent_scan check "$terms" "$linked" "$mentioned" "${args[@]}" role=cand "$cand"
   rc=$?
   rm -f -- "$auth"
   return "$rc"
 }
 
+# Print the issue and PR numbers the source names in any form, space-separated.
+fm_intent_mentioned() {  # <source-file>
+  grep -oE '(#|/issues/|/pull/)[0-9]+' "$1" 2>/dev/null | grep -oE '[0-9]+' | tr '\n' ' '
+}
+
 # Print the authorized words without refused sentences, then a `Refs #<n>` line
-# for each issue of this repository the source links. Removed sentences go to
-# stderr; nothing is reworded.
+# for each issue of this repository the source links and no kept `Refs` line
+# already names. Removed sentences go to stderr; nothing is reworded.
 fm_intent_scrub() {  # <source-file>
   local src=$1 auth terms linked
   auth=$(fm_intent_authorized_text "$src") || { echo "intent-scrub: cannot read authorized intent from $src" >&2; return 2; }
   terms=$(fm_intent_foreign_terms . | paste -sd';' -)
-  linked=$(fm_intent_linked_issues "$src" . | sed 's/^/#/' | paste -sd',' - | sed 's/,/, /g')
-  printf '%s\n' "$auth" | fm_intent_scan scrub "$terms" "" "" role=cand - |
+  linked=$(fm_intent_linked_issues "$src" . | tr '\n' ' ')
+  printf '%s\n' "$auth" | fm_intent_scan scrub "$terms" "$linked" "$(fm_intent_mentioned "$src")" role=cand - |
     awk 'NF { if (!first) first = NR; last = NR } { l[NR] = $0 } END { for (i = first; first && i <= last; i++) print l[i] }'
-  [ -z "$linked" ] || printf '\nRefs %s\n' "$linked"
 }
 
 # The `nm-<run>-<step>` decision key this block mandates is load-bearing beyond
