@@ -104,6 +104,20 @@
 # additions of missing knowledge. A correction edits only the wrong text and
 # never runs fm-ensure-agents-md.sh, whose inserted sections and created
 # pointer file are themselves additions.
+# Ship tasks carry rule 8, the existing-review-comment inventory, which applies
+# only when the task continues an existing branch or PR:
+#   - Before the first commit, the worker lists every automated-review comment
+#     already on that PR in its first status note, one entry per comment:
+#     reviewer, file, line, and a one-line claim in the worker's own reading.
+#     The list is complete; the worker never filters it by how minor a comment
+#     looks.
+#   - Its ready signal or PR body then states, for each listed comment, one of:
+#     the pipeline covered it, the worker fixed it, or it is left open with a
+#     reason.
+#   - Firstmate's guidance in the brief is limited to naming the PR. The brief
+#     never classifies a comment's nature in advance (for example as "wording"
+#     or "not instructions"), because a pre-classified comment is read as
+#     ignorable even when it argues the change misses its stated purpose.
 # Scaffolds carry no role scope: fm-spawn.sh supplies fm_brief_worker_role from
 # fm-dod-lib.sh to every ship/scout launch brief, so this file never becomes a
 # second owner of a contract that must stay current across relaunches.
@@ -647,6 +661,7 @@ $ASK_USER_BLOCK
    A decision or blocker you opened stays open until a \`resolved\` line carrying its exact key lands; a later \`done:\` or \`working:\` line never closes it, even when the answer is what started that work.
    Firstmate's reply normally writes that closing line at answer time; when a blocker or wait clears WITHOUT a firstmate reply, append \`resolved [at=<epoch>]: {how it cleared}\` yourself (same \`[key=<slug>]\` if you opened it with one) as you resume.
 $SHARED_INFRA_RULE
+8. If this task continues an existing branch or PR, list every automated-review comment already on it in your first status note before your first commit, and settle each one in your ready signal or PR body (\`$FM_ROOT/bin/fm-brief.sh --help\` owns the procedure).
 
 $INBOX_SECTION
 

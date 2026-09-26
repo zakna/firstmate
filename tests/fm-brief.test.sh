@@ -1293,8 +1293,8 @@ test_crewmate_scaffolds_forbid_pool_administration() {
   # One shared string, not two copies: the emitted rule must be byte-identical
   # across the ship and scout scaffolds so a later edit cannot fix one and miss
   # the other.
-  ship_rule=$(awk '/^7\. Never administer/,/^$/' "$home/data/brief-pool-no-mistakes/brief.md")
-  scout_rule=$(awk '/^7\. Never administer/,/^$/' "$brief")
+  ship_rule=$(awk '/^7\. Never administer/ { f = 1 } f && (/^$/ || /^8\./) { exit } f' "$home/data/brief-pool-no-mistakes/brief.md")
+  scout_rule=$(awk '/^7\. Never administer/ { f = 1 } f && (/^$/ || /^8\./) { exit } f' "$brief")
   [ -n "$ship_rule" ] || fail "ship brief emitted no shared-infrastructure rule to compare"
   [ "$ship_rule" = "$scout_rule" ] \
     || fail "ship and scout shared-infrastructure rules have drifted apart"
@@ -1315,6 +1315,45 @@ test_crewmate_scaffolds_forbid_pool_administration() {
     "secondmate charter must not inherit the crewmate pool-administration prohibition"
 
   pass "fm-brief.sh: every crewmate scaffold forbids administering the shared worktree pool"
+}
+
+# A task that continues an existing branch or PR must inventory every
+# automated-review comment already on it, and the procedure lives in --help so
+# firstmate's brief text never has to (and never may) pre-classify a comment.
+test_ship_existing_review_comment_inventory() {
+  local home="$TMP_ROOT/review-inventory" mode brief help
+  mkdir -p "$home/data"
+  for mode in no-mistakes direct-PR local-only; do
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "inv-$mode" alpha --mode "$mode" >/dev/null 2>&1 \
+      || fail "fm-brief.sh --mode $mode exited non-zero"
+    brief="$home/data/inv-$mode/brief.md"
+    assert_grep "continues an existing branch or PR" "$brief" \
+      "$mode ship brief did not scope the review-comment inventory to continued work"
+    assert_grep "list every automated-review comment already on it" "$brief" \
+      "$mode ship brief did not require the automated-review comment inventory"
+    assert_grep "before your first commit" "$brief" \
+      "$mode ship brief did not time the inventory before the first commit"
+    assert_grep "ready signal or PR body" "$brief" \
+      "$mode ship brief did not require settling each comment at ready time"
+  done
+
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" inv-scout alpha --scout >/dev/null 2>&1 \
+    || fail "fm-brief.sh --scout exited non-zero"
+  assert_no_grep "automated-review comment" "$home/data/inv-scout/brief.md" \
+    "scout brief must not carry the ship-only review-comment inventory"
+
+  help=$("$ROOT/bin/fm-brief.sh" --help)
+  for want in "reviewer, file, line, and a one-line claim" \
+    "the pipeline covered it, the worker fixed it, or it is left open with a" \
+    "limited to naming the PR" \
+    "never classifies a comment's nature in advance"; do
+    case "$help" in
+      *"$want"*) ;;
+      *) fail "fm-brief.sh --help lost the review-comment inventory procedure: $want" ;;
+    esac
+  done
+
+  pass "fm-brief.sh: ship briefs require an existing automated-review comment inventory"
 }
 
 test_script_parses
@@ -1351,3 +1390,4 @@ test_branch_prefix_is_refused_where_it_does_not_apply
 test_branch_prefix_value_is_validated
 test_branch_prefix_command_is_shell_safe
 test_crewmate_scaffolds_forbid_pool_administration
+test_ship_existing_review_comment_inventory
