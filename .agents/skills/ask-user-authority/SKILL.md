@@ -46,7 +46,7 @@ The durable home is exactly one of two:
 
 - A project issue on the task's repository.
   Prefer it whenever that repository has an issue tracker firstmate can write to.
-- A held backlog item created in one step with `bin/fm-captain-hold.sh hold <new-id> --title <title> --reason <note> --origin <task-id>`, when the repository has no usable issue tracker.
+- A backlog item filed with `bin/fm-tasks-axi.sh add`, carrying the full note in its body, then held with `bin/fm-captain-hold.sh hold` under a one-line reason that summarizes it and names the origin task, when the repository has no usable issue tracker.
 
 A decision made under the away posture by the supervision branch always uses the held backlog item and never files a project issue.
 
