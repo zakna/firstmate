@@ -8,8 +8,9 @@
 # github.com origin's issue URLs are required as `Refs #<n>`.
 # check exits 0 when the file passes, 1 with one `intent-check:` line per
 # refused line, and 2 on a usage or read error.
-# scrub prints the authorized words without refused sentences, plus the
-# `Refs #<n>` line the check requires; each removed sentence goes to stderr.
+# scrub prints the authorized words plus the `Refs #<n>` line the check
+# requires; when any line is refused it prints nothing, names each refused
+# line on stderr, and exits 1, never removing or rewording a sentence.
 # bin/fm-dod-lib.sh owns the rules (fm_intent_check, fm_intent_scrub) and
 # which file a task directory resolves to (fm_intent_source_file).
 set -u
