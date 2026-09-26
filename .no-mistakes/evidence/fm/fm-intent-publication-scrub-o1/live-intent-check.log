@@ -1,0 +1,84 @@
+
+$ fm-brief.sh intent-live-a1 rackfan --mode no-mistakes
+[exit 0]
+--- Definition of done lines naming the check:
+105:From this repository, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh scrub $LAB/data/intent-live-a1` to print the authorized words with a `Refs #<n>` last line for each issue of this repository the brief links and the words do not already reference; never add a reference the brief does not name.
+107:Write the exact string you will pass to a file, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check $LAB/data/intent-live-a1 <file>`, and pass that file's content unchanged only when the check passes.
+109:When scrub or the check refuses a line, never drop or reword it yourself: ask firstmate to edit the brief's intent wording, or stop; never start the run with a refused string.
+
+=== Scenario A: leaky Captain's intent (dotagents/unraid/ha retro patterns) ===
+## Captain's intent
+Captain: make the fan quieter at night, see https://github.com/acme/rackfan/issues/43.
+The captain said "yes implement it".
+You must rebase your branch before starting.
+Checks are green and no run exists yet, so the crewmate should start the pipeline.
+Keep the curve below 30 percent after 22:00.
+
+## Firstmate spec
+When starting no-mistakes, pass `--intent` as only this brief's `## Captain's intent` subsection body, not its heading, plus any later words the captain actually said.
+Preserve the actual words without adding speaker labels or direct address; the subsection heading supplies provenance outside the pipeline input.
+For a legacy brief with no such subsection, include only words on lines marked `[captain] `, excluding that metadata prefix; never copy its mixed `# Task` wholesale.
+If it has no provenance-marked captain words, stop and ask firstmate instead of starting no-mistakes.
+Do not include `## Firstmate spec`, later Firstmate build constraints, or your own decisions and tradeoffs.
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh scrub /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1
+intent-scrub: line 1: speaker label: Captain: make the fan quieter at night, see https://github.com/acme/rackfan/issues/43.
+intent-scrub: line 2: quote: The captain said "yes implement it".
+intent-scrub: line 3: direct address: You must rebase your branch before starting.
+intent-scrub: line 4: fleet vocabulary "crewmate": Checks are green and no run exists yet, so the crewmate should start the pipeline.
+[exit 1]
+
+=== Scenario B: clean specification; scrub adds Refs at creation; check passes ===
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh scrub $D > intent.txt
+[exit 0]
+--- intent.txt:
+Make the fan quieter at night, as described in https://github.com/acme/rackfan/issues/43.
+Keep the curve below 30 percent after 22:00.
+Show the temperature so you can see drift.
+[Fan docs](https://example.com/fan) describe the night curve.
+
+Refs #43
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/intent.txt
+[exit 0]
+
+=== Scenario C: composed string drops the Refs line ===
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/norefs.txt
+intent-check: missing reference: add "Refs #43" as the last line
+[exit 1]
+
+=== Scenario D: composed string adds Firstmate spec / framing / label / invented ref ===
+Make the fan quieter at night, as described in https://github.com/acme/rackfan/issues/43.
+Keep the curve below 30 percent after 22:00.
+Show the temperature so you can see drift.
+[Fan docs](https://example.com/fan) describe the night curve.
+
+Refs #43
+Refactor the PWM module first.
+## Firstmate spec
+User: ship it tonight.
+Refs #99
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/bad.txt
+intent-check: line 7: outside the authorized intent: Refactor the PWM module first.
+intent-check: line 8: fleet vocabulary "firstmate": ## Firstmate spec
+intent-check: line 9: speaker label: User: ship it tonight.
+intent-check: line 10: reference not named by the brief: #99: Refs #99
+[exit 1]
+
+=== Scenario E: launch overlay (as fm-spawn renders it) is the source and repeats the no-drop rule ===
+139:The string you pass must pass the Definition of done's intent check unchanged: never drop or reword a sentence it refuses, but ask firstmate to edit the brief's intent wording, or stop.
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/intent.txt
+intent-check: line 1: outside the authorized intent: Make the fan quieter at night, as described in https://github.com/acme/rackfan/issues/43.
+intent-check: line 3: outside the authorized intent: Show the temperature so you can see drift.
+intent-check: line 4: outside the authorized intent: [Fan docs](https://example.com/fan) describe the night curve.
+[exit 1]
+
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DK1AVVH1ZRM0271HKTG6N1/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/data/intent-live-a1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.EvASWH/ov.txt
+intent-check: missing reference: add "Refs #43" as the last line
+[exit 1]
+
+(lab removed)
