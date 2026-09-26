@@ -1,0 +1,6 @@
+# Rendered secondmate charter (fm-brief.sh sm-lab-x1 --secondmate --no-projects) - status-signal lines
+49:   `echo "{state} [at=<epoch>]: {one short line}" >> '$LAB/state/sm-lab-x1.status' && { [ ! -e '$LAB/config/fleet-ledger' ] || '/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DJY3TQN96MJWCAZWJH3GWB/bin/fm-fleet-ledger.sh' appended '$LAB/config' '$LAB/state/sm-lab-x1.status' >/dev/null 2>&1 || true; }`
+59:If its first reportable event is `working [key=<work-slug>] [at=<epoch>]: {material phase}`, use the same key on its later `paused`, `done`, `failed`, `needs-decision`, or `blocked` event so the earlier working phase is superseded.
+60:When a keyed phase ends without another reportable state, append `resolved [key=<work-slug>] [at=<epoch>]: {why it is no longer active}`.
+62:The main firstmate's answer normally writes that closing line at answer time; when a blocker or wait clears WITHOUT an answer from the main firstmate, append `resolved [at=<epoch>]: {how it cleared}` yourself (keyed with `[key=<slug>]` if you opened it with one) as your domain resumes.
+70:If this charter cannot be carried out, append `blocked [at=<epoch>]: {why}` or `failed [at=<epoch>]: {why}` to the main status file and stop.

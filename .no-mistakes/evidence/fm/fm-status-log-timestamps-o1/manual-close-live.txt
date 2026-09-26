@@ -1,0 +1,25 @@
+## Scenario: fm-send --resolve-key with a read-only status file (guarded append fails -> manual close command)
+$ fm-send.sh t1 --resolve-key db-choice 'use postgres'
+exit=1
+fm-gate-refuse: gate agent lifecycle permitted only against lab home $LAB
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the requested message WILL still be sent.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DJY3TQN96MJWCAZWJH3GWB/bin/fm-wake-lib.sh: line 2316: $LAB/state/t1.status: Permission denied
+error: the answer was delivered to sess:fm-t1, but the close for decision key(s) 'db-choice' could not be appended to $LAB/state/t1.status. Close it manually with: printf '%s
+' resolved\ \[key=db-choice\]\ \[at=1790383823\]:\ answered:\ use\ postgres >> $LAB/state/t1.status - do not resend the answer.
+$ <run manual close command>
+exit=0
+$ cat t1.status
+needs-decision [key=db-choice]: postgres or sqlite?
+resolved [key=db-choice] [at=1790383823]: answered: use postgres
+$ classify: status_line_verb / status_line_at_epoch / status_open_decisions on stamped close
+verb=resolved
+at=1790383823 (2026-09-26T00:50:23Z)
+open decisions: []
+$ fm-wake-drain.sh (OPEN DECISIONS should be absent)
+0

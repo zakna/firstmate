@@ -1,0 +1,4 @@
+# Worker fills the charter's keyed-working template; classifier reads prefix, key, and stamp
+working [key=db-migr] [at=1790383839]: migrating schema
+done [key=db-migr] [at=1790383844]: migrated
+verb=working key=db-migr at=1790383839 terminal_last=yes prefix_unrecognized=no
