@@ -354,7 +354,9 @@ fm_intent_foreign_terms() {  # [repo-dir]
   done
 }
 
-# The one scanner behind fm_intent_check and fm_intent_scrub. Text splits into
+# The one scanner behind fm_intent_check and fm_intent_scrub. A quote is
+# refused only when a speech word sits directly against it, so a sentence that
+# merely mentions quotes or quotes a phrase nobody said is not. Text splits into
 # sentences at terminal punctuation followed by space, the same way on every
 # side, so a sentence stripped from a line leaves the rest of that line
 # authorized. Lines in a ``` or ~~~ fence or indented as an example are single
@@ -404,7 +406,7 @@ fm_intent_scan() {  # <mode> <terms> <linked> <mentioned> <file-args...>
         return "speaker label"
       if (has_word(l, "(you|your|yours|yourself|yourselves)") || t ~ /^captain[ \t]*,/ || l ~ /[,;][ \t]*captain[ \t]*[,.!?]/)
         return "direct address"
-      if (unit ~ /^[ \t]*>/ || ((s ~ /"[^"]+"/ || s ~ /\342\200\234/) && has_word(l, "(said|says|say|saying|wrote|words|asked|told|replied|answered|quote|quoted|authori[sz]ed|approved)")))
+      if (unit ~ /^[ \t]*>/ || l ~ /(^|[^a-z])(said|says|say|saying|wrote|words|asked|told|replied|answered|quoted|approved|authori[sz]ed)[ \t]*[,:]?[ \t]*("|\342\200\234)/ || l ~ /("|\342\200\235)[ \t]*,?[ \t]*(said|says|wrote|asked|replied|answered)([^a-z]|$)/)
         return "quote"
       for (i = 1; i <= nterm; i++) if (has_word(l, term[i])) return "fleet vocabulary \"" term[i] "\""
       return ""
