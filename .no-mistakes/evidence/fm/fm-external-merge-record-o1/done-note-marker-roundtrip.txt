@@ -1,0 +1,14 @@
+note: external merge: commit a3d31e2764f110dd03c46136177360bc78dc3f63, parents 2, by BagToad, at 2026-09-22T16:24:02Z
+[real-record] staged+validated; marker args:
+arg=--pr
+arg=https://github.com/cli/cli/pull/14497
+arg=--note
+arg=external%20merge:%20commit%20a3d31e2764f110dd03c46136177360bc78dc3f63,%20parents%202,%20by%20BagToad,%20at%202026-09-22T16:24:02Z
+[all-unknown] staged+validated; marker args:
+arg=--pr
+arg=https://github.com/cli/cli/pull/14497
+arg=--note
+arg=external%20merge:%20commit%20unknown,%20parents%20unknown,%20by%20unknown,%20at%20unknown
+[injected] REFUSED: invalid pending-close arguments in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-note.Gn2qlL/state/t1.backlog-close
+[arbitrary] REFUSED: invalid pending-close arguments in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-note.Gn2qlL/state/t1.backlog-close
+[newline] REFUSED: invalid pending-close arguments in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-note.Gn2qlL/state/t1.backlog-close

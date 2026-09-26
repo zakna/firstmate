@@ -1,0 +1,5 @@
+ok - an external merge records its commit, parents, actor, and time, or unknown
+ok - validated merged polls notify once and retire before the next watcher cycle
+ok - queued merges retain their away authority after captain return
+ok - poll distinguishes attended authorization from external landing
+exit=0

@@ -1,0 +1,2 @@
+not ok - external-merge teardown failed
+exit=1

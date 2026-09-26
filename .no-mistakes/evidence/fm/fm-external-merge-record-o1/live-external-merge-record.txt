@@ -1,0 +1,47 @@
+=== ext-mergecommit (cli/cli#14497)
+rc=0
+window=fm-ext-mergecommit
+worktree=/tmp/wt
+kind=ship
+merge_origin=external
+merge_commit=a3d31e2764f110dd03c46136177360bc78dc3f63
+merge_parents=2
+merge_actor=BagToad
+merged_at=2026-09-22T16:24:02Z
+pr=https://github.com/cli/cli/pull/14497
+=== ext-squash (facebook/react#37645)
+rc=0
+window=fm-ext-squash
+worktree=/tmp/wt
+kind=ship
+merge_origin=external
+merge_commit=59aff3e18cb5b3a336c280bbfa57ec37999511b9
+merge_parents=1
+merge_actor=javache
+merged_at=2026-09-18T09:10:51Z
+pr=https://github.com/facebook/react/pull/37645
+=== ext-unmerged (zakna/firstmate#8)
+rc=0
+window=fm-ext-unmerged
+worktree=/tmp/wt
+kind=ship
+merge_origin=external
+merge_commit=unknown
+merge_parents=unknown
+merge_actor=unknown
+merged_at=unknown
+pr=https://github.com/zakna/firstmate/pull/8
+=== re-record is idempotent (no duplicate fields)
+rc=0
+1
+=== identity mismatch refused (record names cli/cli#14497, call claims #14507)
+rc=1
+meta unchanged
+=== timeout bound: FM_MERGE_EXTERNAL_READ_TIMEOUT=1 with slow gh
+rc=0 elapsed=1s
+merge_origin=external
+merge_commit=unknown
+merge_parents=unknown
+merge_actor=unknown
+merged_at=unknown
+merged_at=unknown
