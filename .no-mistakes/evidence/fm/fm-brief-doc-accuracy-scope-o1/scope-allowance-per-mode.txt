@@ -1,0 +1,33 @@
+--- no-mistakes
+3:# Task
+4-## Captain's intent
+--
+10:# Scope allowance
+11-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DJY0PSGZ9VYFKG22MKBRAK/AGENTS.md` section 7 owns this allowance.
+--
+18:# Setup
+19-You are in a disposable git worktree of portfolio, at a detached HEAD on a clean default branch.
+--- direct-PR
+3:# Task
+4-## Captain's intent
+--
+10:# Scope allowance
+11-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DJY0PSGZ9VYFKG22MKBRAK/AGENTS.md` section 7 owns this allowance.
+--
+18:# Setup
+19-You are in a disposable git worktree of portfolio, at a detached HEAD on a clean default branch.
+--- local-only
+3:# Task
+4-## Captain's intent
+--
+10:# Scope allowance
+11-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3DJY0PSGZ9VYFKG22MKBRAK/AGENTS.md` section 7 owns this allowance.
+--
+18:# Setup
+19-You are in a disposable git worktree of portfolio, at a detached HEAD on a clean default branch.
+--- scout
+3:# Task
+4-## Captain's intent
+--
+15:# Setup
+16-You are in a disposable git worktree of portfolio, at a detached HEAD on a clean default branch.
