@@ -19,6 +19,7 @@ Firstmate always applies this judgment, decides any finding that is unambiguous 
 
 The implementation worker never decides or answers its own ask-user finding.
 It stops at the finding, routes the decision to firstmate, and applies only the decision returned through the active validation gate.
+No brief, spec, or steer may hand that decision back to the worker; spawn, promotion, and steers refuse such wording through `bin/fm-gate-delegation-lib.sh`.
 
 ## Decide
 

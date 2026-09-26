@@ -11,6 +11,11 @@
 # before anything is marked, recorded, or typed, because an empty marked
 # secondmate request delivers only marker and correlation bytes and leaves the
 # parent waiting on a reply to nothing.
+# A text steer to a task worker that hands the worker its own gate responses
+# ("you own each gate response") is refused before anything is recorded or
+# typed, printing the matched phrase; bin/fm-gate-delegation-lib.sh owns the
+# phrase list, the rule, and what counts as a match. A secondmate target is not
+# checked, because a secondmate applies ask-user-authority itself.
 # Special keys instead of text: fm-send.sh <target> --key Enter
 # Key support is backend-specific: tmux/herdr support Escape, Enter, and C-c;
 # Orca currently supports Enter and C-c only, and rejects Escape.
@@ -259,6 +264,8 @@ fi
 . "$SCRIPT_DIR/fm-task-inbox-lib.sh"
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-gate-delegation-lib.sh
+. "$SCRIPT_DIR/fm-gate-delegation-lib.sh"
 
 FM_GUARD_CONTINUE_LINE='This is a supervision warning only; the requested message WILL still be sent.' "$SCRIPT_DIR/fm-guard.sh" || true
 
@@ -543,6 +550,14 @@ fm_send_known_undelivered_cleanup() {
 if [ -n "$TARGET_SELECTOR" ] && [ -n "$TARGET_META" ] && [ "$(fm_meta_get "$TARGET_META" kind)" = secondmate ]; then
   MARK_FROM_FIRSTMATE=1
   TARGET_TASK_ID=$(fm_send_id_from_meta "$TARGET_META")
+fi
+
+# A steer must not hand a task worker its own gate responses (see the header).
+# A secondmate applies ask-user-authority itself, so it is not a task worker here.
+if [ "${1:-}" != --key ] && [ "$MARK_FROM_FIRSTMATE" != 1 ] \
+  && DELEGATION_PHRASE=$(fm_gate_delegation_match "$*"); then
+  echo "error: steer hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; nothing was sent" >&2
+  exit 1
 fi
 
 # Validate the answerer-closes request before any durable mutation or send: the
