@@ -274,6 +274,17 @@ Escalate so the captain can decide each ask-user finding. Firstmate will then de
   expect_code 0 "$rc" "a steer restating that firstmate decides ask-user findings should be sent: $(cat "$err")"
   grep -qF 'wait for firstmate to decide' "$home/state/lane-gate.inbox/002.msg" || fail "the escalation steer was not recorded"
 
+  local waiver
+  for waiver in "Don't wait for firstmate to decide the ask-user findings." \
+    "No need for the captain to decide each ask-user finding." \
+    "It is no longer up to firstmate to decide the ask-user findings."; do
+    PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
+      "$SEND" lane-gate "$waiver" >/dev/null 2>"$err"; rc=$?
+    [ "$rc" -ne 0 ] || fail "a steer taking the decision away from firstmate was sent: $waiver"
+    assert_contains "$(cat "$err")" "ask-user-authority is the single owner" "the refusal should state the rule for: $waiver"
+  done
+  assert_absent "$home/state/lane-gate.inbox/003.msg" "a refused waiver steer was recorded"
+
   # The rendered no-mistakes contract states the opposite rule; relaying it, as
   # a scout promotion does, must not trip the check.
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" lane-gate proj --mode no-mistakes >/dev/null 2>&1 \

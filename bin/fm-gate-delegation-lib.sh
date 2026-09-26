@@ -21,7 +21,9 @@
 # granting it: the phrase opens right after a quote or backtick, an immediately
 # preceding negation ("never", "do not", "don't") inverts it, or firstmate, the
 # captain, "I", or "we" is its subject, directly or through a modal ("to",
-# "can", "will then"). That keeps the rendered scaffold's own
+# "can", "will then"), unless a removal ("don't wait for", "no need for", "no
+# longer up to", "instead of", "rather than", "without") takes that subject out
+# of the decision. That keeps the rendered scaffold's own
 # rule and a decision message answering a named finding through the gate from
 # tripping it. Matching is case-insensitive and on whole words, over the whole
 # text with every run of whitespace folded to one space, so a phrase wrapped
@@ -75,7 +77,7 @@ fm_gate_delegation_match() {  # <text>
           if (prev ~ /["`'\''\342\200\234]/) skip = 1
           if (prefix ~ /(^|[^a-z])(never|not|cannot|no longer)( ever)? $/) skip = 1
           if (prefix ~ /n'\''t $/) skip = 1
-          if (prefix ~ /(^|[^a-z])(firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/) skip = 1
+          if (prefix ~ /(^|[^a-z])(firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/ && prefix !~ /(n'\''t wait for|(^|[^a-z])(not wait for|never wait for|no need for|not up to|no longer up to|instead of|rather than|without)) (firstmate|the captain|captain|i|we)(('\''ll| will| shall| alone| itself| myself| to| can| should| must| may)( then)?)? $/) skip = 1
           if (!skip) {
             print substr(text, start, len)
             exit 0
