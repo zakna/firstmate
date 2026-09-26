@@ -1329,12 +1329,12 @@ test_ship_existing_review_comment_inventory() {
     brief="$home/data/inv-$mode/brief.md"
     assert_grep "continues an existing branch or PR" "$brief" \
       "$mode ship brief did not scope the review-comment inventory to continued work"
-    assert_grep "list every automated-review comment already on it" "$brief" \
-      "$mode ship brief did not require the automated-review comment inventory"
-    assert_grep "before your first commit" "$brief" \
-      "$mode ship brief did not time the inventory before the first commit"
-    assert_grep "ready signal or PR body" "$brief" \
-      "$mode ship brief did not require settling each comment at ready time"
+    assert_grep "before your first commit write every automated-review comment already on it to \`$home/data/inv-$mode/review-comments.md\`" "$brief" \
+      "$mode ship brief did not require the inventory file under the firstmate home before the first commit"
+    assert_grep "note [at=<epoch>]: review-comment inventory: N comments, $home/data/inv-$mode/review-comments.md" "$brief" \
+      "$mode ship brief did not require the single inventory status line"
+    assert_grep "settle each one in the PR body, keeping the ready line single" "$brief" \
+      "$mode ship brief did not require settling each comment in the PR body"
   done
 
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" inv-scout alpha --scout >/dev/null 2>&1 \
@@ -1343,8 +1343,10 @@ test_ship_existing_review_comment_inventory() {
     "scout brief must not carry the ship-only review-comment inventory"
 
   help=$("$ROOT/bin/fm-brief.sh" --help)
-  for want in "reviewer, file, line, and a one-line claim" \
-    "the pipeline covered it, the worker fixed it, or it is left open with a" \
+  for want in "reviewer, file, line, and a" \
+    "The inventory never goes in the status file" \
+    "review-comment inventory: N comments, data/<task-id>/review-comments.md" \
+    "pipeline covered it, the worker fixed it, or it is left open with a" \
     "limited to naming the PR" \
     "never classifies a comment's nature in advance"; do
     case "$help" in

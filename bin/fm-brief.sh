@@ -106,14 +106,17 @@
 # pointer file are themselves additions.
 # Ship tasks carry rule 8, the existing-review-comment inventory, which applies
 # only when the task continues an existing branch or PR:
-#   - Before the first commit, the worker lists every automated-review comment
-#     already on that PR in its first status note, one entry per comment:
-#     reviewer, file, line, and a one-line claim in the worker's own reading.
-#     The list is complete; the worker never filters it by how minor a comment
-#     looks.
-#   - Its ready signal or PR body then states, for each listed comment, one of:
-#     the pipeline covered it, the worker fixed it, or it is left open with a
-#     reason.
+#   - Before the first commit, the worker writes every automated-review comment
+#     already on that PR to data/<task-id>/review-comments.md under the
+#     firstmate home, one entry per comment: reviewer, file, line, and a
+#     one-line claim in the worker's own reading. The list is complete; the
+#     worker never filters it by how minor a comment looks.
+#   - The inventory never goes in the status file. The worker appends exactly
+#     one status line pointing at it:
+#     note [at=<epoch>]: review-comment inventory: N comments, data/<task-id>/review-comments.md
+#   - At ready time the PR body states, for each listed comment, one of: the
+#     pipeline covered it, the worker fixed it, or it is left open with a
+#     reason. The ready line stays a single line.
 #   - Firstmate's guidance in the brief is limited to naming the PR. The brief
 #     never classifies a comment's nature in advance (for example as "wording"
 #     or "not instructions"), because a pre-classified comment is read as
@@ -661,7 +664,7 @@ $ASK_USER_BLOCK
    A decision or blocker you opened stays open until a \`resolved\` line carrying its exact key lands; a later \`done:\` or \`working:\` line never closes it, even when the answer is what started that work.
    Firstmate's reply normally writes that closing line at answer time; when a blocker or wait clears WITHOUT a firstmate reply, append \`resolved [at=<epoch>]: {how it cleared}\` yourself (same \`[key=<slug>]\` if you opened it with one) as you resume.
 $SHARED_INFRA_RULE
-8. If this task continues an existing branch or PR, list every automated-review comment already on it in your first status note before your first commit, and settle each one in your ready signal or PR body (\`$FM_ROOT/bin/fm-brief.sh --help\` owns the procedure).
+8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to \`$DATA/$ID/review-comments.md\` and append one status line \`note [at=<epoch>]: review-comment inventory: N comments, $DATA/$ID/review-comments.md\`; at ready time settle each one in the PR body, keeping the ready line single (\`$FM_ROOT/bin/fm-brief.sh --help\` owns the procedure).
 
 $INBOX_SECTION
 
