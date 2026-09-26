@@ -1,0 +1,18 @@
+# Live lab: same clone-b slot, bin/fm-spawn.sh anchor-own-r1 <lab>/w/b/project --scout (owner clone)
+spawned anchor-own-r1 harness=codex kind=scout window=firstmate:fm-anchor-own-r1 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/project
+spawn-exit=0
+bash-3.2$ 
+## state/anchor-own-r1.meta:
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/project
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/w/b/project
+harness=codex
+## slot-owner claim:
+task=anchor-own-r1
+home=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.xpf4sr
+## worker window tail:
+  Note: You’re in a subdirectory of a Git project. Trusting will apply to the repository root: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/w/b/project
+  Do you trust the contents of this directory? Working with untrusted contents comes with higher risk of prompt injection. Trusting the directory allows project-local config, hooks, and exec policies
+  to load.
+› 1. Yes, continue
+  2. No, quit
+  Press enter to continue

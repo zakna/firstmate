@@ -1,0 +1,18 @@
+# Live lab: real tmux (fm-lab socket) + real treehouse v2.3.0; two clones a/ and b/ of one origin
+## slot created by 'treehouse get' from clone b:
+slot=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/project
+slot git-common-dir=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/w/b/project/.git
+## primary pane (bin/fm-spawn.sh anchor-live-r1 <lab>/w/a/project --scout):
+error: Treehouse pool slot /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/project is a worktree of clone '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/w/b/project', not of clone '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/w/a/project' this spawn is for; two clones of one origin share a Treehouse pool, so refusing to launch task anchor-live-r1 in the other clone's slot (free the pool with 'treehouse return' and then 'treehouse destroy' on that slot after reading its preview); inspect window firstmate:fm-anchor-live-r1
+spawn-exit=1
+bash-3.2$ 
+## worker window (fm-spawn's treehouse get reused the clone-b slot):
+Run "treehouse update" to update
+🌳 Setting up worktree...
+🌳 Entered worktree at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/project. Type 'exit' to return.
+➜  project git:HEAD 
+## post-refusal state
+state dir: .last-watcher-beat 
+slot-owner file: ls: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.xpf4sr/pool/.treehouse/project-3bd5b0/1/.fm-slot-owner: No such file or directory
+slot HEAD before=c1cf2402539c1facea3cbe9ef2c87baca4daedd6 after=c1cf2402539c1facea3cbe9ef2c87baca4daedd6
+clone-b FETCH_HEAD mtime=Sep 26 02:52:03 2026 (brief written Sep 26 02:52:26 2026; predates spawn, from the initial treehouse get)

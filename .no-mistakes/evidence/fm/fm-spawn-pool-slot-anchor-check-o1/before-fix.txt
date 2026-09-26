@@ -1,0 +1,6 @@
+$ bin/fm-spawn.sh pool-anchor-foreign-r1 /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.rR6Keq/two-clones/home-a/project --scout   # pane in /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.rR6Keq/two-clones/pool/1/project
+spawned pool-anchor-foreign-r1 harness=codex kind=scout window=firstmate:fm-pool-anchor-foreign-r1 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.rR6Keq/two-clones/pool/1/project
+exit=0
+not ok - spawn for clone A launched in a slot anchored to clone B
+spawned pool-anchor-foreign-r1 harness=codex kind=scout window=firstmate:fm-pool-anchor-foreign-r1 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.rR6Keq/two-clones/pool/1/project
+test-exit=1

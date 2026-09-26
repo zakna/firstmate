@@ -1,0 +1,6 @@
+$ bin/fm-spawn.sh pool-anchor-foreign-r1 /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.tWrpV2/two-clones/home-a/project --scout   # pane in /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.tWrpV2/two-clones/pool/1/project
+error: Treehouse pool slot /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.tWrpV2/two-clones/pool/1/project is a worktree of clone '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.tWrpV2/two-clones/home-b/project', not of clone '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-spawn-pool-slot-anchor.tWrpV2/two-clones/home-a/project' this spawn is for; two clones of one origin share a Treehouse pool, so refusing to launch task pool-anchor-foreign-r1 in the other clone's slot (free the pool with 'treehouse return' and then 'treehouse destroy' on that slot after reading its preview); inspect window firstmate:fm-pool-anchor-foreign-r1
+exit=1
+ok - a spawn for one clone refuses a Treehouse slot anchored to another clone of the same origin
+ok - the same slot still launches and is claimed for the clone that owns it
+# all fm-spawn-pool-slot-anchor tests passed
