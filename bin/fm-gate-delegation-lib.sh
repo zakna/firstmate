@@ -22,8 +22,7 @@
 # the wait for firstmate's decision. A waiver counts only when the same clause
 # ties the wait to a gate decision ("to decide", "ask-user", "gate",
 # "finding"), so "don't wait for me; push the branch" is not a match. It does
-# not try to catch every paraphrase
-# of implied delegation. A bare "decide the ask-user findings" counts only as
+# not try to catch every paraphrase of implied delegation. A bare "decide the ask-user findings" counts only as
 # an instruction to the worker: at the start of the text or of a clause, or
 # with "you" as its subject, so "wait for firstmate to decide the ask-user
 # findings" is not a match. A match is skipped when it only mentions or forbids
@@ -33,7 +32,9 @@
 # message answering a named finding through the gate from tripping it.
 # Matching is case-insensitive and on whole words, over the whole text with
 # every run of whitespace folded to one space, so a phrase wrapped across lines
-# still matches.
+# still matches. A line break also starts a clause, after any leading markdown
+# list ("-", "*", "+", "1.") or blockquote (">") marker, so a "decide the
+# ask-user findings" line under a heading or an unpunctuated line matches too.
 # No side effects on source. set -u / set -e safe.
 
 # shellcheck source=bin/fm-brief-heading-lib.sh
@@ -66,12 +67,13 @@ fm_gate_delegation_match() {  # <text>
   local patterns
   patterns=$(fm_gate_delegation_patterns)
   printf '%s\n' "$1" | LC_ALL=C FM_GATE_DELEGATION_PATTERNS=$patterns awk '
-    { text = text (NR > 1 ? " " : "") $0 }
-    END {
-      gsub(/[[:space:]]+/, " ", text)
-      gsub(/\342\200\231/, "'\''", text)
+    function fold(s) {
+      gsub(/[[:space:]]+/, " ", s)
+      gsub(/\342\200\231/, "'\''", s)
+      return s
+    }
+    function scan(text,    lower, i, offset, rest, start, len, prefix, prev, skip) {
       lower = tolower(text)
-      n = split(ENVIRON["FM_GATE_DELEGATION_PATTERNS"], pats, "\n")
       for (i = 1; i <= n; i++) {
         if (pats[i] == "") continue
         offset = 0
@@ -88,15 +90,25 @@ fm_gate_delegation_match() {  # <text>
           if (prev ~ /["`'\''\342\200\234]/) skip = 1
           if (prefix ~ /(^|[^a-z])(never|not|cannot|no longer)( ever)? $/) skip = 1
           if (prefix ~ /n'\''t $/) skip = 1
-          if (!skip) {
-            print substr(text, start, len)
-            exit 0
-          }
+          if (!skip) return substr(text, start, len)
           offset = start
           rest = substr(lower, start + 1)
         }
       }
-      exit 1
+      return ""
+    }
+    {
+      text = text (NR > 1 ? " " : "") $0
+      line = $0
+      sub(/^[[:space:]]*(>[[:space:]]*)*([-*+]|[0-9]+\.)?[[:space:]]*/, "", line)
+      lines = lines (NR > 1 ? ". " : "") line
+    }
+    END {
+      n = split(ENVIRON["FM_GATE_DELEGATION_PATTERNS"], pats, "\n")
+      hit = scan(fold(text))
+      if (hit == "") hit = scan(fold(lines))
+      if (hit == "") exit 1
+      print hit
     }
   '
 }

@@ -273,7 +273,12 @@ Feed it to the gate with no-mistakes axi respond --action fix --ids F2; never an
     "Don't wait for firstmate to decide the ask-user findings." \
     "No need for the captain to decide each ask-user finding." \
     "It is no longer up to firstmate to decide the ask-user findings." \
-    "No need to wait for firstmate to decide the ask-user findings."; do
+    "No need to wait for firstmate to decide the ask-user findings." \
+    "## Gate
+Decide each ask-user finding." \
+    "Steps:
+- Run tests
+Decide the ask-user findings."; do
     PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
       "$SEND" lane-gate "$waiver" >/dev/null 2>"$err"; rc=$?
     [ "$rc" -ne 0 ] || fail "a steer handing the ask-user decision to the worker was sent: $waiver"
