@@ -206,11 +206,11 @@ fm_exec_timed() {  # <seconds> <grace-seconds> <command...>
     exit 125
   fi
   owner=${FM_EXEC_TIMED_OWNER_PID:-$$}
-  [ "$owner" != "$BASHPID" ] || owner=$PPID
   unset FM_EXEC_TIMED_OWNER_PID
   if command -v perl >/dev/null 2>&1; then
     exec perl -MPOSIX=WNOHANG,setpgid -MTime::HiRes=time -e '
-      my ($bound, $grace, $owner) = (shift, shift, shift);
+      my ($bound, $grace, $owner, $caller_parent) = (shift, shift, shift, shift);
+      $owner = $caller_parent if $owner == $$;
       my $parent = getppid();
       my ($pid, $pending, $kill_at, $timed_out) = (0, "", 0, 0);
       for my $sig (qw(TERM INT HUP)) {
@@ -257,7 +257,7 @@ fm_exec_timed() {  # <seconds> <grace-seconds> <command...>
         }
         select undef, undef, undef, 0.05;
       }
-    ' -- "$seconds" "$grace" "$owner" "$@"
+    ' -- "$seconds" "$grace" "$owner" "$PPID" "$@"
   elif command -v timeout >/dev/null 2>&1; then
     exec timeout -k "$grace" "$seconds" "$@"
   elif command -v gtimeout >/dev/null 2>&1; then
