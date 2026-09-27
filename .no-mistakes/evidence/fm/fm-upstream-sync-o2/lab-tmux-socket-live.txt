@@ -1,0 +1,42 @@
++(eval):3> DEEP=+(eval):3> mktemp -d /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.XXXXXX
++(eval):3> DEEP=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr 
++(eval):3> LAB=+(eval):3> printf very-deep-worktree-segment-%02d/ 1 2 3 4 5 6
++(eval):3> LAB=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab 
++(eval):3> dirname /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
++(eval):3> mkdir -p /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06
++(eval):4> bin/fm-lab-home.sh create /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
+/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
++(eval):4> echo 'lab path length 247'
+lab path length 247
++(eval):5> SD=+(eval):5> bin/fm-lab-home.sh tmux-dir /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
++(eval):5> SD=/tmp/fml.8Jqdy6 
++(eval):5> echo 'socket dir=/tmp/fml.8Jqdy6'
+socket dir=/tmp/fml.8Jqdy6
++(eval):5> stat -f '%Lp %u' /tmp/fml.8Jqdy6
+700 501
++(eval):5> id -u
+501
++(eval):6> bin/fm-lab-home.sh tmux-dir /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
+/tmp/fml.8Jqdy6
++(eval):7> TMUX_TMPDIR=/tmp/fml.8Jqdy6 tmux -L fm-lab new-session -d -s primary 'sleep 300'
++(eval):7> TMUX_TMPDIR=/tmp/fml.8Jqdy6 tmux -L fm-lab ls
+main: 4 windows (created Sun Sep 27 22:39:19 2026)
+primary: 1 windows (created Sun Sep 27 22:39:20 2026)
++(eval):8> bin/fm-lab-home.sh teardown /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
+fm-lab-home: refusing teardown: cannot confirm the lab tmux server has stopped
++(eval):8> echo 'teardown-while-running rc=1'
+teardown-while-running rc=1
++(eval):8> ls -d /tmp/fml.8Jqdy6
+/tmp/fml.8Jqdy6
++(eval):9> TMUX_TMPDIR=/tmp/fml.8Jqdy6 tmux -L fm-lab kill-server
++(eval):10> bin/fm-lab-home.sh teardown /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr/very-deep-worktree-segment-01/very-deep-worktree-segment-02/very-deep-worktree-segment-03/very-deep-worktree-segment-04/very-deep-worktree-segment-05/very-deep-worktree-segment-06/lab
++(eval):10> echo 'teardown rc=0'
+teardown rc=0
++(eval):10> ls -d /tmp/fml.8Jqdy6
+ls: /tmp/fml.8Jqdy6: No such file or directory
++(eval):11> bin/fm-lab-home.sh tmux-dir /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr
+fm-lab-home: refusing '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr': not a marked lab home
++(eval):11> echo 'unmarked rc=1'
+unmarked rc=1
++(eval):12> rm -rf /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bzuZbr
++(eval):13> set +x

@@ -1,0 +1,6 @@
+# default (no opt-out)
+rc=0
+{"attribution":false,"read_config_from":{"claude":false}}
+# FM_KEEP_AI_TRAILERS=1
+rc=0
+{"attribution":true,"read_config_from":{"claude":false}}
