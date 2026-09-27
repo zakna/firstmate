@@ -553,7 +553,7 @@ test_ship_project_memory_wording() {
   pass "fm-brief.sh: ship project-memory wording bounds edits to corrections of wrong information"
 }
 
-# A narrow scope sentence in the filled task must not hide AGENTS.md section 7's
+# A narrow scope sentence in the filled task must not hide validation-supervision's
 # allowance for the smallest correctness, test, and documentation-accuracy edits,
 # so every ship mode carries it right after the task, while scouts do not.
 test_ship_scope_allowance() {
@@ -569,7 +569,7 @@ test_ship_scope_allowance() {
       "$mode brief lost the scope allowance"
     assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$brief" \
       "$mode brief lost the documentation-accuracy allowance"
-    assert_grep "\`$ROOT/AGENTS.md\` section 7 owns this allowance" "$brief" \
+    assert_grep "\`$ROOT/.agents/skills/validation-supervision/SKILL.md\` owns this allowance" "$brief" \
       "$mode brief no longer points at the allowance owner"
   done
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-scope-scout some-proj --scout >/dev/null 2>&1

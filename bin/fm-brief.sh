@@ -11,8 +11,9 @@
 # intent). bin/fm-dod-lib.sh owns the no-mistakes `--intent` contract those
 # subsections feed; bin/fm-spawn.sh refuses leftover placeholders and a
 # `## Captain's intent` line opening with a Captain label or address. A ship
-# brief follows `# Task` with a `# Scope allowance` pointer to AGENTS.md
-# section 7, so a narrow scope sentence cannot hide it. Secondmate
+# brief follows `# Task` with a `# Scope allowance` pointer to
+# .agents/skills/validation-supervision/SKILL.md, so a narrow scope sentence
+# cannot hide it. Secondmate
 # charters still use a single `{TASK}` charter fill. Firstmate may adjust other
 # sections when the task genuinely deviates (e.g. working an existing external
 # PR instead of shipping a new one).
