@@ -77,8 +77,10 @@
 # The pipeline publishes `--intent` as the pull request body, so the worker runs
 # bin/fm-intent-check.sh (fm_intent_check, fm_intent_scrub) on the exact string
 # before the run starts. It refuses whole lines, naming each, and never strips
-# or rewords the captain's words; a refused line goes back to firstmate to
-# reword the brief's intent, or the worker stops. It refuses speaker labels,
+# or rewords the captain's words. A refusal names the source file it read; a
+# refused line goes back to firstmate to reword the authorized intent in that
+# file and in brief.md's `## Captain's intent`, so a relaunch agrees, before the
+# worker reruns the check, or the worker stops. It refuses speaker labels,
 # direct address (an opening `please`, `yourself`, `you must`, `you should`,
 # `you will`, `you need to`, `your branch`, `your worktree`, or a vocative
 # captain), attributed quotes, fleet terms the repository does not use, and
@@ -236,7 +238,7 @@ fm_brief_intent_overlay() {  # <captain-intent>
 # Current no-mistakes intent contract
 This section supersedes every earlier brief instruction about constructing `--intent`, but not later clarifications actually supplied by the captain.
 Use everything under `## Captain intent authorized for --intent` through the end of this brief, including any nested subheadings but excluding that heading, plus any later words the captain actually supplied as `--intent`; never include Firstmate specification or other mixed Task content.
-The string you pass must pass the Definition of done's intent check unchanged: never drop or reword a sentence it refuses, but ask firstmate to edit the brief's intent wording, or stop.
+The string you pass must pass the Definition of done's intent check unchanged: never drop or reword a sentence it refuses, but ask firstmate to reword the authorized intent in the source file the refusal names and in `brief.md`'s `## Captain's intent`, then rerun the check, or stop.
 Preserve those words without adding speaker labels or direct address.
 Firstmate-authored constraints, acceptance criteria, implementation details, decisions, and tradeoffs are specification, not captain intent.
 The Definition of done's rule that `--intent` must be self-sufficient still governs the string you pass: resolve any report, decision, or PR the intent below refers to into its substance rather than passing the pointer.
@@ -529,19 +531,23 @@ fm_intent_check() {  # <source-file> <intent-file> [--captain-words <file>]... [
   fm_intent_scan check "$terms" "$(fm_intent_origin_slug .)" "$linked" "$(fm_intent_mentioned "$src" .)" "${args[@]}" role=cand "$cand"
   rc=$?
   rm -f -- "$auth"
+  [ "$rc" -ne 1 ] || echo "intent-check: authorized intent read from $src"
   return "$rc"
 }
 
 # Print the authorized words, then a `Refs #<n>` line for each issue of this
 # repository the source links and no `Refs` line of the words already names.
-# When any line is refused it prints nothing, names each refused line on
-# stderr, and exits 1; it never removes or rewords a sentence.
+# When any line is refused it prints nothing, names each refused line and the
+# source file on stderr, and exits 1; it never removes or rewords a sentence.
 fm_intent_scrub() {  # <source-file>
-  local src=$1 auth terms linked
+  local src=$1 auth terms linked rc
   auth=$(fm_intent_authorized_text "$src") || { echo "intent-scrub: cannot read authorized intent from $src" >&2; return 2; }
   terms=$(fm_intent_foreign_terms . | paste -sd';' -)
   linked=$(fm_intent_linked_issues "$src" . | tr '\n' ' ')
   printf '%s\n' "$auth" | fm_intent_scan scrub "$terms" "$(fm_intent_origin_slug .)" "$linked" "$(fm_intent_mentioned "$src" .)" role=cand -
+  rc=$?
+  [ "$rc" -ne 1 ] || echo "intent-scrub: authorized intent read from $src" >&2
+  return "$rc"
 }
 
 # The `nm-<run>-<step>` decision key this block mandates is load-bearing beyond
@@ -602,7 +608,7 @@ From this repository, run \`$check_cmd scrub $2\` to print the authorized words 
 Scrub never removes or rewords a sentence: when it refuses a line it prints nothing, names each refused line, and exits non-zero.
 Write the exact string you will pass to a file, run \`$check_cmd check $2 <file>\`, and pass that file's content unchanged only when the check passes.
 The check refuses speaker labels, direct address, attributed quotes, these fleet terms where this repository's own files do not use them ($terms_list), and any sentence outside the authorized words; name later captain words with \`--captain-words <file>\` and the resolved substance of a referenced report, decision, or PR with \`--resolved <file>\`, which still pass every other rule.
-When scrub or the check refuses a line, never drop or reword it yourself: ask firstmate to edit the brief's intent wording, or stop; never start the run with a refused string.
+When scrub or the check refuses a line, never drop or reword it yourself: ask firstmate to reword the authorized intent in the source file the refusal names, and in \`brief.md\`'s \`## Captain's intent\` so a relaunch agrees, then rerun the check, or stop; never start the run with a refused string.
 Do not hand-edit, commit, or fix findings yourself while a run is active - the pipeline applies every fix.
 
 One drive call blocks until the next gate or outcome, which routinely outlives what your harness lets a single command run: Claude Code kills a command at ten minutes maximum, while one fix round is capped around thirty minutes and up to three rounds chain.

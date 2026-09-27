@@ -181,6 +181,28 @@ Refs #42' "$out" "scrub did not return the words plus Refs"
   pass "scrub refuses and names each refused line, and a clean scrub passes the check"
 }
 
+test_rewording_the_named_source_clears_a_refusal() {
+  local dir="$TMP_ROOT/reword" src out err rc
+  write_launch_brief "$dir" 'Make exports UTF-8.
+You must keep the column order.'
+  src="$dir/launch-brief.md"
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir" 2>"$TMP_ROOT/reword.err")
+  rc=$?
+  err=$(cat "$TMP_ROOT/reword.err")
+  [ "$rc" -eq 1 ] || fail "scrub exited $rc on a refused line, want 1"
+  assert_contains "$err" "authorized intent read from $src" "scrub did not name the source file it read"
+  out=$(run_check "$dir" 'Make exports UTF-8.
+Keep the column order.')
+  [ $? -eq 1 ] || fail "a reworded sentence passed before the source was reworded"
+  assert_contains "$out" "authorized intent read from $src" "check did not name the source file it read"
+  sed 's/^You must keep the column order\.$/Keep the column order./' "$src" > "$src.new" && mv "$src.new" "$src"
+  out=$(cd "$REPO" && "$CHECK" scrub "$dir") || fail "scrub still refused after the named source was reworded"
+  assert_equals 'Make exports UTF-8.
+Keep the column order.' "$out" "scrub did not return the reworded words"
+  out=$(run_check "$dir" "$out") || fail "check still refused after the named source was reworded: $out"
+  pass "a refusal names its source file, and rewording that file clears it"
+}
+
 test_scrub_keeps_the_captains_refs_line() {
   local dir="$TMP_ROOT/scrub-refs" out
   write_launch_brief "$dir" 'Make the fan quieter at night.
@@ -273,6 +295,7 @@ test_repository_vocabulary_is_not_fleet_vocabulary
 test_examples_and_inline_code_are_exempt
 test_issue_reference_is_required_and_never_invented
 test_scrub_refuses_instead_of_dropping
+test_rewording_the_named_source_clears_a_refusal
 test_scrub_keeps_the_captains_refs_line
 test_later_words_and_resolved_substance
 test_legacy_marked_task_uses_only_marked_words
