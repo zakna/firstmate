@@ -568,13 +568,13 @@ EOF
 }
 
 # The scope allowance every ship contract carries right after its task, so a
-# narrow scope sentence cannot hide AGENTS.md section 7. Rendered by
-# bin/fm-brief.sh into a ship brief and by bin/fm-promote.sh into a promoted
+# narrow scope sentence cannot hide the allowance validation-supervision owns.
+# Rendered by bin/fm-brief.sh into a ship brief and by bin/fm-promote.sh into a promoted
 # scout's ship instructions and brief.
 fm_scope_allowance_block() {  # <fm-root>
   cat <<EOF
 # Scope allowance
-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's \`$1/AGENTS.md\` section 7 owns this allowance.
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's \`$1/.agents/skills/validation-supervision/SKILL.md\` owns this allowance.
 EOF
 }
 
@@ -613,6 +613,7 @@ Do not hand-edit, commit, or fix findings yourself while a run is active - the p
 
 One drive call blocks until the next gate or outcome, which routinely outlives what your harness lets a single command run: Claude Code kills a command at ten minutes maximum, while one fix round is capped around thirty minutes and up to three rounds chain.
 So background the drive call instead of sitting in one blocking hold your harness will kill, and read its return when it finishes.
+Declare that wait using the brief's status-reporting rule before waiting on the backgrounded drive call.
 Where a harness's own command limit is not established, assume it bounds commands and use that same backgrounded shape.
 ${pr_return_line}Whenever a drive call returns without a gate or an outcome - its own wait elapsed, or it was killed or timed out - reattach at once by re-running \`no-mistakes axi run\` without flags, backgrounded the same way${pr_reattach_clause} if it refuses because no run is active, read the finished outcome from \`no-mistakes axi status\`.
 A killed or timed-out call is never evidence the daemon died: the daemon accepts your response immediately and runs the round in the background, so the call was only ever waiting for a read while the run kept working.

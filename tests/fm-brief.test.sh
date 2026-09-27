@@ -553,7 +553,7 @@ test_ship_project_memory_wording() {
   pass "fm-brief.sh: ship project-memory wording bounds edits to corrections of wrong information"
 }
 
-# A narrow scope sentence in the filled task must not hide AGENTS.md section 7's
+# A narrow scope sentence in the filled task must not hide validation-supervision's
 # allowance for the smallest correctness, test, and documentation-accuracy edits,
 # so every ship mode carries it right after the task, while scouts do not.
 test_ship_scope_allowance() {
@@ -569,7 +569,7 @@ test_ship_scope_allowance() {
       "$mode brief lost the scope allowance"
     assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$brief" \
       "$mode brief lost the documentation-accuracy allowance"
-    assert_grep "\`$ROOT/AGENTS.md\` section 7 owns this allowance" "$brief" \
+    assert_grep "\`$ROOT/.agents/skills/validation-supervision/SKILL.md\` owns this allowance" "$brief" \
       "$mode brief no longer points at the allowance owner"
   done
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-scope-scout some-proj --scout >/dev/null 2>&1
@@ -1001,6 +1001,14 @@ test_ship_and_scout_teach_validation_round_pause() {
     brief="$home/data/$id/brief.md"
     assert_grep "your own validation round" "$brief" \
       "$kind brief did not teach workers to declare their validation-round wait"
+    assert_grep 'Before ending your turn with your own background shell or monitor still running' "$brief" \
+      "$kind brief did not require declaring a background-work wait"
+    assert_grep 'before waiting on your own pipeline run or a long foreground command' "$brief" \
+      "$kind brief did not require declaring a pipeline or foreground wait"
+    assert_grep 'Firstmate may still raise one first-sight alert' "$brief" \
+      "$kind brief incorrectly promised to suppress the first alert"
+    assert_grep 'Do not declare active implementation or reasoning as a wait' "$brief" \
+      "$kind brief did not limit the declaration to actual waits"
   done
   pass "fm-brief.sh: ship and scout scaffolds teach validation-round pauses"
 }
