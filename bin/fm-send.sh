@@ -12,8 +12,8 @@
 # secondmate request delivers only marker and correlation bytes and leaves the
 # parent waiting on a reply to nothing.
 # A text steer to a task worker that hands the worker its own gate responses
-# ("you own each gate response") is refused before anything is recorded or
-# typed, printing the matched phrase; bin/fm-gate-delegation-lib.sh owns the
+# ("you own each gate response") draws a warning naming the matched phrase and
+# is still sent; bin/fm-gate-delegation-lib.sh owns the
 # phrase list, the rule, and what counts as a match. A secondmate target is not
 # checked, because a secondmate applies ask-user-authority itself.
 # Special keys instead of text: fm-send.sh <target> --key Enter
@@ -552,12 +552,11 @@ if [ -n "$TARGET_SELECTOR" ] && [ -n "$TARGET_META" ] && [ "$(fm_meta_get "$TARG
   TARGET_TASK_ID=$(fm_send_id_from_meta "$TARGET_META")
 fi
 
-# A steer must not hand a task worker its own gate responses (see the header).
+# Warn when a steer hands a task worker its own gate responses (see the header).
 # A secondmate applies ask-user-authority itself, so it is not a task worker here.
 if [ "${1:-}" != --key ] && [ "$MARK_FROM_FIRSTMATE" != 1 ] \
   && DELEGATION_PHRASE=$(fm_gate_delegation_match "$*"); then
-  echo "error: steer hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; nothing was sent" >&2
-  exit 1
+  echo "warning: steer hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; sending it anyway" >&2
 fi
 
 # Validate the answerer-closes request before any durable mutation or send: the

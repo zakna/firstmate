@@ -14,8 +14,9 @@
 # bin/fm-spawn.sh checks a ship or scout brief's `## Firstmate spec` (or a
 # legacy `# Task` body) before launch, bin/fm-promote.sh checks the scout brief
 # before it becomes the promoted brief, and bin/fm-send.sh checks the text of
-# every steer to a task worker; each refuses and prints the matched phrase with
-# FM_GATE_DELEGATION_RULE.
+# every steer to a task worker; each prints one warning on stderr naming the
+# matched phrase with FM_GATE_DELEGATION_RULE and then proceeds, so a missed or
+# false match never blocks a launch, promotion, or steer.
 #
 # The list catches explicit delegation wording and its close variants, such as
 # an instruction to the worker to decide the ask-user findings or a waiver of

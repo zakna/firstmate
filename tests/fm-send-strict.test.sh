@@ -232,43 +232,38 @@ test_key_send_exit_status_follows_delivery() {
   pass "fm-send --key: exit status follows delivery, and an undelivered key never reports success"
 }
 
-# A steer that hands a task worker its own gate responses is refused before
-# anything is recorded, even when it answers an open decision, while the rule
-# the scaffold itself states and a decision answering a named finding through
-# the gate still go through (bin/fm-gate-delegation-lib.sh).
-test_steer_refuses_gate_delegation_wording() {
-  local dir fb home err log rc brief
+# A steer that hands a task worker its own gate responses draws one warning
+# naming the matched wording and is still sent, even when it answers an open
+# decision, while the rule the scaffold itself states, a decision answering a
+# named finding through the gate, and routine steers draw no warning
+# (bin/fm-gate-delegation-lib.sh).
+test_steer_warns_on_gate_delegation_wording() {
+  local dir fb home err log rc brief n=0 steer
   dir="$TMP_ROOT/delegation"; mkdir -p "$dir"
   fb=$(make_stubs "$dir"); home=$(setup_home delegation); err="$dir/send.err"; log="$dir/tmux.log"; : > "$log"
   fm_write_meta "$home/state/lane-gate.meta" "window=sess:fm-lane-gate" "kind=ship"
   printf 'needs-decision [at=1] [key=nm-r1-review]: ask-user findings=F2 file=%s/F.txt\n' "$dir" \
     > "$home/state/lane-gate.status"
 
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate --resolve-key nm-r1-review "Run /no-mistakes to a green PR.
+  send_gate() {
+    PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
+      "$SEND" lane-gate "$@" >/dev/null 2>"$err"; rc=$?
+    n=$((n + 1))
+    expect_code 0 "$rc" "the steer should be sent: $(cat "$err")"
+    assert_present "$home/state/lane-gate.inbox/$(printf '%03d' "$n").msg" "the steer was not recorded"
+  }
+
+  send_gate --resolve-key nm-r1-review "Run /no-mistakes to a green PR.
 You own each gate
-response; do not pass --yes." >/dev/null 2>"$err"; rc=$?
-  [ "$rc" -ne 0 ] || fail "a delegating steer was sent"
-  assert_contains "$(cat "$err")" '"You own each gate response"' "the refusal should name the matched phrase"
-  assert_contains "$(cat "$err")" "ask-user-authority is the single owner" "the refusal should state the rule"
-  assert_absent "$home/state/lane-gate.inbox/001.msg" "a refused steer was recorded"
-  assert_no_grep "resolved" "$home/state/lane-gate.status" "a refused steer closed the open decision"
+response; do not pass --yes."
+  assert_contains "$(cat "$err")" 'warning: steer hands gate responses to the worker: "You own each gate response"' \
+    "the warning should name the matched phrase"
+  assert_contains "$(cat "$err")" "ask-user-authority is the single owner" "the warning should state the rule"
+  [ "$(grep -c 'hands gate responses' "$err")" -eq 1 ] || fail "the steer should draw exactly one warning"
+  assert_grep "resolved [key=nm-r1-review]" "$home/state/lane-gate.status" "a warned steer did not close its key"
 
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate "Follow the pipeline and drive every gate response yourself." >/dev/null 2>"$err"; rc=$?
-  [ "$rc" -ne 0 ] || fail "a steer delegating every gate response was sent"
-  assert_contains "$(cat "$err")" '"drive every gate response yourself"' "the refusal should name the second phrase"
-
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate --resolve-key nm-r1-review "Decision for nm-r1-review under ask-user-authority: fix finding F2.
-Feed it to the gate with no-mistakes axi respond --action fix --ids F2; never answer the ask-user findings yourself." \
-    >/dev/null 2>"$err"; rc=$?
-  expect_code 0 "$rc" "a decision answering a named finding through the gate should be sent: $(cat "$err")"
-  grep -qF 'fix finding F2' "$home/state/lane-gate.inbox/001.msg" || fail "the decision was not recorded"
-  assert_grep "resolved [key=nm-r1-review]" "$home/state/lane-gate.status" "the decision did not close its key"
-
-  local waiver
-  for waiver in "You can decide the ask-user findings." \
+  for steer in "Follow the pipeline and drive every gate response yourself." \
+    "You can decide the ask-user findings." \
     "Once promoted, decide the ask-user findings." \
     "Don't wait for firstmate to decide the ask-user findings." \
     "No need for the captain to decide each ask-user finding." \
@@ -279,38 +274,25 @@ Decide each ask-user finding." \
     "Steps:
 - Run tests
 Decide the ask-user findings."; do
-    PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-      "$SEND" lane-gate "$waiver" >/dev/null 2>"$err"; rc=$?
-    [ "$rc" -ne 0 ] || fail "a steer handing the ask-user decision to the worker was sent: $waiver"
-    assert_contains "$(cat "$err")" "ask-user-authority is the single owner" "the refusal should state the rule for: $waiver"
+    send_gate "$steer"
+    assert_contains "$(cat "$err")" "warning: steer hands gate responses to the worker" "no warning for: $steer"
+    assert_contains "$(cat "$err")" "ask-user-authority is the single owner" "the warning should state the rule for: $steer"
   done
-  assert_absent "$home/state/lane-gate.inbox/002.msg" "a refused steer was recorded"
 
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate "Stop and wait for firstmate to decide the ask-user findings.
+  for steer in "Decision for nm-r1-review under ask-user-authority: fix finding F2.
+Feed it to the gate with no-mistakes axi respond --action fix --ids F2; never answer the ask-user findings yourself." \
+    "Stop and wait for firstmate to decide the ask-user findings.
 Escalate so the captain can decide each ask-user finding. Firstmate will then decide the ask-user findings." \
-    >/dev/null 2>"$err"; rc=$?
-  expect_code 0 "$rc" "a steer restating that firstmate decides ask-user findings should be sent: $(cat "$err")"
-  grep -qF 'wait for firstmate to decide' "$home/state/lane-gate.inbox/002.msg" || fail "the escalation steer was not recorded"
-
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate "Stop and wait for firstmate to
+    "Stop and wait for firstmate to
 decide the ask-user findings. Escalate so the captain can
 decide each ask-user finding. You must never
 decide the ask-user findings yourself. Never
-decide the ask-user findings." >/dev/null 2>"$err"; rc=$?
-  expect_code 0 "$rc" "a hard-wrapped steer restating the escalation rule should be sent: $(cat "$err")"
-  grep -qF 'You must never' "$home/state/lane-gate.inbox/003.msg" || fail "the wrapped escalation steer was not recorded"
-
-  local routine n=4
-  for routine in "Don't wait for me; push the branch once tests pass." \
+decide the ask-user findings." \
+    "Don't wait for me; push the branch once tests pass." \
     "Do not wait for the captain to merge the PR." \
     "Never wait for a decision on naming; pick one."; do
-    PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-      "$SEND" lane-gate "$routine" >/dev/null 2>"$err"; rc=$?
-    expect_code 0 "$rc" "a routine steer unrelated to gate decisions should be sent: $routine: $(cat "$err")"
-    grep -qF "$routine" "$home/state/lane-gate.inbox/00$n.msg" || fail "the routine steer was not recorded: $routine"
-    n=$((n + 1))
+    send_gate "$steer"
+    assert_not_contains "$(cat "$err")" "hands gate responses" "a non-delegating steer drew a warning: $steer"
   done
 
   # The rendered no-mistakes contract states the opposite rule; relaying it, as
@@ -319,16 +301,14 @@ decide the ask-user findings." >/dev/null 2>"$err"; rc=$?
     || fail "the no-mistakes brief should scaffold"
   brief="$home/data/lane-gate/brief.md"
   assert_grep "ask-user findings are never yours to answer" "$brief" "the scaffold no longer states the rule under test"
-  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
-    "$SEND" lane-gate "$(cat "$brief")" >/dev/null 2>"$err"; rc=$?
-  expect_code 0 "$rc" "the scaffold's own ask-user rule should be sendable: $(cat "$err")"
-  assert_present "$home/state/lane-gate.inbox/007.msg" "the scaffold contract was not recorded"
-  pass "fm-send: a steer that hands gate responses to the worker is refused; the stated rule and a gate decision are not"
+  send_gate "$(cat "$brief")"
+  assert_not_contains "$(cat "$err")" "hands gate responses" "the scaffold's own ask-user rule drew a warning"
+  pass "fm-send: a steer that hands gate responses to the worker is sent with a warning; the stated rule and a gate decision draw none"
 }
 
 test_exact_lane_id_send_still_works
 test_key_send_exit_status_follows_delivery
-test_steer_refuses_gate_delegation_wording
+test_steer_warns_on_gate_delegation_wording
 test_unset_fm_home_fails
 test_unresolvable_target_does_not_tmux_fallback
 test_prefixless_herdr_pane_id_fails

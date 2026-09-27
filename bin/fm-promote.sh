@@ -16,9 +16,9 @@
 # instructions under `## Firstmate spec`; the scout-time spec remains context but
 # is not relabeled as the ship spec. Promotion refuses leftover `{TASK}` /
 # `{FIRSTMATE_SPEC}` placeholders and a `## Captain's intent` line opening with
-# a Captain label or address (bin/fm-dod-lib.sh), and a scout-time
-# `## Firstmate spec` that hands the worker its own gate responses
-# (bin/fm-gate-delegation-lib.sh). A pre-subsection scout
+# a Captain label or address (bin/fm-dod-lib.sh). It warns, and still
+# promotes, when the scout-time `## Firstmate spec` hands the worker its own
+# gate responses (bin/fm-gate-delegation-lib.sh). A pre-subsection scout
 # brief contributes only Task lines explicitly marked as captain words to intent,
 # read outside fenced blocks and indented examples so a quoted `Captain:` sample
 # never passes the provenance gate as the ask (bin/fm-dod-lib.sh).
@@ -217,8 +217,7 @@ if ADDRESS_LINE=$(fm_brief_intent_address_line "$SCOUT_BRIEF"); then
   exit 1
 fi
 if DELEGATION_PHRASE=$(fm_gate_delegation_brief_match "$SCOUT_BRIEF"); then
-  echo "error: $SCOUT_BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; it would carry into the promoted brief" >&2
-  exit 1
+  echo "warning: $SCOUT_BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; promoting anyway, so it carries into the promoted brief" >&2
 fi
 if fm_brief_task_heading_present "$SCOUT_BRIEF" "## Captain's intent"; then
   INTENT_BODY=$(fm_brief_task_heading_body "$SCOUT_BRIEF" "## Captain's intent")

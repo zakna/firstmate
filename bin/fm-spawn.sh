@@ -21,9 +21,9 @@
 #   guessed posture. A
 #   ship or scout spawn also refuses leftover `{TASK}` / `{FIRSTMATE_SPEC}`
 #   placeholders, an empty Task, an incomplete pair of Task subsections, or a
-#   `## Captain's intent` line opening with a Captain label or address, and
-#   a `## Firstmate spec` (or legacy Task) that hands the worker its own gate
-#   responses (bin/fm-gate-delegation-lib.sh).
+#   `## Captain's intent` line opening with a Captain label or address. It
+#   warns, and still launches, when a `## Firstmate spec` (or legacy Task)
+#   hands the worker its own gate responses (bin/fm-gate-delegation-lib.sh).
 #   Every ship or scout spawn renders `launch-brief.md`; for a no-mistakes ship
 #   it also carries the current `--intent` contract and the extracted captain
 #   intent. A legacy mixed Task is accepted there only under bin/fm-dod-lib.sh's
@@ -2874,8 +2874,7 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     exit 1
   fi
   if DELEGATION_PHRASE=$(fm_gate_delegation_brief_match "$BRIEF"); then
-    echo "error: $BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE" >&2
-    exit 1
+    echo "warning: $BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; launching anyway" >&2
   fi
   if [ "$KIND" = ship ] && [ "$MODE" = no-mistakes ]; then
     if fm_brief_task_heading_present "$BRIEF" "## Captain's intent"; then

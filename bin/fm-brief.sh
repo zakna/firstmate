@@ -9,9 +9,9 @@
 # direct address) and `{FIRSTMATE_SPEC}`
 # under `## Firstmate spec` (build instructions, which are never the captain's
 # intent). bin/fm-dod-lib.sh owns the no-mistakes `--intent` contract those
-# subsections feed; bin/fm-spawn.sh refuses leftover placeholders, a
-# `## Captain's intent` line opening with a Captain label or address, and a
-# `## Firstmate spec` that hands the worker its own gate responses
+# subsections feed; bin/fm-spawn.sh refuses leftover placeholders and a
+# `## Captain's intent` line opening with a Captain label or address, and warns
+# on a `## Firstmate spec` that hands the worker its own gate responses
 # (bin/fm-gate-delegation-lib.sh), because this scaffold never sees the filled
 # text. A ship brief follows `# Task` with a `# Scope allowance` pointer to
 # AGENTS.md section 7, so a narrow scope sentence cannot hide it. Secondmate
