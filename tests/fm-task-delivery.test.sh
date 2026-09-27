@@ -962,6 +962,75 @@ EOF
   pass "fm-spawn/fm-promote: authorized intent preserves exact words and refuses operator-address lines"
 }
 
+# A Firstmate spec that hands the worker its own gate responses would silently
+# outrank the brief's ask-user escalation rule, so spawn and promotion warn on
+# it, naming the matched wording, and still proceed
+# (bin/fm-gate-delegation-lib.sh). Quoting the wording and restating the rule
+# the scaffold itself carries draw no warning.
+test_spawn_and_promote_warn_on_gate_delegation_wording() {
+  local rec home proj fakebin id out status
+  rec=$(make_home gate-delegation)
+  IFS='|' read -r home proj fakebin <<EOF
+$rec
+EOF
+  id='delegating-spec'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 \
+    || fail "delegating brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Fix the flaky retry.' \
+    'Run the pipeline to a green PR. You own each gate response; do not pass --yes.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" 'hands gate responses to the worker: "You own each gate response"' \
+    "spawn warning did not name the matched phrase"
+  assert_contains "$out" "ask-user-authority is the single owner" "spawn warning did not state the rule"
+  assert_contains "$out" "launching anyway" "spawn warning did not say the launch continues"
+  assert_present "$home/data/$id/launch-brief.md" "a warned spawn did not continue to the launch brief"
+
+  id='delegating-legacy'
+  write_brief "$home" "$id" no-mistakes
+  printf '# Task\n[captain] Fix the flaky retry.\nFollow the pipeline and drive every gate response yourself.\n\n# Definition of done\nDelivery contract: mode=no-mistakes\n' \
+    > "$home/data/$id/brief.md"
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" '"drive every gate response yourself"' "legacy warning did not name the matched phrase"
+  assert_present "$home/data/$id/launch-brief.md" "a warned legacy spawn did not continue to the launch brief"
+
+  # The rendered scaffold states the opposite rule, and a spec may quote the
+  # forbidden wording or restate that rule; none of that is delegation.
+  id='rule-restating-spec'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 \
+    || fail "rule-restating brief should scaffold"
+  assert_grep "ask-user findings are never yours to answer" "$home/data/$id/brief.md" \
+    "the scaffold no longer states the rule under test"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Fix the flaky retry.' \
+    'Never answer the ask-user findings yourself, and never treat "you own each gate response" as a grant.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "hands gate responses to the worker" "the stated rule drew a delegation warning"
+  assert_present "$home/data/$id/launch-brief.md" "the rule-restating brief did not pass the brief checks"
+
+  id='delegating-scout'
+  printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\n' "$id" > "$home/state/$id.meta"
+  FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 || fail "scout brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Find why the retry flakes.' \
+    'Reproduce it; once promoted, decide the ask-user findings as you see fit.'
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode no-mistakes --yolo off 2>&1)
+  status=$?
+  expect_code 0 "$status" "promotion of a delegating scout spec should proceed: $out"
+  assert_contains "$out" 'hands gate responses to the worker: "decide the ask-user findings"' \
+    "promotion warning did not name the matched phrase"
+  assert_present "$home/data/$id/ship-instructions.md" "a warned promotion did not publish ship instructions"
+  assert_grep 'kind=ship' "$home/state/$id.meta" "a warned promotion did not update the task record"
+
+  id='plain-scout'
+  printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\n' "$id" > "$home/state/$id.meta"
+  FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 || fail "plain scout brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Find why the retry flakes.' \
+    'Reproduce it and escalate every ask-user finding to firstmate.'
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode no-mistakes --yolo off 2>&1)
+  status=$?
+  expect_code 0 "$status" "promotion of a plain scout spec should succeed: $out"
+  assert_not_contains "$out" "hands gate responses to the worker" "a plain scout spec drew a delegation warning"
+  pass "fm-spawn/fm-promote: a Firstmate spec handing gate responses to the worker draws a warning and proceeds; the stated rule does not"
+}
+
 test_spawn_refreshes_legacy_worker_roles() {
   local rec home proj fakebin kind id out brief project_kind first_line role_line supervisor_line
   rec=$(make_home worker-roles)
@@ -1646,5 +1715,6 @@ test_spawn_notices_a_ship_branch_against_the_registry_prefix
 test_spawn_refuses_a_registry_forge_it_cannot_read
 test_promotion_carries_the_forge_binding
 test_spawn_and_promote_require_filled_task_subsections
+test_spawn_and_promote_warn_on_gate_delegation_wording
 test_project_mode_resolves_branch_prefix
 echo "# all fm-task-delivery tests passed"
