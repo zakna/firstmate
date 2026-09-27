@@ -1,0 +1,3 @@
+ok - a spawn for one clone refuses a Treehouse slot anchored to another clone of the same origin
+ok - the same slot still launches and is claimed for the clone that owns it
+# all fm-spawn-pool-slot-anchor tests passed

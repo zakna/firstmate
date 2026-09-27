@@ -1,0 +1,14 @@
+ok - a clean intent and a sentence-level subset pass
+ok - second-person product wording, links, and task items pass; worker address does not
+ok - each forbidden class is refused and names its line
+ok - only a quote a speech word attributes is refused
+ok - only fleet terms the repository does not use are refused
+ok - fenced examples and inline code are exempt from the refusal classes
+ok - only this repository's named issues count as references
+ok - scrub refuses and names each refused line, and a clean scrub passes the check
+ok - a refusal names its source file, and rewording that file clears it
+ok - scrub keeps a Refs line the brief names without repeating it
+ok - later captain words and resolved substance are authorized but still checked
+ok - a legacy provenance-marked Task authorizes only its marked words
+ok - a task directory resolves to the launch overlay, then promotion instructions
+ok - the no-mistakes brief tells the worker to run the check on the task directory

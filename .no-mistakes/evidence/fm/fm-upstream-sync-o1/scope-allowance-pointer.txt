@@ -1,0 +1,18 @@
+== no-mistakes
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
+referenced path: /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md
+EXISTS; skill carries allowance:
+1
+== direct-PR
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
+referenced path: /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md
+EXISTS; skill carries allowance:
+1
+== local-only
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
+referenced path: /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z/.agents/skills/validation-supervision/SKILL.md
+EXISTS; skill carries allowance:
+1

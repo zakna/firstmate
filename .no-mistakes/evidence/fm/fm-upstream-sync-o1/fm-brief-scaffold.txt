@@ -1,0 +1,6 @@
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.WF7ivg/data/scope-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.WF7ivg/data/scope-direct-PR/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.WF7ivg/data/scope-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0

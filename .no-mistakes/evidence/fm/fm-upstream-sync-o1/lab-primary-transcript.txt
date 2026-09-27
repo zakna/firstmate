@@ -1,0 +1,16 @@
+ ▐▛███▛█   Claude Code v2.1.283
+▝▜██████▀  Opus 5.5 with xhigh effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z
+❯ Quick check, do not start any fleet work or spawn anything: per your instructions, which file owns (a) the ship-task scope allowance for smallest downstream changes and (b) the no-mistakes ready
+  signal wording including the 'no CI' form? Quote the no-CI ready-signal pattern verbatim. Answer in 3 lines.
+  Searched for 1 pattern
+⏺ Captain, here's the answer:
+  1. Smallest-downstream-changes allowance: .agents/skills/validation-supervision/SKILL.md:15 owns it. bin/fm-dod-lib.sh:577 says so when it adds the allowance to each worker's instructions.
+  2. No-mistakes ready-signal wording, including the no-CI form: bin/fm-dod-lib.sh owns it (lines 764–774, checked at line 806). ship-landing points to it as the owner.
+  3. No-CI pattern, verbatim: done [at=<epoch>]: PR {url} no CI: test step {n}/{m} scenarios live; untested: {each scenario the test step could not drive, or none}
+✻ Sautéed for 15s · done 6:27 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M3HTH1B393AQ2FDGCPHSTJ6Z ctx 48809/1000000  Opus xhigh | 5h [██░░░░] 27% →20:30 | 7d [█░░░░░] 18% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
