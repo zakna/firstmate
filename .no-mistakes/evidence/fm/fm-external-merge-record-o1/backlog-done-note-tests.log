@@ -1,0 +1,4 @@
+ok - dispatch and completion transition structurally with evidence
+ok - completion records an external merge in the Done note and only then
+ok - recovery replays an external-merge note and rejects any other trailing note
+rc=0

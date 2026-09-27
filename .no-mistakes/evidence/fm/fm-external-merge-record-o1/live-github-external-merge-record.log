@@ -1,0 +1,46 @@
+## Live GitHub read: fm_merge_external_record (sourced as bin/fm-watch.sh sources it) against zakna/firstmate PR #6, merged on GitHub outside fm-pr-merge.sh
+--- meta before
+kind=ship
+spawn_gen=lab-1
+pr=https://github.com/zakna/firstmate/pull/6
+record rc=0
+--- meta after
+kind=ship
+spawn_gen=lab-1
+merge_origin=external
+merge_commit=bf81a30177f255c2d2537112b6d5ddf6a56f3f55
+merge_parents=2
+merge_actor=zakna
+merged_at=2026-09-27T09:13:58Z
+pr=https://github.com/zakna/firstmate/pull/6
+--- forge cross-check (independent gh api REST read)
+merge_commit_sha=bf81a30177f255c2d2537112b6d5ddf6a56f3f55 merged_by=zakna merged_at=2026-09-27T09:13:58Z
+parents=2
+
+## Adversarial: open (unmerged) PR #9 -> details recorded as unknown, record still succeeds
+record rc=0
+kind=ship
+spawn_gen=lab-2
+merge_origin=external
+merge_commit=unknown
+merge_parents=unknown
+merge_actor=unknown
+merged_at=unknown
+pr=https://github.com/zakna/firstmate/pull/9
+
+## Adversarial: identity mismatch (asked to record PR 7 on a meta naming PR 6) -> refused, meta untouched
+record rc=1
+meta unchanged
+
+## Re-record on the same meta -> no duplicated fields
+record rc=0
+merge_origin lines: 1
+
+## Merged PR #5 (squash/rebase-style check of parent count)
+record rc=0
+merge_origin=external
+merge_commit=c87ddea1c8bb5b82bf3c2ee06c4d874156c6ca66
+merge_parents=2
+merge_actor=zakna
+merged_at=2026-09-27T08:54:20Z
+forge: sha=c87ddea1c8bb5b82bf3c2ee06c4d874156c6ca66 parents=2

@@ -1,0 +1,30 @@
+--- task meta handed to fm-teardown.sh (fields from the live GitHub read)
+window=firstmate:fm-lab-ext-pr6
+endpoint_task_id=lab-ext-pr6
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-backlog-atomicity.Brp9kW/live-ext/absent-worktree
+project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-backlog-atomicity.Brp9kW/live-ext/absent-project
+harness=claude
+kind=ship
+mode=no-mistakes
+yolo=off
+spawn_gen=spawn-live
+merge_origin=external
+merge_commit=bf81a30177f255c2d2537112b6d5ddf6a56f3f55
+merge_parents=2
+merge_actor=zakna
+merged_at=2026-09-27T09:13:58Z
+pr=https://github.com/zakna/firstmate/pull/6
+--- fm-teardown.sh
+/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-backlog-atomicity.Brp9kW/live-ext/absent-project: skipped: not a directory
+teardown lab-ext-pr6 complete (window firstmate:fm-lab-ext-pr6, worktree /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-backlog-atomicity.Brp9kW/live-ext/absent-worktree)
+Backlog: lab-ext-pr6 is closed in /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-backlog-atomicity.Brp9kW/live-ext/home/data/backlog.md. Run bin/fm-tasks-axi.sh ready for dependency-cleared candidates, check date gates, and dispatch only work whose blockers are gone and date is due.
+teardown rc=0
+--- backlog row state: done
+--- backlog file after teardown:
+# Backlog
+
+## In flight
+## Queued
+## Done
+- [x] lab-ext-pr6 - item for lab-ext-pr6 https://github.com/zakna/firstmate/pull/6 (kind: ship) (merged 2026-09-27)
+  external merge: commit bf81a30177f255c2d2537112b6d5ddf6a56f3f55, parents 2, by zakna, at 2026-09-27T09:13:58Z
