@@ -1294,7 +1294,9 @@ fm_treehouse_pool_slot_state() {  # <project-dir> <worktree>
   FM_TREEHOUSE_POOL_SLOT=foreign
   FM_TREEHOUSE_POOL_SLOT_CLONE=$slot_common
   FM_TREEHOUSE_POOL_PROJECT_CLONE=$project_common
+  # shellcheck disable=SC2034 # Read by fm-spawn.sh after the function returns.
   [ "${slot_common##*/}" != .git ] || FM_TREEHOUSE_POOL_SLOT_CLONE=${slot_common%/.git}
+  # shellcheck disable=SC2034 # Read by fm-spawn.sh after the function returns.
   [ "${project_common##*/}" != .git ] || FM_TREEHOUSE_POOL_PROJECT_CLONE=${project_common%/.git}
 }
 

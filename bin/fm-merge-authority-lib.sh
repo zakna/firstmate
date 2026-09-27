@@ -33,6 +33,25 @@
 # so it cannot interleave with that consumption transaction, and removes any
 # remaining record.
 #
+# External merge record. A merged poll that finds no matching record above
+# observed an external merge: the pull request landed outside
+# bin/fm-pr-merge.sh. fm_merge_external_record then writes what the forge says
+# about that landing into state/<task-id>.meta, placed before the pr= line
+# because fm_pr_metadata_identity_parse refuses unknown lines after it:
+#   merge_origin=external
+#   merge_commit=<sha> | unknown
+#   merge_parents=<parent count of the merge commit> | unknown
+#   merge_actor=<login of the merging account> | unknown
+#   merged_at=<ISO-8601 UTC merge time> | unknown
+# A merge through bin/fm-pr-merge.sh writes none of these. Only GitHub is read,
+# through the one GraphQL record read in bin/fm-pr-lib.sh, bounded by 10
+# seconds. Another forge, a failed or timed-out read, and any value that fails
+# validation record unknown. The
+# record is best effort and runs after the outcome is published, while the poll
+# still holds the task lifecycle lock that teardown needs: its failure is only
+# logged and never blocks, retries, or changes that delivery.
+# bin/fm-teardown.sh carries the fields into the backlog Done note.
+#
 # Sourced by those scripts and by tests. No side effects on source beyond its
 # sourced libraries.
 
@@ -41,6 +60,8 @@ _FM_MERGE_AUTHORITY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh"
 # shellcheck source=bin/fm-afk-contract.sh
 . "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-afk-contract.sh"
+# shellcheck source=bin/fm-timeout-lib.sh
+. "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-timeout-lib.sh"
 
 # shellcheck disable=SC2034 # Public results consumed by sourcing callers.
 FM_MERGE_AUTHORITY=
@@ -48,6 +69,10 @@ FM_MERGE_AUTHORITY=
 FM_MERGE_AUTHORITY_REASON=
 # shellcheck disable=SC2034 # Public results consumed by sourcing callers.
 FM_MERGE_AUTHORITY_RECORD_IDENTITY=
+FM_MERGE_EXTERNAL_COMMIT=unknown
+FM_MERGE_EXTERNAL_PARENTS=unknown
+FM_MERGE_EXTERNAL_ACTOR=unknown
+FM_MERGE_EXTERNAL_AT=unknown
 
 fm_merge_authority_resolve() {  # <home> <state> <meta> <task-id>
   local home=${1-} state=${2-} meta=${3-} id=${4-}
@@ -181,6 +206,83 @@ fm_merge_authority_remove_if_matches() {  # <state> <task-id> <provider> <host> 
       status=1
     fi
   fi
+  fm_lock_release "$lock" || status=1
+  return "$status"
+}
+
+fm_merge_external_read() {  # <provider> <path> <number>
+  local provider=$1 path=$2 number=$3 record commit parents actor at
+  local LC_ALL=C
+  FM_MERGE_EXTERNAL_COMMIT=unknown
+  FM_MERGE_EXTERNAL_PARENTS=unknown
+  FM_MERGE_EXTERNAL_ACTOR=unknown
+  FM_MERGE_EXTERNAL_AT=unknown
+  [ "$provider" = github ] || return 0
+  # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
+  record=$(fm_run_timed 10 bash -c '
+    . "$1"
+    fm_pr_github_read_record "$2" "$3" "$4" || exit 1
+    [ "$FM_PR_RECORD_MERGED" = true ] || exit 1
+    printf "%s\n" "$FM_PR_RECORD_MERGE_COMMIT" "$FM_PR_RECORD_MERGE_PARENTS" \
+      "$FM_PR_RECORD_MERGE_ACTOR" "$FM_PR_RECORD_MERGED_AT"
+  ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "${path%%/*}" "${path#*/}" "$number" \
+    </dev/null 2>/dev/null) || return 0
+  { IFS= read -r commit; IFS= read -r parents; IFS= read -r actor; IFS= read -r at; } <<RECORD
+$record
+RECORD
+  [[ "$commit" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] && FM_MERGE_EXTERNAL_COMMIT=$commit
+  [[ "$parents" =~ ^[0-9]{1,3}$ ]] && FM_MERGE_EXTERNAL_PARENTS=$parents
+  [[ "$actor" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$ ]] && FM_MERGE_EXTERNAL_ACTOR=$actor
+  [[ "$at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] && FM_MERGE_EXTERNAL_AT=$at
+  return 0
+}
+
+fm_merge_external_record() {  # <state> <task-id> <provider> <host> <path> <number>
+  local state=$1 id=$2 provider=$3 host=$4 path=$5 number=$6
+  local meta lock tmp='' state_device line status=0 inserted=0
+  fm_pr_task_id_valid "$id" || return 1
+  [ -d "$state" ] && [ ! -L "$state" ] || return 1
+  state_device=$(fm_pr_file_device "$state") || return 1
+  meta="$state/$id.meta"
+  fm_merge_external_read "$provider" "$path" "$number"
+  lock=$(fm_meta_lock_path "$meta") || return 1
+  fm_lock_acquire_wait "$lock" || return 1
+  fm_pr_metadata_identity_parse "$meta" \
+    && [ "$FM_PR_META_PROVIDER" = "$provider" ] && [ "$FM_PR_META_HOST" = "$host" ] \
+    && [ "$FM_PR_META_PATH" = "$path" ] && [ "$FM_PR_META_NUMBER" = "$number" ] \
+    && [ "$(fm_pr_file_device "$meta")" = "$state_device" ] || status=1
+  if [ "$status" -eq 0 ]; then
+    tmp=$(umask 077; mktemp "$state/.fm-merge-external.XXXXXX") || status=1
+  fi
+  if [ "$status" -eq 0 ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        merge_origin=*|merge_commit=*|merge_parents=*|merge_actor=*|merged_at=*) continue ;;
+        pr=*)
+          if [ "$inserted" -eq 0 ]; then
+            printf '%s\n' merge_origin=external \
+              "merge_commit=$FM_MERGE_EXTERNAL_COMMIT" \
+              "merge_parents=$FM_MERGE_EXTERNAL_PARENTS" \
+              "merge_actor=$FM_MERGE_EXTERNAL_ACTOR" \
+              "merged_at=$FM_MERGE_EXTERNAL_AT" >> "$tmp" || status=1
+            inserted=1
+          fi
+          ;;
+      esac
+      printf '%s\n' "$line" >> "$tmp" || status=1
+    done < "$meta"
+  fi
+  if [ "$status" -eq 0 ]; then
+    chmod 0600 "$tmp" \
+      && fm_pr_private_file_valid "$tmp" 600 "$state_device" \
+      && fm_pr_metadata_identity_parse "$tmp" \
+      && [ "$FM_PR_META_PROVIDER" = "$provider" ] && [ "$FM_PR_META_HOST" = "$host" ] \
+      && [ "$FM_PR_META_PATH" = "$path" ] && [ "$FM_PR_META_NUMBER" = "$number" ] \
+      && fm_pr_regular_destination_on_device_or_absent "$meta" "$state_device" \
+      && mv -f -- "$tmp" "$meta" \
+      || status=1
+  fi
+  [ "$status" -eq 0 ] || { [ -z "$tmp" ] || rm -f -- "$tmp"; }
   fm_lock_release "$lock" || status=1
   return "$status"
 }

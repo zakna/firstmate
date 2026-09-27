@@ -94,6 +94,10 @@ FM_PR_RETIRE_RECEIPT_HASH=
 FM_PR_RETIRE_RECEIPT_IDENTITY=
 FM_PR_RECORD_STATE=
 FM_PR_RECORD_MERGED=
+FM_PR_RECORD_MERGE_COMMIT=
+FM_PR_RECORD_MERGE_PARENTS=
+FM_PR_RECORD_MERGE_ACTOR=
+FM_PR_RECORD_MERGED_AT=
 FM_PR_POLL_RETIREMENT_REJECTED=
 
 fm_task_id_path_safe() {
@@ -911,33 +915,55 @@ fm_pr_poll_retirement_receipt_valid() {
   FM_PR_RETIRE_RECEIPT_IDENTITY=$(fm_pr_file_identity "$receipt") || return 1
 }
 
+# The GitHub record read. State and merged are required; the merge commit, its
+# parent count, the merging actor's login, and the merge time are optional
+# fields of the same query, left empty when the forge omits them (an unmerged
+# pull request) and read by the external-merge record in
+# bin/fm-merge-authority-lib.sh. The gh-axi fallback leaves them empty.
 fm_pr_github_read_record_with_gh() {  # <owner> <repo> <number>
-  local owner=$1 repo=$2 number=$3 fields line total=0 named=0
-  local state='' merged=''
+  local owner=$1 repo=$2 number=$3 fields line total=0 named=0 optional=0
+  local state='' merged='' seen=' '
   FM_PR_RECORD_STATE=
   FM_PR_RECORD_MERGED=
+  FM_PR_RECORD_MERGE_COMMIT=
+  FM_PR_RECORD_MERGE_PARENTS=
+  FM_PR_RECORD_MERGE_ACTOR=
+  FM_PR_RECORD_MERGED_AT=
 
   # shellcheck disable=SC2016  # GraphQL variables are literal query syntax.
   if ! fields=$(gh api graphql \
-    -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){state merged}}}' \
+    -f query='query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){state merged mergedAt mergedBy{login} mergeCommit{oid parents{totalCount}}}}}' \
     -F "owner=$owner" -F "repo=$repo" -F "number=$number" \
-    --jq '.data.repository.pullRequest | "state=" + (.state // ""), "merged=" + (.merged | tostring)' \
+    --jq '.data.repository.pullRequest | "state=" + (.state // ""), "merged=" + (.merged | tostring), "merge_commit=" + (.mergeCommit.oid // ""), "merge_parents=" + ((.mergeCommit.parents.totalCount // "") | tostring), "merge_actor=" + (.mergedBy.login // ""), "merged_at=" + (.mergedAt // "")' \
     2>/dev/null) || [ -z "$fields" ]; then
     return 1
   fi
   while IFS= read -r line; do
     total=$((total + 1))
     case "$line" in
-      state=*) state=${line#state=} ;;
-      merged=*) merged=${line#merged=} ;;
+      state=*) state=${line#state=}; named=$((named + 1)); continue ;;
+      merged=*) merged=${line#merged=}; named=$((named + 1)); continue ;;
+      merge_commit=*|merge_parents=*|merge_actor=*|merged_at=*) ;;
       *) continue ;;
     esac
-    named=$((named + 1))
+    case "$seen" in *" ${line%%=*} "*) return 1 ;; esac
+    seen="$seen${line%%=*} "
+    optional=$((optional + 1))
+    case "$line" in
+      merge_commit=*) FM_PR_RECORD_MERGE_COMMIT=${line#merge_commit=} ;;
+      merge_parents=*) FM_PR_RECORD_MERGE_PARENTS=${line#merge_parents=} ;;
+      merge_actor=*) FM_PR_RECORD_MERGE_ACTOR=${line#merge_actor=} ;;
+      merged_at=*) FM_PR_RECORD_MERGED_AT=${line#merged_at=} ;;
+    esac
   done <<FIELDS
 $fields
 FIELDS
-  if [ "$named" -ne 2 ] || [ "$total" -ne 2 ] || [ -z "$state" ] \
+  if [ "$named" -ne 2 ] || [ "$total" -ne $((2 + optional)) ] || [ -z "$state" ] \
     || { [ "$merged" != true ] && [ "$merged" != false ]; }; then
+    FM_PR_RECORD_MERGE_COMMIT=
+    FM_PR_RECORD_MERGE_PARENTS=
+    FM_PR_RECORD_MERGE_ACTOR=
+    FM_PR_RECORD_MERGED_AT=
     return 1
   fi
 
@@ -953,6 +979,8 @@ fm_pr_github_read_record_with_gh_axi() {  # <owner> <repo> <number>
   local owner=$1 repo=$2 number=$3 output state
   FM_PR_RECORD_STATE=
   FM_PR_RECORD_MERGED=
+  # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+  FM_PR_RECORD_MERGE_COMMIT='' FM_PR_RECORD_MERGE_PARENTS='' FM_PR_RECORD_MERGE_ACTOR='' FM_PR_RECORD_MERGED_AT=''
   if ! output=$(gh-axi pr view "$number" --repo "$owner/$repo" 2>/dev/null); then
     return 1
   fi

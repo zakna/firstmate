@@ -15,8 +15,9 @@
 # Removing state/<id>.meta and landing the backlog transition are one step, not
 # two: bin/fm-backlog-transition-lib.sh owns that invariant, and both halves run
 # under the task's own meta lock before this script reports success. Because the
-# completion links (the PR, the report path, a local-main note) live only in the
-# record being removed, the intended transition is recorded in
+# completion links (the PR with any external-merge note, the report path, a
+# local-main note) live only in the record being removed, the intended
+# transition is recorded in
 # state/<id>.backlog-close first, so a process killed between the halves leaves
 # the next session start enough to finish it; a landed close removes that record.
 # A close that fails is fatal and loud, preserves its pending-close record, and
@@ -1586,7 +1587,7 @@ work_is_landed() {
 # other ship carries the PR recorded on its own record.
 BACKLOG_DONE_ARGS=()
 backlog_done_args() {
-  local data_relative
+  local data_relative note
   BACKLOG_DONE_ARGS=()
   case "$KIND" in
     scout)
@@ -1598,6 +1599,16 @@ backlog_done_args() {
         BACKLOG_DONE_ARGS=(--note "local main")
       elif [ -n "$PR_URL" ]; then
         BACKLOG_DONE_ARGS=(--pr "$PR_URL")
+        # A pull request that landed outside bin/fm-pr-merge.sh also records
+        # the external-merge fields its merged poll wrote into this record.
+        if [ "$(fm_meta_get "$META" merge_origin)" = external ]; then
+          note=$(fm_backlog_external_merge_note \
+            "$(fm_meta_get "$META" merge_commit)" "$(fm_meta_get "$META" merge_parents)" \
+            "$(fm_meta_get "$META" merge_actor)" "$(fm_meta_get "$META" merged_at)")
+          fm_backlog_external_merge_note_valid "$note" \
+            || note=$(fm_backlog_external_merge_note unknown unknown unknown unknown)
+          BACKLOG_DONE_ARGS+=(--note "$note")
+        fi
       fi
       ;;
   esac

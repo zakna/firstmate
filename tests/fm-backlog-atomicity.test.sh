@@ -2892,6 +2892,66 @@ test_dispatch_and_completion_are_structural() {
   pass "dispatch and completion transition structurally with evidence"
 }
 
+test_completion_records_an_external_merge_in_the_done_note() {
+  local case_dir id pr sha note
+  id=atomic-close-external-b16
+  pr=https://github.com/example/repo/pull/16
+  sha=93c689e0123456789abcdef0123456789abcdef0
+  note="external merge: commit $sha, parents 2, by octocat, at 2026-09-20T10:00:00Z"
+  case_dir=$(make_home close-external)
+  add_item "$case_dir" "$id"
+  start_item "$case_dir" "$id"
+  write_task_meta "$case_dir" "$id" ship no-mistakes "spawn_gen=spawn-close-external" \
+    merge_origin=external "merge_commit=$sha" merge_parents=2 merge_actor=octocat \
+    merged_at=2026-09-20T10:00:00Z "pr=$pr"
+
+  run_teardown "$case_dir" "$id" >/dev/null || fail "external-merge teardown failed"
+  [ "$(row_state "$case_dir" "$id")" = "done" ] \
+    || fail "external-merge teardown left the item $(row_state "$case_dir" "$id")"
+  assert_grep "$pr" "$(backlog_of "$case_dir")" "external-merge close dropped its PR"
+  assert_grep "$note" "$(backlog_of "$case_dir")" \
+    "external-merge close did not record the merge commit, parents, actor, and time"
+
+  id=atomic-close-fleet-merge-b16
+  add_item "$case_dir" "$id"
+  start_item "$case_dir" "$id"
+  write_task_meta "$case_dir" "$id" ship no-mistakes "spawn_gen=spawn-close-fleet" "pr=$pr"
+  run_teardown "$case_dir" "$id" >/dev/null || fail "fleet-merge teardown failed"
+  [ "$(grep -c 'external merge:' "$(backlog_of "$case_dir")")" = 1 ] \
+    || fail "a task with no external-merge record gained an external-merge note"
+  pass "completion records an external merge in the Done note and only then"
+}
+
+test_recovery_replays_an_external_merge_note() {
+  local case_dir id marker bad_id bad_marker out
+  id=atomic-heal-external-b16
+  bad_id=atomic-heal-external-bad-b16
+  case_dir=$(make_home heal-external)
+  add_item "$case_dir" "$id"
+  start_item "$case_dir" "$id"
+  add_item "$case_dir" "$bad_id"
+  start_item "$case_dir" "$bad_id"
+  marker="$(home_of "$case_dir")/state/$id.backlog-close"
+  bad_marker="$(home_of "$case_dir")/state/$bad_id.backlog-close"
+  printf 'id=%s\ndata=%s\nspawn_gen=spawn-heal-ext\narg=--pr\narg=https://github.com/example/repo/pull/17\narg=--note\narg=%s\n' \
+    "$id" "$(home_of "$case_dir")/data" \
+    'external%20merge:%20commit%20unknown,%20parents%20unknown,%20by%20unknown,%20at%20unknown' \
+    > "$marker"
+  printf 'id=%s\ndata=%s\nspawn_gen=spawn-heal-ext-bad\narg=--pr\narg=https://github.com/example/repo/pull/18\narg=--note\narg=%s\n' \
+    "$bad_id" "$(home_of "$case_dir")/data" 'anything%20else' > "$bad_marker"
+
+  out=$(run_bootstrap "$case_dir")
+  [ "$(row_state "$case_dir" "$id")" = "done" ] \
+    || fail "recovery did not replay an external-merge close: $out"
+  assert_grep 'external merge: commit unknown, parents unknown, by unknown, at unknown' \
+    "$(backlog_of "$case_dir")" "the replayed close dropped its external-merge note"
+  assert_absent "$marker" "a replayed external-merge close left its record behind"
+  assert_present "$bad_marker" "a close record with an arbitrary note was consumed"
+  [ "$(row_state "$case_dir" "$bad_id")" = in_flight ] \
+    || fail "an arbitrary note changed the backlog row: $out"
+  pass "recovery replays an external-merge note and rejects any other trailing note"
+}
+
 test_refused_teardown_leaves_the_item_live() {
   local case_dir home id out rc=0
   id=fm-structural-refusal-b15
@@ -3090,6 +3150,8 @@ test_spawn_refuses_an_unsafe_tasks_config_before_exempting_a_missing_backlog
 test_spawn_refuses_a_data_directory_symlinked_outside_the_home
 test_configured_adapter_refuses_a_data_directory_outside_the_home
 test_dispatch_and_completion_are_structural
+test_completion_records_an_external_merge_in_the_done_note
+test_recovery_replays_an_external_merge_note
 test_refused_teardown_leaves_the_item_live
 test_environment_selected_adapter_is_not_forced_to_markdown
 test_manual_backend_home_dispatches_and_completes_without_touching_the_backlog

@@ -953,7 +953,9 @@ apply_pending_retained_artifact() {  # <task-id>
   fm_backlog_close_marker_validate "$marker" "$DATA" "$id" "$STATE" \
     || { report_retained_artifact_failure "$id" "$marker"; return 1; }
   [ "$FM_BACKLOG_CLOSE_VALIDATED_MODE" = retain ] || return 0
-  args=("${FM_BACKLOG_CLOSE_VALIDATED_ARGS[@]+"${FM_BACKLOG_CLOSE_VALIDATED_ARGS[@]}"}")
+  # Only the leading artifact pair is a row artifact; a trailing --note stays
+  # in the body line the retained transition already wrote.
+  args=("${FM_BACKLOG_CLOSE_VALIDATED_ARGS[@]:0:2}")
   case "${args[0]-}" in
     --pr|--report)
       fm_backlog_row_artifact_supported "$id" "${args[@]}" || return 0
