@@ -432,6 +432,48 @@ test_no_mistakes_dod_green_detection() {
   pass "fm-brief.sh: no-mistakes DOD detects a green PR from the drive call, not a status poll"
 }
 
+# The ready line names the real evidence rather than a bare "checks green":
+# the no-mistakes block branches on the repository's default-branch no_ci
+# declaration, and both PR-based modes let a held claim ride the ready line.
+test_ready_signal_names_the_evidence() {
+  local home id brief
+  home="$TMP_ROOT/ready-evidence-home"
+  mkdir -p "$home/data"
+  id="brief-ready-nm-f1"
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" some-proj --mode no-mistakes >/dev/null 2>&1
+  brief="$home/data/$id/brief.md"
+  assert_present "$brief" "no-mistakes brief was not scaffolded"
+  # shellcheck disable=SC2016  # single quotes are deliberate: the backticks must stay literal
+  assert_grep 'git show origin/<default branch>:.no-mistakes.yaml' "$brief" \
+    "no-mistakes DOD must read no_ci from the default branch's own config"
+  assert_grep "never decide it from your branch's copy or from the project's name" "$brief" \
+    "no-mistakes DOD must forbid guessing the no_ci declaration"
+  assert_grep "do not wait for the drive call to report CI green" "$brief" \
+    "a no-CI return point must not wait for the CI-ready stamp"
+  # shellcheck disable=SC2016  # single quotes are deliberate: the backticks must stay literal
+  assert_grep 'the ci step'"'"'s log (`no-mistakes axi logs --step ci`)' "$brief" \
+    "a no-CI return point must be the ci step's own no-CI log line"
+  assert_grep 'done [at=<epoch>]: PR {url} checks green: {name of each check that ran}; read changed files: {yes|no|unknown}' "$brief" \
+    "a CI ready line must name the checks and whether any read a changed file"
+  assert_grep 'done [at=<epoch>]: PR {url} no CI: test step {n}/{m} scenarios live; untested: {each scenario the test step could not drive, or none}' "$brief" \
+    "a no-CI ready line must name the test step's live and untested scenarios"
+  assert_grep '; held: {one line}' "$brief" \
+    "a no-mistakes ready line must carry a held claim"
+  assert_no_grep 'PR {url} checks green` and stop' "$brief" \
+    "the no-mistakes DOD still prescribes a bare checks-green ready line"
+
+  id="brief-ready-dp-f2"
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" some-proj --mode direct-PR >/dev/null 2>&1
+  brief="$home/data/$id/brief.md"
+  assert_present "$brief" "direct-PR brief was not scaffolded"
+  assert_grep 'done [at=<epoch>]: PR {url}' "$brief" "direct-PR ready line lost its prefix"
+  assert_grep ' held: {one line}' "$brief" "a direct-PR ready line must carry a held claim"
+  assert_grep "never leave that disclosure only in a PR comment" "$brief" \
+    "a held claim must ride the ready line, not only a PR comment"
+  assert_no_grep "no_ci" "$brief" "the no-CI branch belongs to the pipeline contract only"
+  pass "fm-brief.sh: the ready line names its CI, no-CI, and held evidence"
+}
+
 test_ask_user_escalation_format() {
   local home id brief mode other_id other_brief
   home="$TMP_ROOT/ask-user-home"
@@ -1354,6 +1396,7 @@ test_delivery_flags_are_refused_where_they_do_not_apply
 test_faster_paths_use_configured_authority_without_stacked_review
 test_no_mistakes_dod_wording
 test_no_mistakes_dod_green_detection
+test_ready_signal_names_the_evidence
 test_pr_based_dod_requires_non_draft
 test_ask_user_escalation_format
 test_ship_project_memory_wording

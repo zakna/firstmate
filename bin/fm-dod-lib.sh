@@ -19,7 +19,8 @@
 # accepted while the named head exists only in the worker's disposable copy.
 # The check tests that head, not whether some branch moved. In no-mistakes
 # mode the pre-validation `done: {summary}` is the pipeline handoff and is
-# not gated; only the later CI-ready `done: PR <url> checks green` is, or on a
+# not gated; only the later CI-ready `done: PR <url> checks green` (or
+# `done: PR <url> no CI:` when the repository declares no CI) is, or on a
 # Gerrit project the later `done: PR <change url> published for review`. The
 # named head is the worker copy's HEAD, except that a done naming the task's
 # recorded pr= passes when the forge holds that head: a forge-reported
@@ -348,6 +349,19 @@ There is no pull request, no \`gh-axi\` call, and no forge CI result to report: 
 EOF
 }
 
+# The ready line's evidence tail. The machine-read prefix stays exactly
+# `done [at=<epoch>]: PR <url>`; everything the worker adds follows the URL after
+# one space, so fm_dod_pr_url_from_done_note and every other URL reader take the
+# first word after `PR` as today. This helper is the single owner of the `held:`
+# disclosure; the no-mistakes block below owns the `checks green:` and `no CI:`
+# evidence clauses, and fm_dod_note_reports_ci_ready recognizes both.
+fm_ready_held_rule() {  # <separator before held:>
+  cat <<EOF
+If you hold back any part of the ready claim - a review, check, or verification still required on this final head, or anything else the merge authority must know before merging - end that ready line with \`${1}held: {one line}\`; never leave that disclosure only in a PR comment or description, where the merge authority does not read it.
+Keep the whole ready line on one line, with the URL as the first word after \`PR\` and one space after it.
+EOF
+}
+
 fm_dod_block() {  # <mode> <task-id> [branch] [<forge>]
   local mode=$1 id=$2 forge=${4:-none}
   local branch=${3:-fm/$id}
@@ -411,6 +425,9 @@ When it is implemented and committed, push your branch and open a PR with \`gh-a
 Before you report done, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number>\` must print \`draft: no\`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with \`gh-axi pr ready <number>\`.
 A draft cannot be merged, so a done report on one leaves the merge unasked.
 Then append \`done [at=<epoch>]: PR {url}\` to the status file and stop.
+EOF
+      fm_ready_held_rule ' '
+      cat <<EOF
 That \`done:\` is accepted only when this copy's HEAD - your latest commit - is pushed to your PR branch; the check tests that commit, not merely that a branch moved.
 If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
 Do NOT run /no-mistakes. The configured merge authority decides whether to merge the PR; firstmate relays the outcome.
@@ -443,9 +460,21 @@ EOF
       fm_nm_driving_block "$forge"
       cat <<EOF
 
-After /no-mistakes reports CI green (the CI-ready return point - do not wait for it to keep monitoring in the background until merge), read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number>\` must print \`draft: no\`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with \`gh-axi pr ready <number>\`.
+Your ready return point and ready line depend on whether this repository declares no CI.
+Read that from the default branch's \`.no-mistakes.yaml\` (\`git show origin/<default branch>:.no-mistakes.yaml\`), because the pipeline honors \`no_ci: true\` only from that copy; never decide it from your branch's copy or from the project's name.
+- With CI (no \`no_ci: true\`): the return point is /no-mistakes reporting CI green (the CI-ready return point - do not wait for it to keep monitoring in the background until merge).
+- With no CI (\`no_ci: true\`): no check runs, so do not wait for the drive call to report CI green, which can arrive hours later.
+  The return point is the ci step's log (\`no-mistakes axi logs --step ci\`) showing that the repository declares no CI and is treating that as all checks passed, which the ci step logs at its first poll; read that log while the drive call runs in the background.
+At the return point, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number>\` must print \`draft: no\`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with \`gh-axi pr ready <number>\`.
 A draft cannot be merged, so a done report on one leaves the merge unasked.
-Then append \`done [at=<epoch>]: PR {url} checks green\` and stop. You are finished.
+Then append the one ready line that names the real evidence, and stop. You are finished.
+- With CI: \`done [at=<epoch>]: PR {url} checks green: {name of each check that ran}; read changed files: {yes|no|unknown}\`.
+  Write \`yes\` only when at least one of those checks reads a file this PR changes, \`no\` when none does (a change to one markdown file under only typecheck and workflow lint is \`no\`), and \`unknown\` when you cannot tell from the check definitions and logs.
+- With no CI: \`done [at=<epoch>]: PR {url} no CI: test step {n}/{m} scenarios live; untested: {each scenario the test step could not drive, or none}\`, taken from the pipeline test step's evidence (\`no-mistakes axi logs --step test\`).
+  Name every untested scenario, especially one that is the premise of the change.
+EOF
+      fm_ready_held_rule '; '
+      cat <<EOF
 That CI-ready \`done:\` is accepted only when this copy's HEAD - your latest commit - is one the /no-mistakes run pushed, so commit nothing after the run; the check tests that commit, not merely that a branch moved.
 If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
 EOF
@@ -468,11 +497,12 @@ fm_dod_ref_contains() {  # <repo> <ref-namespace> <sha>
 }
 
 # 0 when a done: note reports the no-mistakes CI-ready PR (`PR <url> checks
-# green`, with any surrounding text). bin/fm-crew-state.sh takes its CI-ready
+# green`, or `PR <url> no CI:` on a repository that declares no CI, with any
+# evidence tail fm_dod_block prescribes). bin/fm-crew-state.sh takes its CI-ready
 # path on this same test, so every CI-ready line it acts on is gated.
 fm_dod_note_reports_ci_ready() {  # <note>
   case "$1" in
-    *PR*"checks green"*|*"checks green"*PR*) return 0 ;;
+    *PR*"checks green"*|*"checks green"*PR*|PR\ *\ "no CI:"*) return 0 ;;
   esac
   return 1
 }

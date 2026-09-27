@@ -271,6 +271,40 @@ test_ci_ready_variants_are_gated() {
   pass "no-mistakes CI-ready done: with extra text is gated"
 }
 
+# The ready line's evidence tail follows the URL after one space, so every shape
+# fm_dod_block prescribes still classifies as done, is still gated as the
+# CI-ready report, and still yields exactly the URL.
+test_evidence_tailed_ready_lines_keep_verb_gate_and_url() {
+  local repo wt entry mode line url rc verb note got
+  repo="$TMP_ROOT/tailed-repo"
+  wt="$TMP_ROOT/tailed-wt"
+  fm_git_worktree "$repo" "$wt" fm/tailed
+  git -C "$wt" commit -q --allow-empty -m 'only in the disposable copy'
+  url='https://github.com/o/r/pull/5'
+  for entry in \
+    "no-mistakes|done [at=1788576000]: PR $url checks green: typecheck, actionlint; read changed files: no" \
+    "no-mistakes|done [at=1788576000]: PR $url checks green: test; read changed files: yes; held: fresh review still required on this head" \
+    "no-mistakes|done [at=1788576000]: PR $url no CI: test step 12/13 scenarios live; untested: real reboot" \
+    "no-mistakes|done [at=1788576000]: PR $url no CI: test step 19/19 scenarios live; untested: none; held: ssh transport not driven" \
+    "direct-PR|done [at=1788576000]: PR $url held: fresh independent review still required on the final head"; do
+    mode=${entry%%|*}
+    line=${entry#*|}
+    verb=$(status_line_verb "$line")
+    [ "$verb" = "done" ] || fail "an evidence-tailed ready line stopped classifying as done ($verb): $line"
+    note=$(status_line_note "$line")
+    got=$(fm_dod_pr_url_from_done_note "$note") || fail "no URL from an evidence-tailed ready line: $line"
+    [ "$got" = "$url" ] || fail "an evidence tail changed the extracted URL ($got): $line"
+    rc=0
+    accept_done ship "$mode" "$wt" "$repo" "$line" >/dev/null || rc=$?
+    [ "$rc" -eq 1 ] || fail "$mode evidence-tailed ready line skipped the named-head gate: $line"
+  done
+  fm_dod_note_reports_ci_ready "PR $url no CI: test step 12/13 scenarios live; untested: real reboot" \
+    || fail "a no-CI ready report is not recognized as the CI-ready return"
+  ! fm_dod_note_reports_ci_ready "added no CI: handling to the parser" \
+    || fail "a pre-validation summary mentioning no CI read as the CI-ready return"
+  pass "evidence-tailed ready lines keep the done verb, the gate, and the exact URL"
+}
+
 test_keyed_and_spaced_done_lines_are_gated() {
   local repo wt line mode rc
   repo="$TMP_ROOT/keyed-repo"
@@ -393,6 +427,7 @@ test_merge_marker_binds_to_the_named_pr
 test_forge_recorded_head_is_accepted_without_local_object
 test_direct_pr_recorded_head_does_not_cover_unpushed_commit
 test_ci_ready_variants_are_gated
+test_evidence_tailed_ready_lines_keep_verb_gate_and_url
 test_keyed_and_spaced_done_lines_are_gated
 test_local_only_linked_branch_is_accepted
 test_local_only_detached_head_is_refused
