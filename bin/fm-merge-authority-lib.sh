@@ -44,9 +44,9 @@
 #   merge_actor=<login of the merging account> | unknown
 #   merged_at=<ISO-8601 UTC merge time> | unknown
 # A merge through bin/fm-pr-merge.sh writes none of these. Only GitHub is read,
-# through the one GraphQL record read in bin/fm-pr-lib.sh, bounded by
-# FM_MERGE_EXTERNAL_READ_TIMEOUT seconds (default 10). Another forge, a failed or
-# timed-out read, and any value that fails validation record unknown. The
+# through the one GraphQL record read in bin/fm-pr-lib.sh, bounded by 10
+# seconds. Another forge, a failed or timed-out read, and any value that fails
+# validation record unknown. The
 # record is best effort and runs after the outcome is published, while the poll
 # still holds the task lifecycle lock that teardown needs: its failure is only
 # logged and never blocks, retries, or changes that delivery.
@@ -211,17 +211,15 @@ fm_merge_authority_remove_if_matches() {  # <state> <task-id> <provider> <host> 
 }
 
 fm_merge_external_read() {  # <provider> <path> <number>
-  local provider=$1 path=$2 number=$3 record commit parents actor at timeout
+  local provider=$1 path=$2 number=$3 record commit parents actor at
   local LC_ALL=C
   FM_MERGE_EXTERNAL_COMMIT=unknown
   FM_MERGE_EXTERNAL_PARENTS=unknown
   FM_MERGE_EXTERNAL_ACTOR=unknown
   FM_MERGE_EXTERNAL_AT=unknown
   [ "$provider" = github ] || return 0
-  timeout=${FM_MERGE_EXTERNAL_READ_TIMEOUT:-10}
-  case "$timeout" in ''|*[!0-9]*|0) timeout=10 ;; esac
   # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
-  record=$(fm_run_timed "$timeout" bash -c '
+  record=$(fm_run_timed 10 bash -c '
     . "$1"
     fm_pr_github_read_record "$2" "$3" "$4" || exit 1
     [ "$FM_PR_RECORD_MERGED" = true ] || exit 1
