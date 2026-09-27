@@ -511,6 +511,31 @@ test_ship_project_memory_wording() {
   pass "fm-brief.sh: ship project-memory wording bounds edits to corrections of wrong information"
 }
 
+# A narrow scope sentence in the filled task must not hide AGENTS.md section 7's
+# allowance for the smallest correctness, test, and documentation-accuracy edits,
+# so every ship mode carries it right after the task, while scouts do not.
+test_ship_scope_allowance() {
+  local home mode id brief
+  home="$TMP_ROOT/scope-allowance-home"
+  mkdir -p "$home/data"
+  for mode in no-mistakes direct-PR local-only; do
+    id="brief-scope-$mode"
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" some-proj --mode "$mode" >/dev/null 2>&1
+    brief="$home/data/$id/brief.md"
+    assert_present "$brief" "$mode brief was not scaffolded"
+    assert_grep "However narrowly the task above states its scope" "$brief" \
+      "$mode brief lost the scope allowance"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$brief" \
+      "$mode brief lost the documentation-accuracy allowance"
+    assert_grep "\`$ROOT/AGENTS.md\` section 7 owns this allowance" "$brief" \
+      "$mode brief no longer points at the allowance owner"
+  done
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-scope-scout some-proj --scout >/dev/null 2>&1
+  assert_no_grep "However narrowly the task above states its scope" "$home/data/brief-scope-scout/brief.md" \
+    "scout brief received the ship scope allowance"
+  pass "fm-brief.sh: ship briefs keep the documentation-accuracy scope allowance visible"
+}
+
 test_herdr_lab_contract_is_explicit_and_complete() {
   local home id brief
   home="$TMP_ROOT/herdr-lab-home"
@@ -1332,6 +1357,7 @@ test_no_mistakes_dod_green_detection
 test_pr_based_dod_requires_non_draft
 test_ask_user_escalation_format
 test_ship_project_memory_wording
+test_ship_scope_allowance
 test_herdr_lab_contract_is_explicit_and_complete
 test_herdr_lab_contract_quotes_foreign_firstmate_path
 test_herdr_lab_omission_is_loud_for_ship_and_scout

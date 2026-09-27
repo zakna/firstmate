@@ -359,6 +359,10 @@ STUB
       "$mode: promoted worker did not receive the Captain's intent subsection"
     assert_grep "## Firstmate spec" "$payload" \
       "$mode: promoted worker did not receive the Firstmate spec subsection"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$payload" \
+      "$mode: promoted worker did not receive the documentation-accuracy scope allowance"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$home/data/$id/brief.md" \
+      "$mode: promoted brief did not carry the documentation-accuracy scope allowance for a relaunch"
 
     # Compare the public outputs of both real generation paths. The promoted
     # payload ends at its Definition of done, as does an ordinary generated

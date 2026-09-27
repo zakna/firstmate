@@ -279,6 +279,8 @@ EOF
 $PROMOTION_SHIP_SPEC
 
 EOF
+  fm_scope_allowance_block "$FM_ROOT"
+  printf '\n'
   promote_delivery_contract
 } > "$TMP" || { echo "error: could not render ship instructions for mode=$MODE" >&2; exit 1; }
 mv "$TMP" "$INSTRUCTIONS"
@@ -293,6 +295,8 @@ BRIEF_REPLACEMENT="$DATA/$ID/.brief.md.promote.${BASHPID:-$$}"
   cat "$SCOUT_BRIEF"
   printf '\n\n'
   printf '# Current ship Firstmate spec\n%s\n\n' "$PROMOTION_SHIP_SPEC"
+  fm_scope_allowance_block "$FM_ROOT"
+  printf '\n'
   promote_delivery_contract
 } > "$BRIEF_REPLACEMENT" || {
   echo "error: could not render the promoted brief for mode=$MODE" >&2
