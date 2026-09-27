@@ -1,0 +1,6 @@
+== fallback PID expressions vs real BASHPID in a subshell (bash 5) ==
+BASHPID=16699 sh-fallback=16699 perl-fallback=16699
+== bash 3.2 subshell: fallbacks vs $$ (must differ from parent) ==
+parent $$=16689
+subshell sh-fallback=16702 perl-fallback=16702
+16702 16689 /bin/bash -c echo "parent \$\$=$$"; ( a=$(exec sh -c "printf \"%s\n\" \"\$PPID\""); b=$(exec perl -e "print getppid"); echo "subshell sh-fallback=$a perl-fallback=$b"; ps -o pid=,ppid=,command= -p $a )

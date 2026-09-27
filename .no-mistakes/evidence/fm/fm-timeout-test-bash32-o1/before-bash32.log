@@ -1,0 +1,8 @@
+== BEFORE (base 061d3d60 test file) under /bin/bash 3.2, PATH=/bin first ==
+bash: 3.2.57(1)-release
+ok - fm_exec_timed passes a command's status and output through unchanged
+ok - fm_exec_timed sends TERM at the bound and a cooperative command ends there
+ok - fm_exec_timed kills a TERM-ignoring command once the grace has passed
+tests/.base-tmp.test.sh: line 100: BASHPID: unbound variable
+not ok - the bounded probe failed under PATH=/bin:/usr/bin:/Users/olivier/.antigravity/antigravity/bin:/Users/olivier/.local/bin:/Users/olivier/.opencode/bin:/Users/olivier/.antigravity/antigravity/bin:/opt/homebrew/Caskroom/miniforge/base/bin:/opt/homebrew/Caskroom/miniforge/base/condabin:/Users/olivier/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Library/TeX/texbin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/olivier/.local/bin:/Users/olivier/go/bin:/Users/olivier/.cargo/bin:/Users/olivier/bin:/usr/local/sbin:/Users/olivier/Library/Application Support/JetBrains/Toolbox/scripts:/Users/olivier/.local/bin:/Users/olivier/.local/bin
+exit=1
