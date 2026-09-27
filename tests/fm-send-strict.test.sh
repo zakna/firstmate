@@ -293,7 +293,16 @@ Escalate so the captain can decide each ask-user finding. Firstmate will then de
   expect_code 0 "$rc" "a steer restating that firstmate decides ask-user findings should be sent: $(cat "$err")"
   grep -qF 'wait for firstmate to decide' "$home/state/lane-gate.inbox/002.msg" || fail "the escalation steer was not recorded"
 
-  local routine n=3
+  PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
+    "$SEND" lane-gate "Stop and wait for firstmate to
+decide the ask-user findings. Escalate so the captain can
+decide each ask-user finding. You must never
+decide the ask-user findings yourself. Never
+decide the ask-user findings." >/dev/null 2>"$err"; rc=$?
+  expect_code 0 "$rc" "a hard-wrapped steer restating the escalation rule should be sent: $(cat "$err")"
+  grep -qF 'You must never' "$home/state/lane-gate.inbox/003.msg" || fail "the wrapped escalation steer was not recorded"
+
+  local routine n=4
   for routine in "Don't wait for me; push the branch once tests pass." \
     "Do not wait for the captain to merge the PR." \
     "Never wait for a decision on naming; pick one."; do
@@ -313,7 +322,7 @@ Escalate so the captain can decide each ask-user finding. Firstmate will then de
   PATH="$fb:$PATH" FM_HOME="$home" FM_ROOT_OVERRIDE="$home" FM_TMUX_LOG="$log" FM_SEND_SETTLE=0 \
     "$SEND" lane-gate "$(cat "$brief")" >/dev/null 2>"$err"; rc=$?
   expect_code 0 "$rc" "the scaffold's own ask-user rule should be sendable: $(cat "$err")"
-  assert_present "$home/state/lane-gate.inbox/006.msg" "the scaffold contract was not recorded"
+  assert_present "$home/state/lane-gate.inbox/007.msg" "the scaffold contract was not recorded"
   pass "fm-send: a steer that hands gate responses to the worker is refused; the stated rule and a gate decision are not"
 }
 
