@@ -511,6 +511,31 @@ test_ship_project_memory_wording() {
   pass "fm-brief.sh: ship project-memory wording bounds edits to corrections of wrong information"
 }
 
+# A narrow scope sentence in the filled task must not hide AGENTS.md section 7's
+# allowance for the smallest correctness, test, and documentation-accuracy edits,
+# so every ship mode carries it right after the task, while scouts do not.
+test_ship_scope_allowance() {
+  local home mode id brief
+  home="$TMP_ROOT/scope-allowance-home"
+  mkdir -p "$home/data"
+  for mode in no-mistakes direct-PR local-only; do
+    id="brief-scope-$mode"
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" some-proj --mode "$mode" >/dev/null 2>&1
+    brief="$home/data/$id/brief.md"
+    assert_present "$brief" "$mode brief was not scaffolded"
+    assert_grep "However narrowly the task above states its scope" "$brief" \
+      "$mode brief lost the scope allowance"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$brief" \
+      "$mode brief lost the documentation-accuracy allowance"
+    assert_grep "\`$ROOT/AGENTS.md\` section 7 owns this allowance" "$brief" \
+      "$mode brief no longer points at the allowance owner"
+  done
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-scope-scout some-proj --scout >/dev/null 2>&1
+  assert_no_grep "However narrowly the task above states its scope" "$home/data/brief-scope-scout/brief.md" \
+    "scout brief received the ship scope allowance"
+  pass "fm-brief.sh: ship briefs keep the documentation-accuracy scope allowance visible"
+}
+
 test_herdr_lab_contract_is_explicit_and_complete() {
   local home id brief
   home="$TMP_ROOT/herdr-lab-home"
@@ -693,7 +718,7 @@ test_secondmate_marked_request_reporting_contract() {
     "secondmate charter retained the unconditional working opener"
   assert_grep 'When a routed-work phase has a supervisor-actionable material change worth reporting under the rule above' "$brief" \
     "secondmate charter did not limit keyed phases to reportable material changes"
-  assert_grep "If its first reportable event is \`working [key=<work-slug>]: {material phase}\`" "$brief" \
+  assert_grep "If its first reportable event is \`working [key=<work-slug>] [at=<epoch>]: {material phase}\`" "$brief" \
     "secondmate charter lost keyed working syntax for a reportable material phase"
   assert_grep "use the same key on its later \`paused\`, \`done\`, \`failed\`, \`needs-decision\`, or \`blocked\` event" "$brief" \
     "secondmate charter lost same-key closure for a reportable material phase"
@@ -873,9 +898,11 @@ test_pause_verb_override_renders_all_brief_scaffolds() {
     # Every status signal the brief instructs a worker to append is a template
     # the worker fills in and writes verbatim, with or without a shell, not only
     # rule 4's echo: substitute each one's named placeholders and read the stamp
-    # back. Extracting by "append" as well as by the stamp means dropping a stamp
-    # from any instruction fails here rather than shrinking the set.
+    # back. Extracting by "append" and by a keyed event head as well as by the
+    # stamp means dropping a stamp from any instruction fails here rather than
+    # shrinking the set.
     templates=$(grep -o -e "append \`[^\`]*: [^\`]*\`" \
+      -e "\`[a-z-]* \[key=[^\`]*: [^\`]*\`" \
       -e "\`[^\`]*\[at=<epoch>\][^\`]*\`" "$brief" \
       | sed 's/^append //' | tr -d '`' | sort -u)
     signals=0
@@ -1330,6 +1357,7 @@ test_no_mistakes_dod_green_detection
 test_pr_based_dod_requires_non_draft
 test_ask_user_escalation_format
 test_ship_project_memory_wording
+test_ship_scope_allowance
 test_herdr_lab_contract_is_explicit_and_complete
 test_herdr_lab_contract_quotes_foreign_firstmate_path
 test_herdr_lab_omission_is_loud_for_ship_and_scout

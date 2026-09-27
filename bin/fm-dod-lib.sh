@@ -275,6 +275,17 @@ fm_ask_user_escalation_block() {  # <data-dir> <task-id>
 EOF
 }
 
+# The scope allowance every ship contract carries right after its task, so a
+# narrow scope sentence cannot hide AGENTS.md section 7. Rendered by
+# bin/fm-brief.sh into a ship brief and by bin/fm-promote.sh into a promoted
+# scout's ship instructions and brief.
+fm_scope_allowance_block() {  # <fm-root>
+  cat <<EOF
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's \`$1/AGENTS.md\` section 7 owns this allowance.
+EOF
+}
+
 # The forge-independent middle of the no-mistakes contract: how a worker drives
 # the pipeline, what `--intent` may carry, and the two firstmate-specific rules.
 # Written once; only the two sentences about a green PR depend on the forge,

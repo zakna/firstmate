@@ -314,7 +314,9 @@ test_promotion_delivers_the_real_definition_of_done() {
   mkdir -p "$home/state" "$sendroot/bin"
   cat > "$sendroot/bin/fm-send.sh" <<'STUB'
 #!/usr/bin/env bash
-# Capture the message a promoted worker would receive, instead of steering one.
+# Capture the task a promoted worker is addressed by and the message it would
+# receive, instead of steering one.
+printf '%s' "$1" > "$FM_TEST_CAPTURE.target"
 printf '%s' "$2" > "$FM_TEST_CAPTURE"
 STUB
   chmod +x "$sendroot/bin/fm-send.sh"
@@ -338,6 +340,8 @@ STUB
          eval "$(printf '%s\n' "$out" | sed -n 's/^next: //p' | grep 'fm-send\.sh')" ) \
       || fail "$mode: promotion's delivery command did not run"
     assert_present "$payload" "$mode: promotion delivered no message to the worker"
+    [ "$(cat "$payload.target")" = "$id" ] \
+      || fail "$mode: promotion's delivery command addressed '$(cat "$payload.target")', not the task id $id"
 
     grep -qx "Delivery contract: mode=$mode" "$payload" \
       || fail "$mode: promoted worker did not receive the machine-readable delivery contract"
@@ -355,6 +359,10 @@ STUB
       "$mode: promoted worker did not receive the Captain's intent subsection"
     assert_grep "## Firstmate spec" "$payload" \
       "$mode: promoted worker did not receive the Firstmate spec subsection"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$payload" \
+      "$mode: promoted worker did not receive the documentation-accuracy scope allowance"
+    assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$home/data/$id/brief.md" \
+      "$mode: promoted brief did not carry the documentation-accuracy scope allowance for a relaunch"
 
     # Compare the public outputs of both real generation paths. The promoted
     # payload ends at its Definition of done, as does an ordinary generated
