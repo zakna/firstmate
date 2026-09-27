@@ -44,7 +44,7 @@
 # shellcheck source=bin/fm-brief-heading-lib.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-brief-heading-lib.sh"
 
-# shellcheck disable=SC2034 # Read by the sourcing refusal sites.
+# shellcheck disable=SC2034 # Read by the sourcing warning sites.
 FM_GATE_DELEGATION_RULE="ask-user-authority is the single owner of ask-user finding decisions: a worker escalates every ask-user finding to firstmate and never answers one itself, so a spec or steer must not hand gate responses to the worker; decide each finding under ask-user-authority and send the worker that decision for the named finding instead"
 
 # One extended regular expression per line, matched against lower-cased text.
