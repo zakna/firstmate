@@ -1,0 +1,66 @@
+== Scenario A: two-step durable home (tasks-axi add with full note body, then captain-hold hold with one-line reason + origin)
+$ bin/fm-tasks-axi.sh add ha-72-author-note Author note: rollup physical-test simplification declined in ha-72 --kind captain --body Finding (gate review f3, simplification): remove the rollup physical-test propagation component in rollup.py:88 (fn propagate(x)).
+Why declined: author call; removing it would expand the contract of this ticket.
+Suggested change: drop propagate() and inline the physical-test flag at the rollup call site (e.g. rollup(..., physical=True)).
+ok: added ha-72-author-note (captain) -> Queued
+task:
+  id: ha-72-author-note
+  title: "Author note: rollup physical-test simplification declined in ha-72"
+  state: queued
+  blocked: no
+  blocked_by: none
+  held: no
+  hold_reason: "-"
+  hold_kind: "-"
+  hold_until: "-"
+  kind: captain
+  repo: "-"
+  priority: "-"
+  created: 2026-09-27
+  closed: "-"
+  deps: none
+  links: none
+  body: "Finding (gate review f3, simplification): remove the rollup physical-test propagation component in rollup.py:88 (fn propagate(x)).\nWhy declined: author call; removing it would expand the contract of this ticket.\nSuggested change: drop propagate() and inline the physical-test flag at the rollup call site (e.g. rollup(..., physical=True))."
+help[2]:
+  - Run `tasks-axi start ha-72-author-note` to move it to in flight
+  - Run `tasks-axi block ha-72-author-note --by <other>` to record a dependency
+[exit 0]
+$ bin/fm-captain-hold.sh hold ha-72-author-note --reason declined simplification f3 from ha-72-retro-s1 left as author call - see body --origin ha-72-retro-s1
+ha-72-author-note
+[exit 0]
+== Resulting backlog.md
+# Backlog
+
+## In flight
+## Queued
+- [ ] ha-72-author-note - Author note: rollup physical-test simplification declined in ha-72 (kind: captain) (since 2026-09-27) (hold: declined simplification f3 from ha-72-retro-s1 left as author call - see body) (hold-kind: captain)
+  Captain hold set: 2026-09-27T12:14:56Z
+
+  Finding (gate review f3, simplification): remove the rollup physical-test propagation component in rollup.py:88 (fn propagate(x)).
+  Why declined: author call; removing it would expand the contract of this ticket.
+  Suggested change: drop propagate() and inline the physical-test flag at the rollup call site (e.g. rollup(..., physical=True)).
+## Done
+== open check
+$ bin/fm-captain-hold.sh open ha-72-author-note
+[exit 0]
+== Scenario B (adversarial): putting the full multi-line note in --reason instead
+$ bin/fm-captain-hold.sh hold ha-71-author-note --title Author note ha-71 --reason Finding (gate review f3, simplification): remove the rollup physical-test propagation component in rollup.py:88 (fn propagate(x)).
+Why declined: author call; removing it would expand the contract of this ticket.
+Suggested change: drop propagate() and inline the physical-test flag at the rollup call site (e.g. rollup(..., physical=True)). --origin ha-71-retro-s1
+fm-captain-hold: reason must be one line
+[exit 1]
+$ bin/fm-captain-hold.sh hold ha-71b-author-note --title Author note ha-71b --reason critical pages on ordinary cooking heat (intended?) --origin ha-71-retro-s1
+fm-captain-hold: reason must not contain parentheses (tasks-axi hold contract)
+[exit 1]
+== backlog after adversarial attempts
+# Backlog
+
+## In flight
+## Queued
+- [ ] ha-72-author-note - Author note: rollup physical-test simplification declined in ha-72 (kind: captain) (since 2026-09-27) (hold: declined simplification f3 from ha-72-retro-s1 left as author call - see body) (hold-kind: captain)
+  Captain hold set: 2026-09-27T12:14:56Z
+
+  Finding (gate review f3, simplification): remove the rollup physical-test propagation component in rollup.py:88 (fn propagate(x)).
+  Why declined: author call; removing it would expand the contract of this ticket.
+  Suggested change: drop propagate() and inline the physical-test flag at the rollup call site (e.g. rollup(..., physical=True)).
+## Done
