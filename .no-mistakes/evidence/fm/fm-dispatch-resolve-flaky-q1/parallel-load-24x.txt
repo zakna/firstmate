@@ -1,0 +1,5 @@
+base: 2/24 runs failed
+   1 not ok - a directory at the list path prints one diagnostic line (expected '1', got '2')
+   1 not ok - a rule-criterion match prints one diagnostic line (expected '1', got '2')
+head: 0/24 runs failed
+head extra: 0/48 failed

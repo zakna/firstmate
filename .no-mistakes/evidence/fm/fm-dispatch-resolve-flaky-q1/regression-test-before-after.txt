@@ -1,0 +1,7 @@
+== HEAD test file vs BASE lib ==
+not ok - the provider lookup prints nothing on stderr when SIGPIPE is ignored (expected '', got '_: line 7: printf: write error: Broken pipe')
+exit=1
+== HEAD test file vs HEAD lib ==
+ok - provider lookup reads its whole table, so an ignored SIGPIPE adds no diagnostic line
+# all fm-dispatch-resolve tests passed
+exit=0

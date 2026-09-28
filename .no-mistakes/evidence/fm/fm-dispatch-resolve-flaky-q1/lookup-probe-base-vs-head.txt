@@ -1,0 +1,23 @@
+== BASE lib (2a0a916) ==
+claude
+rc=0
+_: line 4: printf: write error: Broken pipe
+== HEAD lib (b8aa219) ==
+claude
+rc=0
+== HEAD real table: every harness + unknown ==
+claude -> claude rc=0
+codex -> codex rc=0
+cursor -> cursor rc=0
+opencode -> <none> rc=1
+grok -> grok rc=0
+omp -> <none> rc=1
+nosuch -> <none> rc=1
+== BASE real table ==
+claude -> claude rc=0
+codex -> codex rc=0
+cursor -> cursor rc=0
+opencode -> <none> rc=1
+grok -> grok rc=0
+omp -> <none> rc=1
+nosuch -> <none> rc=1
