@@ -145,14 +145,18 @@ fm_quota_single_provider_table() {
     'muse meta'
 }
 
+# The table is read whole before the early return: bash writes it one line at a
+# time, so returning mid-stream from a process substitution left the writer on a
+# closed pipe, which prints a broken-pipe error where SIGPIPE is ignored (CI).
 fm_quota_single_provider_for_harness() {
-  local harness provider
+  local harness provider table
+  table=$(fm_quota_single_provider_table)
   while read -r harness provider; do
     if [ "$harness" = "$1" ]; then
       printf '%s\n' "$provider"
       return 0
     fi
-  done < <(fm_quota_single_provider_table)
+  done <<<"$table"
   return 1
 }
 

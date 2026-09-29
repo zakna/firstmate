@@ -340,6 +340,26 @@ assert_contains "$out" '  status: clear' "no list resolves exactly as before"
 assert_contains "$(jq -r .state.task.brief "$LOG/body")" 'Acme-Ledger' "no list sends the task text as before"
 pass "never-send list withholds the request on a match or a bad list, and never prints the value"
 
+# --- provider lookup: no broken-pipe line where SIGPIPE is ignored -----------
+# CI runners ignore SIGPIPE, so a lookup that returned before its harness table
+# was fully written left the writer printing a broken-pipe error on the tool's
+# stderr. The table here pauses after the matching line to make that timing
+# deterministic.
+lookup_out=$(bash -c '
+  trap "" PIPE
+  . "$1/bin/fm-quota-axi-lib.sh"
+  fm_quota_single_provider_table() {
+    printf "%s\n" "claude claude"
+    sleep 0.3
+    printf "%s\n" "codex codex"
+  }
+  fm_quota_single_provider_for_harness claude
+  sleep 0.5
+' _ "$ROOT" 2> "$TMP_ROOT/lookup.err")
+assert_equals 'claude' "$lookup_out" "the provider lookup still finds the harness"
+assert_equals '' "$(cat "$TMP_ROOT/lookup.err")" "the provider lookup prints nothing on stderr when SIGPIPE is ignored"
+pass "provider lookup reads its whole table, so an ignored SIGPIPE adds no diagnostic line"
+
 # --- rules are snapshotted and line output is injection-safe -------------------
 MUTATED_RULES="$TMP_ROOT/mutated-rules.json"
 jq '.rules[3].use = {"harness":"claude","model":"opus"}' "$BASE_RULES" > "$MUTATED_RULES"
