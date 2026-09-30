@@ -126,8 +126,10 @@
 #                                   active-alert directive for that wedge alarm
 #                                   (off|auto|osascript|herdr|command:<cmd>). An
 #                                   absent file/var means auto: on macOS that is
-#                                   an OS-level notification, so the alarm is
-#                                   never silent. See wedge_alarm_notify below
+#                                   an OS-level notification, and elsewhere a
+#                                   herdr notification when the supervisor runs
+#                                   under herdr with herdr on PATH, so the alarm
+#                                   is not silent. See wedge_alarm_notify below
 #                                   and docs/configuration.md.
 #          FM_WEDGE_ALARM_EXEC      notifier seam: when set, every notifier
 #                                   channel routes through this command as
@@ -899,13 +901,15 @@ escalate_flush() {  # <state>
 # single directive. Directives:
 #   off              disable the active alert entirely, regardless of position
 #                    (marker + flash remain)
-#   auto | default   platform default: macOS -> osascript; otherwise none
+#   auto | default   platform default: macOS -> osascript; elsewhere herdr
+#                    when the supervisor runs under herdr and herdr is on
+#                    PATH; otherwise none
 #   osascript        macOS Notification Center banner (backend-independent)
 #   herdr            herdr UI notification (herdr notification show)
 #   command:<cmd>    run <cmd> via `sh -c`, summary on $1 and on stdin
-# An absent config means auto, i.e. default-ON on macOS: the alarm's whole
-# purpose is to never be silent, so the reachable OS channel fires unless the
-# captain explicitly disables it.
+# An absent config means auto, i.e. default-ON on macOS and under herdr: the
+# alarm's whole purpose is to never be silent, so the reachable channel fires
+# unless the captain explicitly disables it.
 
 # Print the configured channel directives, one per line. FM_WEDGE_ALARM_CHANNEL
 # wins (a single directive); else each non-empty, non-comment line of
@@ -930,15 +934,20 @@ wedge_alarm_configured_channels() {
   [ -n "$found" ] || printf 'auto\n'
 }
 
-# Resolve the platform's default OS-level channel for `auto`. macOS reaches the
-# captain via an osascript Notification Center banner; other platforms have no
-# built-in OS channel (the captain wires a command: directive), so this prints
-# nothing and wedge_alarm_notify logs that the marker is the only signal.
+# Resolve the platform's default channel for `auto`. macOS reaches the captain
+# via an osascript Notification Center banner. Elsewhere a supervisor running
+# under herdr (the resolved FM_SUPERVISOR_BACKEND) with herdr on PATH reaches
+# the captain through a herdr notification; any other shape has no built-in
+# channel (the captain wires a command: directive), so this prints nothing and
+# wedge_alarm_notify logs that the marker is the only signal.
 wedge_alarm_platform_default() {
   case "$(uname)" in
     Darwin) command -v osascript >/dev/null 2>&1 && printf 'osascript' ;;
-    *) : ;;
+    *)
+      [ "${FM_SUPERVISOR_BACKEND:-$FM_SUPERVISOR_BACKEND_DEFAULT}" = herdr ] \
+        && command -v herdr >/dev/null 2>&1 && printf 'herdr' ;;
   esac
+  return 0
 }
 
 wedge_alarm_run_bounded() {

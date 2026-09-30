@@ -2408,7 +2408,11 @@ status_span_has_actionable() {  # <status-file> <start-offset>
 #             (e.g. waiting on CI);
 #   paused  - the crew's authoritative current state is a declared external-wait
 #             pause (paused:), which is EXPECTED to idle;
-#   none    - neither, so the wake must surface (a stopped/finished/parked/failed/
+#   parked  - a no-mistakes run parked at a gate, read from the run step: not
+#             working and not itself a wait, but named so a caller that must
+#             decide what an exited agent on a parked run means decides it
+#             rather than falling through (fm-watch.sh pause_state_class);
+#   none    - none of these, so the wake must surface (a stopped/finished/failed/
 #             torn-down/unknown crew, or an unreadable verdict).
 # One fm-crew-state.sh read serves BOTH absorb reasons at once. Reading the state
 # authoritatively (not the status log) is what keeps run-step precedence: a crew
@@ -2423,10 +2427,11 @@ crew_absorb_class() {  # <id>
   case "$line" in state:*) ;; *) printf 'none'; return ;; esac
   state=${line#state: }; state=${state%% *}
   if [ "$state" = paused ]; then printf 'paused'; return; fi
+  src=${line#*source: }; src=${src%% *}
   if [ "$state" = working ]; then
-    src=${line#*source: }; src=${src%% *}
     case "$src" in run-step|pane) printf 'working'; return ;; esac
   fi
+  if [ "$state" = parked ] && [ "$src" = run-step ]; then printf 'parked'; return; fi
   printf 'none'
 }
 

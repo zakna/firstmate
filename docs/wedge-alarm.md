@@ -13,12 +13,13 @@ It lists channel directives, one per non-empty, non-comment line, and every list
 
 - `off` disables every active alert while retaining the durable marker and tmux flash.
 - `auto` or `default` resolves to `osascript` on macOS.
-  Other platforms have no built-in OS channel, so configure `command:` when a durable marker alone is insufficient.
+  On other platforms it resolves to `herdr` when the supervisor runs under herdr and `herdr` is on `PATH`.
+  Any other shape has no built-in channel and logs that the durable marker is the only signal, so configure `command:` when that is insufficient.
 - `osascript` posts a macOS Notification Center banner outside the terminal pane.
 - `herdr` calls `herdr notification show` outside the supervised pane.
 - `command:<cmd>` runs `<cmd>` through `sh -c` with the alarm summary as `$1` and on stdin, allowing delivery to a phone or pager service.
 
-An absent `config/wedge-alarm` behaves as `auto`, which is default-on on macOS.
+An absent `config/wedge-alarm` behaves as `auto`, which is default-on on macOS and under herdr.
 This is deliberate because the alarm fires only after a genuine max-defer wedge and is rate-limited to at most once per max-defer window.
 
 Each channel is best-effort.

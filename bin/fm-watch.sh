@@ -369,10 +369,14 @@ case "$SECONDMATE_LIVENESS_WINDOW_SECS" in ''|*[!0-9]*|0) SECONDMATE_LIVENESS_WI
 # A crew that declared a pause is idling on a known external wait, so its stale
 # pane is absorbed rather than wedge-escalated.
 # A captain-held or paused crew whose agent has confidently exited uses the same
-# bounded cadence, while a live or ambiguously read agent surfaces on first sight
-# and is then held to that same cadence; a secondmate earns the cadence on its
-# declaration alone, because its endpoint liveness is deliberately never read
-# (pause_state_class owns that split).
+# bounded cadence - an agent the endpoint probe confirms exited counts as exited
+# even while its no-mistakes run stays parked at a gate - while a live or
+# ambiguously read agent surfaces on first sight and is then held to that same
+# cadence; a secondmate earns the cadence on its declaration alone, because its
+# endpoint liveness is deliberately never read (pause_state_class owns that
+# split). A task the backlog holds for the captain never wedge-escalates on an
+# idle endpoint, whatever its status line, run record, or endpoint reads: it
+# takes the captain call's bounded recheck instead (wedge_defer_captain_call).
 # These cases re-surface once for a recheck every PAUSE_RESURFACE_SECS - far
 # longer than the wedge threshold, but finite so a forgotten wait cannot rot
 # invisibly - except an item held for the captain while the away-posture record
@@ -1397,6 +1401,38 @@ EOF
   return 0
 }
 
+# Defer the wedge ladder for a task whose BACKLOG record holds it for the captain
+# (task_captain_call_open), however its run record or endpoint reads. The status
+# line is not that record: firstmate holds a task and may stop its worker on
+# purpose while the no-mistakes run stays parked at a gate and the worker's last
+# line stays an ordinary `working:` or `resolved`, which wedge_wait_evidence
+# cannot read as a wait. Nothing the worker could do would end that quiet, so it
+# is neither a wedge nor a gone endpoint to report: it is the captain's wait, and
+# it takes the captain call's own bounded recheck (captain_call_stale_bound),
+# sharing that throttle with the first-sight alarm so the lane is not announced
+# twice inside one PAUSE_RESURFACE_SECS, and staying silent under the
+# away-posture record. Like the other deferrals it restarts the idle timer,
+# which also holds the backlog read to once per STALE_ESCALATE_SECS, and leaves
+# the escalation count alone. Returns 1 when no open captain call is proven, so
+# an unreadable backlog keeps the unchanged ladder.
+wedge_defer_captain_call() {  # <window> <since-file> <triage-label> <idle-age> <task>
+  local win=$1 since_file=$2 label=$3 age=$4 task=$5 key reason
+  key=$(window_key "$win")
+  if captain_call_stale_bound "$key" "$task"; then
+    date +%s > "$since_file"
+    clear_write_tracking "$key"
+    triage_log "absorbed $label (held for the captain, recheck not due, idle ${age}s): $win"
+    return 0
+  fi
+  [ -n "$STALE_WAIT_DECLARATION" ] || return 1
+  date +%s > "$since_file"
+  clear_write_tracking "$key"
+  reason="stale: $win (idle ${age}s - held for the captain in the backlog, awaiting the captain, rechecked on a long cadence not a wedge; answer the held decision or release the hold)"
+  fm_wake_append stale "$win" "$reason" || exit 1
+  stale_wait_record "$key"
+  wake "$reason"
+}
+
 # Drop a window's write-deferral chain wherever its stale bookkeeping resets, so
 # the bounded re-surface cadence is measured from the CURRENT quiet stretch and a
 # long-finished one cannot make the next deferral resurface immediately.
@@ -1479,18 +1515,19 @@ wedge_dead_record() {  # <window> <since-file> <triage-label> <idle-age> <pane-h
 # can be absorbed this way: the plain non-terminal path, and the
 # stale_is_terminal-overridden path (a captain-relevant status-log line that an
 # active run/busy pane outranked).
-# The wait-evidence consult (wedge_wait_evidence), the worktree write probe, and
-# the dead-record probe (wedge_dead_record) run ONLY here, inside the
-# at-threshold branch that is about to escalate: at most one each per window per
-# STALE_ESCALATE_SECS, never on an ordinary poll. The crew-state read
-# wedge_wait_evidence may take under config/wedge-defer-parked-gate keeps that
-# same bound however long the wait lasts, because the deferral it feeds restarts
-# the idle timer like every other deferral below; an unconfigured home never
-# reaches that read at all. The wait consult runs first, because a pane that can
-# account for its own quiet has nothing to prove through its worktree. The dead-record probe
-# runs last of the three, so the two cheaper deferrals keep the panes they
-# already own on their existing bounded cadences and only a pane that would
-# otherwise alarm pays for a backend read.
+# The wait-evidence consult (wedge_wait_evidence), the backlog captain-hold read
+# (wedge_defer_captain_call), the worktree write probe, and the dead-record probe
+# (wedge_dead_record) run ONLY here, inside the at-threshold branch that is about
+# to escalate: at most one each per window per STALE_ESCALATE_SECS, never on an
+# ordinary poll. The crew-state read wedge_wait_evidence may take under
+# config/wedge-defer-parked-gate keeps that same bound however long the wait
+# lasts, because the deferral it feeds restarts the idle timer like every other
+# deferral below; an unconfigured home never reaches that read at all. The two
+# wait consults run first, because a pane that can account for its own quiet has
+# nothing to prove through its worktree, and a lane held for the captain is a
+# wait whatever its endpoint proves. The dead-record probe runs last, so the
+# cheaper deferrals keep the panes they already own on their existing bounded
+# cadences and only a pane that would otherwise alarm pays for a backend read.
 wedge_timer_check() {  # <window> <since-file> <triage-label> <escalation-count-file> <task> <pane-hash>
   local win=$1 since_file=$2 label=$3 escalation_file=$4 task=$5 hash=$6 since age n reason evidence
   since=$(cat "$since_file" 2>/dev/null || true)
@@ -1507,6 +1544,9 @@ wedge_timer_check() {  # <window> <since-file> <triage-label> <escalation-count-
       if [ "$age" -ge "$STALE_ESCALATE_SECS" ]; then
         if evidence=$(wedge_wait_evidence "$task") &&
            wedge_defer_wait "$win" "$since_file" "$label" "$age" "$evidence"; then
+          return 0
+        fi
+        if wedge_defer_captain_call "$win" "$since_file" "$label" "$age" "$task"; then
           return 0
         fi
         if crew_worktree_written_since "$task" "$STATE" "$since_file"; then
@@ -1699,9 +1739,10 @@ clear_pause_tracking() {  # <window-key>
 }
 
 # Reconcile a declared pause or captain-held status with authoritative crew state.
-# After fm-crew-state has fallen back to stopped or unknown, paused classification is
-# recovered only for a confidently dead ordinary crew, or for a secondmate, whose
-# endpoint liveness this function deliberately never reads.
+# Prints working, paused, or none. After fm-crew-state has fallen back to stopped,
+# unknown, or a parked run, paused classification is recovered only for a
+# confidently dead ordinary crew, or for a secondmate, whose endpoint liveness this
+# function deliberately never reads.
 pause_state_class() {  # <window> <task>
   local win=$1 task=$2 key last recheck_file class agent_alive kind
   key=$(window_key "$win")
@@ -1709,7 +1750,11 @@ pause_state_class() {  # <window> <task>
   recheck_file="$STATE/.paused-rechecked-$key"
   if ! status_is_paused_or_captain_held "$last"; then
     rm -f "$recheck_file"
-    crew_absorb_class "$task"
+    class=$(crew_absorb_class "$task")
+    # With no declared wait a parked run is not a wait this function admits, so
+    # it surfaces exactly as every other unabsorbable verdict does.
+    [ "$class" = parked ] && class=none
+    printf '%s' "$class"
     return
   fi
   # Read once past the declared-wait gate and reused by both liveness gates below,
@@ -1750,7 +1795,17 @@ pause_state_class() {  # <window> <task>
   # status-declared `captain-held` transfer - which has no current-state mapping
   # and so arrives as `none` - would be silenced by every caller rather than taking
   # the bounded re-surface cadence, and a forgotten declaration would rot invisibly.
-  [ "$class" = none ] && class=paused
+  # A stopped worker on a run still parked at a gate counts as confidently exited:
+  # the endpoint probe above is the only proof of whether an agent is there, and a
+  # parked run proves nothing about that - it waits for an answer to its gate, not
+  # for the worker, and the worker's own declaration already names who owes it.
+  case "$class" in
+    parked)
+      triage_log "declared wait on a parked run with its agent confirmed exited, counted as exited: $win"
+      class=paused
+      ;;
+    none) class=paused ;;
+  esac
   case "$class" in
     paused) date +%s > "$recheck_file" ;;
     *) rm -f "$recheck_file" ;;

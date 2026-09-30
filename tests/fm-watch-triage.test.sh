@@ -612,12 +612,18 @@ test_crew_absorb_class_classifier() {
   ! crew_is_provably_working a || fail "a paused crew was treated as provably working"
   FM_FAKE_CREW_STATE='state: working · source: status-log · working: compiling'
   [ "$(crew_absorb_class a)" = none ] || fail "stale working: status-log classed absorbable"
+  FM_FAKE_CREW_STATE='state: parked · source: run-step · parked at review'
+  [ "$(crew_absorb_class a)" = parked ] || fail "a run parked at a gate not classed parked"
+  ! crew_is_provably_working a || fail "a parked run was treated as provably working"
+  ! crew_is_paused a || fail "a parked run was classed a declared pause"
+  FM_FAKE_CREW_STATE='state: parked · source: status-log · needs-decision: pick one'
+  [ "$(crew_absorb_class a)" = none ] || fail "a status-log decision was classed as a parked run"
   FM_FAKE_CREW_STATE='state: unknown · source: none · worktree gone'
   [ "$(crew_absorb_class a)" = none ] || fail "unknown crew classed absorbable"
   ! crew_is_paused a || fail "unknown crew classed paused"
   [ "$(crew_absorb_class "")" = none ] || fail "empty id not classed none"
   unset FM_FAKE_CREW_STATE
-  pass "crew_absorb_class: working/paused/none from one read; crew_is_paused and crew_is_provably_working agree"
+  pass "crew_absorb_class: working/paused/parked/none from one read; crew_is_paused and crew_is_provably_working agree"
 }
 
 # The wedge detector's third liveness input: writes inside the crew's own recorded
@@ -4196,6 +4202,161 @@ test_reheld_captain_call_starts_its_own_resurface_window() {
   pass "a released-then-re-held task is a distinct captain call whose first sight still alarms"
 }
 
+# --- the wedge ladder and work the captain is already holding ----------------
+# The shape: firstmate held a task for the captain in the
+# backlog, stopped its worker on purpose, and left the no-mistakes run parked at
+# its review gate. The worker's last status line is an ordinary one, so no line
+# predicate sees the hold, and the pane has been idle past the wedge threshold.
+# That lane was reported as a possible wedge. A lane held for the captain is a
+# wait, whatever its run record says and whatever the endpoint probe proves, so
+# it takes the captain's bounded recheck instead of the ladder.
+
+# A hold fixture already stably stale at its recorded hash, with the wedge timer
+# armed and past the threshold - exactly where wedge_timer_check owns the pane.
+held_wedge_fixture() {  # <name> <status-line> <hold|nohold>
+  local dir state key text
+  dir=$(make_hold_home "$1" "$2" "$3") || return 1
+  state="$dir/state"
+  text='idle at the review gate'
+  printf '%s' "$text" > "$dir/pane.txt"
+  key=$(hold_key)
+  printf '%s' "$(hash_text "$text")" > "$state/.hash-$key"
+  printf '1\n' > "$state/.count-$key"
+  printf '%s' "$(hash_text "$text")" > "$state/.stale-$key"
+  printf '%s\n' "$(( $(date +%s) - 300 ))" > "$state/.stale-since-$key"
+  printf '%s\n' "$dir"
+}
+
+# One watcher over a held_wedge_fixture. <pane-command> and <inventory> choose
+# what the endpoint probe proves: `bash` in front of a window the inventory still
+# lists is an exited agent, `node` is an unattributable foreground process, and
+# `grok` is a live agent.
+held_wedge_round() {  # <dir> <crew-verdict> <pane-command> <exit|absorb>
+  local dir=$1 verdict=$2 comm=$3 mode=$4 pid cycles=0
+  PATH="$dir/fakebin:$PATH" FM_FAKE_TMUX_WINDOW=test:fm-held-merge \
+    FM_FAKE_TMUX_CAPTURE="$dir/pane.txt" FM_FAKE_TMUX_CURRENT_COMMAND="$comm" \
+    FM_FAKE_TMUX_WINDOWS=fm-held-merge FM_FAKE_CREW_STATE="$verdict" \
+    FM_WATCH_HANDLING_SUCCESSOR=1 \
+    FM_HOME="$dir" FM_DATA_OVERRIDE="$dir/data" FM_CONFIG_OVERRIDE="$dir/config" \
+    FM_STATE_OVERRIDE="$dir/state" FM_CREW_STATE_BIN="$dir/fakebin/fm-crew-state.sh" \
+    FM_PAUSE_RESURFACE_SECS=999 FM_STALE_ESCALATE_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=1 \
+    FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" >> "$dir/watch.out" 2>&1 &
+  pid=$!
+  if [ "$mode" = exit ]; then
+    wait_for_exit "$pid" 100 || { reap "$pid"; return 1; }
+    return 0
+  fi
+  while [ "$cycles" -lt 3 ]; do
+    wait_poll_cycle "$dir/state" "$pid" 300 || { reap "$pid"; return 1; }
+    cycles=$((cycles + 1))
+  done
+  reap "$pid"
+  return 0
+}
+
+test_captain_held_lane_at_a_parked_gate_is_not_a_wedge() {
+  local spec name comm dir state out key
+  local parked='state: parked · source: run-step · parked at review'
+  command -v tasks-axi >/dev/null 2>&1 \
+    || { echo "skip: tasks-axi not found (captain-held wedge threshold)"; return 0; }
+  key=$(hold_key)
+  for spec in 'exited|bash' 'unproven|node'; do
+    name=${spec%%|*}; comm=${spec#*|}
+    dir=$(held_wedge_fixture "held-wedge-$name" 'working: answering the review gate' hold) \
+      || fail "[$name] could not build a captain-held wedge fixture"
+    state="$dir/state"; out="$dir/watch.out"
+
+    held_wedge_round "$dir" "$parked" "$comm" exit \
+      || fail "[$name] a captain-held lane was never rechecked at the wedge threshold: $(cat "$out")"
+    grep -F 'possible wedge' "$out" >/dev/null \
+      && fail "[$name] a captain-held lane was reported as a possible wedge: $(cat "$out")"
+    grep -F 'so this is not a wedge' "$out" >/dev/null \
+      && fail "[$name] a captain-held lane was reported as a gone endpoint instead of a captain wait: $(cat "$out")"
+    grep -F 'awaiting the captain' "$out" >/dev/null \
+      || fail "[$name] the captain-held recheck did not name the captain: $(cat "$out")"
+    [ ! -e "$state/.wedge-escalations-$key" ] \
+      || fail "[$name] a captain-held lane advanced the wedge escalation count"
+    [ "$(wedge_stale_wakes "$state" test:fm-held-merge)" -eq 1 ] \
+      || fail "[$name] a captain-held lane queued $(wedge_stale_wakes "$state" test:fm-held-merge) wakes instead of one"
+    ack_stopped_cycle "$state" || fail "[$name] could not acknowledge the captain-held recheck"
+
+    # Later thresholds inside the recheck cadence stay quiet, and the idle timer
+    # keeps restarting rather than climbing toward an escalation.
+    : > "$out"
+    held_wedge_round "$dir" "$parked" "$comm" absorb \
+      || fail "[$name] a captain-held lane re-alarmed inside its recheck cadence: $(cat "$out")"
+    [ "$(wedge_stale_wakes "$state" test:fm-held-merge)" -eq 0 ] \
+      || fail "[$name] a captain-held lane queued a wake inside its recheck cadence: $(cat "$state/.wake-queue")"
+    [ ! -e "$state/.wedge-escalations-$key" ] \
+      || fail "[$name] a captain-held lane advanced the wedge escalation count on a later threshold"
+  done
+  pass "a lane held for the captain at a parked gate takes the captain's recheck, never the wedge ladder"
+}
+
+# The load-bearing direction for the rule above: the identical lane with NO hold,
+# a live agent and a busy run that has stopped moving, is a real wedge suspect and
+# keeps the unchanged schedule, reason and count.
+test_unheld_live_lane_still_wedge_escalates() {
+  local dir state out key
+  local working='state: working · source: run-step · ci running'
+  command -v tasks-axi >/dev/null 2>&1 \
+    || { echo "skip: tasks-axi not found (unheld wedge threshold)"; return 0; }
+  key=$(hold_key)
+  dir=$(held_wedge_fixture held-wedge-unheld 'working: answering the review gate' nohold) \
+    || fail "could not build an unheld wedge fixture"
+  state="$dir/state"; out="$dir/watch.out"
+  held_wedge_round "$dir" "$working" grok exit \
+    || fail "an unheld live lane stopped escalating at the wedge threshold: $(cat "$out")"
+  grep -F 'possible wedge, escalation 1' "$out" >/dev/null \
+    || fail "an unheld live lane lost its wedge reason: $(cat "$out")"
+  [ "$(cat "$state/.wedge-escalations-$key" 2>/dev/null || true)" = 1 ] \
+    || fail "an unheld live lane did not advance the escalation count"
+  pass "an unheld lane whose live agent stops responding still wedge-escalates"
+}
+
+# The classifier's own choice for the same shape once the worker has declared the
+# wait itself: a run parked at a gate proves nothing about whether its agent is
+# there, so an agent the endpoint probe confirms exited counts as exited and the
+# declared captain wait takes its bounded recheck, while a live agent at the same
+# parked gate still surfaces on first sight.
+test_declared_wait_on_a_parked_run_decides_exited_from_the_endpoint() {
+  local spec name comm dir state out key
+  local parked='state: parked · source: run-step · parked at review'
+  command -v tasks-axi >/dev/null 2>&1 \
+    || { echo "skip: tasks-axi not found (declared wait on a parked run)"; return 0; }
+  key=$(hold_key)
+  for spec in 'exited|bash' 'live|grok'; do
+    name=${spec%%|*}; comm=${spec#*|}
+    dir=$(make_hold_home "parked-declared-$name" \
+      'captain-held [key=nm-r1-review]: tracked by held-merge' nohold) \
+      || fail "[$name] could not build a declared-wait fixture"
+    state="$dir/state"; out="$dir/watch.out"
+    # Declared long enough ago that the bounded recheck is due on first sight.
+    set_mtime "$(( $(date +%s) - 2000 ))" "$state/held-merge.status"
+    printf '%s' "$(seen_sig "$state/held-merge.status")" > "$state/.seen-held-merge_status"
+    printf 'idle at the review gate' > "$dir/pane.txt"
+    printf '%s' "$(hash_text 'idle at the review gate')" > "$state/.hash-$key"
+    printf '1\n' > "$state/.count-$key"
+    held_wedge_round "$dir" "$parked" "$comm" exit \
+      || fail "[$name] a declared wait on a parked run never surfaced: $(cat "$out")"
+    case "$name" in
+      exited)
+        grep -F 'awaiting the captain' "$state/.wake-queue" >/dev/null \
+          || fail "an exited agent on a parked run did not take the captain's bounded recheck: $(cat "$state/.wake-queue")"
+        grep -F 'counted as exited' "$state/.watch-triage.log" >/dev/null \
+          || fail "the classifier did not record its exited choice for a parked run: $(cat "$state/.watch-triage.log")"
+        ;;
+      live)
+        grep -Fx 'stale: test:fm-held-merge' "$out" >/dev/null \
+          || fail "a live agent at a parked gate did not surface on first sight: $(cat "$out")"
+        grep -F 'counted as exited' "$state/.watch-triage.log" >/dev/null 2>&1 \
+          && fail "a live agent at a parked gate was counted as exited"
+        ;;
+    esac
+  done
+  pass "a declared wait on a parked run counts an exited agent as exited and still surfaces a live one"
+}
+
 
 
 test_secondmate_paused_resurfaces_in_normal_mode() {
@@ -6654,6 +6815,9 @@ test_open_captain_call_bounds_stale_churn
 test_stale_churn_without_a_captain_call_still_alarms
 test_failed_wake_append_does_not_arm_the_captain_hold_throttle
 test_reheld_captain_call_starts_its_own_resurface_window
+test_captain_held_lane_at_a_parked_gate_is_not_a_wedge
+test_unheld_live_lane_still_wedge_escalates
+test_declared_wait_on_a_parked_run_decides_exited_from_the_endpoint
 test_secondmate_paused_resurfaces_in_normal_mode
 test_secondmate_captain_held_resurfaces_in_normal_mode
 test_secondmate_nonpaused_stale_remains_suppressed
