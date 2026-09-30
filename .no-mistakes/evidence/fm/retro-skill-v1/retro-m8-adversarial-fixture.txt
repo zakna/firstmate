@@ -1,0 +1,10 @@
+Fixture: round1 findings ci-1 (unselected) + ci-10 (selected ['ci-10']); round2 f-a selection ''; round3 f-b selection NULL; round4 f-c selected.
+Expected worklist: ci-1, f-a, f-b
+--- target commit 236fb96a (this change) ---
+review|1|ci-1|warning|auto-fix|a|prefix of selected id, NOT selected
+review|2|f-a|info|no-op|c|round with empty-string selection
+review|3|f-b|info|no-op|d|round with NULL selection
+--- earlier commit 89451560 (before the exact-membership fix) ---
+review|2|f-a|info|no-op|c|round with empty-string selection
+review|3|f-b|info|no-op|d|round with NULL selection
+exit=0

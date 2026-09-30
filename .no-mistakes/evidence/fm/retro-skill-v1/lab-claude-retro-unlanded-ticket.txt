@@ -1,0 +1,50 @@
+
+ ▐▛███▛█   Claude Code v2.1.285
+▝▜██████▀  Opus 5.5 with xhigh effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M3RYZ8CD20QFHTCQSMSTMCY8
+
+
+❯ /retro no-such-ticket-zz9
+
+  Read 1 file, ran 4 shell commands
+
+⏺ Captain, no retro started: I couldn't find anything called no-such-ticket-zz9 that has landed.
+
+  - Work records: this home has no work item by that name. Its work list is empty, and no projects are registered here.
+  - Projects: with nothing registered, there is no issue or PR it could point to. It isn't a number either, so it can't be a GitHub issue or PR number.
+
+  A retro only runs on work that has landed, so I didn't send out a scout. Send me the landed PR's URL, or the work item or issue it came from, and I'll start one.
+
+✻ Brewed for 41s · done 12:53 PM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M3RYZ8CD20QFHTCQSMSTMCY8 ctx 61097/1000000  Opus xhigh | 5h [█░░░░░] 18% →13:40 | 7d [███░░░] 50% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

@@ -1,0 +1,50 @@
+
+ ▐▛███▛█   Claude Code v2.1.285
+▝▜██████▀  Opus 5.5 with xhigh effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M3RYZ8CD20QFHTCQSMSTMCY8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /retro                             Run a retro on one landed ticket when the captain invokes /retro <ticket> or asks for a retro on a delivered ticket. The retro reviews the process that produced
+                                     the change, not only the code, so the same review comment is never written twice. It produces one report with a fixed metrics block, the status of earlier retro…
+  /session-retro                     End-of-session retrospective - mine the session for skill and harness improvement signals, preserve durable findings, and stage changes for later review. (user)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /retro
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M3RYZ8CD20QFHTCQSMSTMCY8 ctx --  Opus xhigh
+  ⏵⏵ auto mode on (shift+tab to cycle)

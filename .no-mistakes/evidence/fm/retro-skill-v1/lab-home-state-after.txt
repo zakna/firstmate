@@ -1,0 +1,18 @@
+Lab home contents after /retro no-such-ticket-zz9 (no scout, no report):
+<LAB>/.fm-lab-home
+<LAB>/config/startup-memory-budget
+<LAB>/state/.lock
+<LAB>/state/.startup-network.status
+<LAB>/state/.inactive-outcome-reconcile
+<LAB>/state/.lock-session
+<LAB>/state/home-summary.json
+<LAB>/state/.startup-network.report
+<LAB>/state/.wake-queue
+<LAB>/state/.trace-context-effective
+<LAB>/state/.session-start-complete
+<LAB>/state/.startup-network.timings
+main:1: editor#* (2 panes) [80x24] 
+main:2: counter# (1 panes) [80x24] 
+main:3: work# (1 panes) [80x24] 
+main:4: runner# (1 panes) [80x24] 
+primary:1: 2.1.285#* (1 panes) [200x50] 

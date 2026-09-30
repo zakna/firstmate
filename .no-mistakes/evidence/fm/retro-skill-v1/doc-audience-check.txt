@@ -1,0 +1,5 @@
+fm-doc-audience-check: ok surfaces=118 local_links=681
+exit=0
+Inventory WITHOUT the retro entry:
+fm-doc-audience-check: unclassified: .agents/skills/retro/SKILL.md
+exit=1
