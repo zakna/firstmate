@@ -1,0 +1,27 @@
+### M8 selected-flag membership, synthetic rounds (in-memory)
+ci-1|["ci-10"]|0
+ci-10|["ci-10"]|1
+a||0
+b||0
+exit=0
+### Lookup for project alpha (expect only data/a-retro-1)
+data/a-retro-1/report.md
+exit=0
+### Lookup for project gamma (no match, expect empty, no hang)
+(eval):19: device not configured: /dev/tty
+exit=1
+### No retro reports in home (inner grep empty; must not block on stdin)
+(eval):22: command not found: timeout
+exit=127 (124 would mean hang)
+### Same, unguarded form without /dev/null (control: blocks on stdin)
+(eval):24: command not found: timeout
+exit=127 (124 = hung reading stdin)
+### Lookup for project alpha (expect only data/a-retro-1; not beta, not non-retro c-ship-3, not alpha-two)
+data/a-retro-1/report.md
+exit=0
+### Lookup for project gamma (no match -> empty, returns promptly)
+exit=1 (142 = hung)
+### Home with no retro reports (inner grep empty; guarded form)
+exit=1 (142 = hung)
+### Control: unguarded form without /dev/null
+exit=142 (142 = hung reading stdin)

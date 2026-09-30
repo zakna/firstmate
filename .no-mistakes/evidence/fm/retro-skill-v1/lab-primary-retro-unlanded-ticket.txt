@@ -1,0 +1,27 @@
+
+ ▐▛███▛█   Claude Code v2.1.286
+▝▜██████▀  Opus 5.5 with xhigh effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M3SZ5R44DQ1CE5TFT0F44G2T
+
+❯ /retro nonexistent-ticket-zz9
+
+  Listed 1 directory, ran 4 shell commands
+
+⏺ Captain, still checking GitHub for that ticket; the backlog has no match.
+
+  Ran 1 shell command
+
+⏺ Captain, I can't run a retro on nonexistent-ticket-zz9 because I can't find it anywhere, so I've stopped without starting one.
+
+  - Backlog: no task has that id. This session's backlog is empty and has no projects registered.
+  - GitHub: searches for that name found no pull requests and no issues.
+
+  A retro only works on delivered work: a merged PR or an approved local landing. If you meant a different ticket, send me its task id, issue, or PR URL and I'll start the retro.
+
+✻ Cogitated for 43s · done 10:18 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M3SZ5R44DQ1CE5TFT0F44G2T ctx 61717/1000000  Opus xhigh | 5h [█░░░░░] 11% →23:40 | 7d [███░░░] 58% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

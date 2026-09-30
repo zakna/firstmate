@@ -1,0 +1,38 @@
+### Query 1: every attempt
+01M3RYZ8CD20QFHTCQSMSTMCY8|git@github.com:zakna/firstmate.git|completed|https://github.com/zakna/firstmate/pull/15|1790765408||1790767454|86572
+01M3SZ5R44DQ1CE5TFT0F44G2T|git@github.com:zakna/firstmate.git|running||1790799175||1790799272|
+exit=0
+### Query 2 (M2) run 01M3RYZ8CD20QFHTCQSMSTMCY8
+intent|completed|1
+rebase|completed|2798
+review|completed|74762
+test|completed|437386
+document|completed|26924
+lint|completed|2752
+push|completed|5666
+pr|completed|22055
+ci|skipped|1385525
+exit=0
+### Query 3 (M3/M4/M6) run 01M3RYZ8CD20QFHTCQSMSTMCY8
+intent|1|||1
+rebase|1|||2797
+review|1|auto_fix|1|35849
+review|2||0|38910
+test|1|||437385
+document|1||0|26924
+lint|1|||2752
+push|1|||5666
+pr|1|||22055
+ci|1|auto_fix|2|1330151
+ci|2|user_declined|2|55373
+exit=0
+### Query 4 (M8 worklist) run 01M3RYZ8CD20QFHTCQSMSTMCY8
+review|1|retro-m8-substring-match|warning|auto-fix|1|.agents/skills/retro/SKILL.md|The M8 worklist query decides whether a finding was selected with `instr(COALESCE(rd.selec
+ci|1|ci-1|error|auto-fix|1||CI check failing: Behavior portable serial 2 - provider reported failure - https://github.
+ci|1|ci-2|error|auto-fix|1||CI check failing: Behavior portable serial 4 - provider reported failure - https://github.
+ci|2|ci-1|error|ask-user|0||CI check failing: Behavior portable serial 2 - provider reported failure - https://github.
+ci|2|ci-2|error|ask-user|0||CI check failing: Behavior portable serial 4 - provider reported failure - https://github.
+exit=0
+### Adversarial: write attempt through -readonly
+Error: stepping, attempt to write a readonly database (8)
+exit=8
