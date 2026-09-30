@@ -119,7 +119,8 @@ sqlite3 -readonly "$DB" "SELECT sr.step_name, rd.round, json_extract(f.value, '\
   FROM step_results sr JOIN step_rounds rd ON rd.step_result_id = sr.id,
     json_each(json_extract(rd.findings_json, '\$.findings')) f
   WHERE sr.run_id = '<run id>'
-    AND instr(COALESCE(rd.selected_finding_ids, ''), json_extract(f.value, '\$.id')) = 0
+    AND NOT EXISTS (SELECT 1 FROM json_each(COALESCE(NULLIF(rd.selected_finding_ids, ''), '[]')) s
+      WHERE s.value = json_extract(f.value, '\$.id'))
   ORDER BY rd.created_at;"
 ```
 
