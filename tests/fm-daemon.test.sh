@@ -2689,13 +2689,74 @@ test_wedge_alarm_auto_darwin_selects_osascript() {
   pass "auto resolves to the macOS osascript notifier on Darwin (default-on)"
 }
 
-test_wedge_alarm_auto_non_darwin_has_no_os_channel() {
+# PATH with every directory holding an executable herdr removed, so the
+# "herdr absent" cases stay deterministic on a host that has herdr installed.
+path_without_herdr() {  # <fakebin-without-herdr>
+  local out=$1 d
+  local -a dirs=()
+  IFS=: read -r -a dirs <<< "$PATH"
+  for d in "${dirs[@]}"; do
+    [ -n "$d" ] && [ ! -x "$d/herdr" ] && out="$out:$d"
+  done
+  printf '%s\n' "$out"
+}
+
+test_wedge_alarm_auto_linux_under_herdr_selects_herdr() {
   local dir log
-  dir=$(make_wedge_case wedge-auto-linux); log="$dir/alert.log"
-  PATH="$dir/fakebin:$PATH" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux FM_WEDGE_ALARM_CHANNEL=auto \
+  dir=$(make_wedge_case wedge-auto-linux-herdr); log="$dir/alert.log"
+  PATH="$dir/fakebin:$PATH" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux \
+    FM_SUPERVISOR_BACKEND=herdr FM_WEDGE_ALARM_CHANNEL=auto \
     wedge_alarm_notify "away-mode WEDGED 900s" "/s/.marker"
-  [ ! -s "$log" ] || fail "auto selected a built-in OS channel on a non-macOS platform: $(cat "$log")"
-  pass "auto on a non-macOS platform selects no built-in OS channel (the marker or a configured command carries it)"
+  grep -F 'herdr' "$log" >/dev/null || fail "auto did not resolve to herdr on Linux under herdr: $(cat "$log")"
+  grep -F 'osascript' "$log" >/dev/null && fail "auto on Linux also selected osascript"
+  pass "auto on Linux resolves to the herdr notifier when the supervisor runs under herdr with herdr on PATH"
+}
+
+test_wedge_alarm_absent_config_linux_under_herdr_selects_herdr() {
+  local dir log cfgdir
+  dir=$(make_wedge_case wedge-absent-linux-herdr); log="$dir/alert.log"
+  cfgdir="$dir/config"; mkdir -p "$cfgdir"
+  PATH="$dir/fakebin:$PATH" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux \
+    FM_SUPERVISOR_BACKEND=herdr FM_CONFIG_OVERRIDE="$cfgdir" FM_WEDGE_ALARM_CHANNEL='' \
+    wedge_alarm_notify "away-mode WEDGED 900s" "/s/.marker"
+  grep -F 'herdr' "$log" >/dev/null || fail "an absent config/wedge-alarm did not reach herdr on Linux under herdr: $(cat "$log")"
+  pass "an absent config/wedge-alarm on Linux under herdr fires the herdr notifier"
+}
+
+test_wedge_alarm_auto_linux_without_herdr_keeps_marker_only_log() {
+  local dir log daemon_log nobin backend
+  dir=$(make_wedge_case wedge-auto-linux-noherdr); log="$dir/alert.log"
+  daemon_log="$dir/daemon.log"
+  nobin="$dir/nobin"; mkdir -p "$nobin"; cp "$dir/fakebin/uname" "$nobin/uname"
+  # herdr missing from PATH, and herdr present but the supervisor under tmux.
+  for backend in herdr-missing tmux; do
+    : > "$log"; : > "$daemon_log"
+    if [ "$backend" = herdr-missing ]; then
+      PATH=$(path_without_herdr "$nobin") LOG="$daemon_log" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux \
+        FM_SUPERVISOR_BACKEND=herdr FM_WEDGE_ALARM_CHANNEL=auto \
+        wedge_alarm_notify "away-mode WEDGED 900s" "/s/.marker"
+    else
+      PATH="$dir/fakebin:$PATH" LOG="$daemon_log" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux \
+        FM_SUPERVISOR_BACKEND=tmux FM_WEDGE_ALARM_CHANNEL=auto \
+        wedge_alarm_notify "away-mode WEDGED 900s" "/s/.marker"
+    fi
+    [ ! -s "$log" ] || fail "auto selected a channel on Linux ($backend): $(cat "$log")"
+    grep -F 'wedge alarm: no OS-level alert channel on Linux; durable marker /s/.marker is the only signal' "$daemon_log" >/dev/null \
+      || fail "auto on Linux ($backend) did not log the marker-only line: $(cat "$daemon_log" 2>/dev/null)"
+  done
+  pass "auto on Linux without herdr on PATH, or under tmux, selects no channel and logs that the marker is the only signal"
+}
+
+test_wedge_alarm_off_disables_linux_herdr_default() {
+  local dir log cfgdir
+  dir=$(make_wedge_case wedge-off-linux-herdr); log="$dir/alert.log"
+  cfgdir="$dir/config"; mkdir -p "$cfgdir"
+  printf 'off\n' > "$cfgdir/wedge-alarm"
+  PATH="$dir/fakebin:$PATH" FM_WEDGE_ALARM_LOG="$log" FM_FAKE_UNAME=Linux \
+    FM_SUPERVISOR_BACKEND=herdr FM_CONFIG_OVERRIDE="$cfgdir" FM_WEDGE_ALARM_CHANNEL='' \
+    wedge_alarm_notify "away-mode WEDGED 900s" "/s/.marker"
+  [ ! -s "$log" ] || fail "config/wedge-alarm off did not disable the Linux herdr default: $(cat "$log")"
+  pass "config/wedge-alarm off still disables the active alert on Linux under herdr"
 }
 
 test_wedge_alarm_config_file_multi_channel() {
@@ -3226,7 +3287,10 @@ test_wedge_alarm_command_failure_hides_configured_command
 test_wedge_alarm_unknown_channel_hides_configured_directive
 test_wedge_alarm_off_disables_active_alert_regardless_of_position
 test_wedge_alarm_auto_darwin_selects_osascript
-test_wedge_alarm_auto_non_darwin_has_no_os_channel
+test_wedge_alarm_auto_linux_under_herdr_selects_herdr
+test_wedge_alarm_absent_config_linux_under_herdr_selects_herdr
+test_wedge_alarm_auto_linux_without_herdr_keeps_marker_only_log
+test_wedge_alarm_off_disables_linux_herdr_default
 test_wedge_alarm_config_file_multi_channel
 test_wedge_alarm_failing_channel_degrades_gracefully
 test_wedge_alarm_hung_channel_times_out_and_falls_through
