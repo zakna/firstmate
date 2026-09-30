@@ -26,7 +26,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
 2. Dispatch a scout on the ticket's project through the ordinary scout intake.
    The retro always runs in a fresh worker, never the one that delivered the ticket, because the delivering worker cannot see its own blind spots and the supervisor's own errors are in scope.
    Give the scout a task id that contains `retro`, so later retros can find this one.
-3. In the scout instructions, name the ticket id, its pull request or landing commit, the delivering task's id, and the absolute path of this file, and tell the worker to follow "Worker procedure".
+3. In the scout instructions, name the project, the ticket id, its pull request or landing commit, the delivering task's id, and the absolute path of this file, and tell the worker to follow "Worker procedure".
    Add nothing that this file already states.
 4. When the scout reports, handle it as any finished investigation.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
@@ -50,8 +50,9 @@ Open the pipeline database read-only.
 - The task's status log and steering messages, when cleanup has not yet removed them.
 - The backlog item and its notes.
 - The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
-- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for the run on the ticket's branch.
-- The earlier retro reports in this home: `grep -l '^# Retro: ' data/*/report.md`.
+- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.
+- The earlier retro reports of the same project in this home: `grep -l '^Project: <project>$' $(grep -l '^# Retro: ' data/*/report.md)`.
+  A home may hold several projects, and another project's follow-ups are not evidence about this one.
 
 Label every statement OBSERVED, naming the record it was read from, or INFERRED.
 List the sources you actually read at the top of the report, and name every expected source that was missing.
@@ -94,13 +95,16 @@ A ticket delivered without the pipeline has no run; report M2 to M6 as not appli
 
 These queries extract M2 to M6 and the M8 worklist.
 They read another tool's storage, so if one fails the schema has changed: report the metric under "Could not establish" and do not guess.
+A delivery whose validation was cancelled, failed, or restarted has several runs; every attempt is part of the process under study.
+Run the per-run queries for each run the first query returns, report M2 to M6 per attempt, and add the attempts up for the block, keeping the attempts distinguishable.
 
 ```sh
 DB="${NM_HOME:-$HOME/.no-mistakes}/state.sqlite"
 
-# the run: find it by branch, then use its id below
-sqlite3 -readonly "$DB" "SELECT id, status, pr_url, created_at, ci_ready_at, updated_at, parked_ms
-  FROM runs WHERE branch = '<branch>' ORDER BY created_at;"
+# every attempt: all runs on the delivery's branch or pull request, with the repository they belong to
+sqlite3 -readonly "$DB" "SELECT r.id, p.upstream_url, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
+  FROM runs r JOIN repos p ON p.id = r.repo_id
+  WHERE r.branch = '<branch>' OR r.pr_url = '<pull request url>' ORDER BY r.created_at;"
 
 # M2, and per-step durations
 sqlite3 -readonly "$DB" "SELECT step_name, status, duration_ms FROM step_results
@@ -112,20 +116,20 @@ sqlite3 -readonly "$DB" "SELECT sr.step_name, rd.round, rd.selection_source,
   FROM step_results sr JOIN step_rounds rd ON rd.step_result_id = sr.id
   WHERE sr.run_id = '<run id>' ORDER BY rd.created_at;"
 
-# M8 worklist: findings raised and never selected for fixing
+# M8 worklist: every finding raised, with whether a fix round selected it
 sqlite3 -readonly "$DB" "SELECT sr.step_name, rd.round, json_extract(f.value, '\$.id'),
     json_extract(f.value, '\$.severity'), json_extract(f.value, '\$.action'),
+    EXISTS (SELECT 1 FROM json_each(COALESCE(NULLIF(rd.selected_finding_ids, ''), '[]')) s
+      WHERE s.value = json_extract(f.value, '\$.id')) AS selected,
     json_extract(f.value, '\$.file'), json_extract(f.value, '\$.description')
   FROM step_results sr JOIN step_rounds rd ON rd.step_result_id = sr.id,
     json_each(json_extract(rd.findings_json, '\$.findings')) f
   WHERE sr.run_id = '<run id>'
-    AND NOT EXISTS (SELECT 1 FROM json_each(COALESCE(NULLIF(rd.selected_finding_ids, ''), '[]')) s
-      WHERE s.value = json_extract(f.value, '\$.id'))
   ORDER BY rd.created_at;"
 ```
 
-The M8 query is an upper bound, because a finding restated under a new identifier in a later round and fixed there still appears.
-Reconcile every row against the merged tree before counting it.
+Selection records an intent to repair, not proof that the fix worked or survived to the merge, and a finding restated under a new identifier in a later round appears twice.
+So reconcile every row, selected or not, against the merged tree before counting it for M8.
 
 ### 4. What cost time
 
@@ -167,8 +171,8 @@ Report one table.
 | File | Lines at the previous retro | Lines now | Added by this ticket | Growth that is not navigation |
 |---|---|---|---|---|
 
-- The project's `AGENTS.md`, and `CLAUDE.md` when it holds its own text: count lines on the default branch now and at the ticket's base commit, and take the earlier count from the previous retro's table.
-- This home's `config/brief-include.md`: count lines now and compare with the previous retro's table; it has no history, so without an earlier table report "no baseline".
+- The project's `AGENTS.md`, and `CLAUDE.md` when it holds its own text: "Added by this ticket" is the count at the landing commit minus the count at the ticket's base commit, "Lines now" is the count on the default branch now, and the earlier count comes from the previous retro's table.
+- This home's `config/brief-include.md`: it has no history, so copy it beside your report as `brief-include.md`, count its lines, and diff it against the copy the previous retro saved; without an earlier copy report "no baseline".
 
 A navigation line tells a reader where something is or which file owns a subject.
 Any other added line - a rule, a lesson, a warning, a procedure - is growth that is not navigation; quote it and route it with the test in step 7.
@@ -187,14 +191,14 @@ Apply one routing test to every proposal and name the class in the report.
 | Automated check | The violation is mechanical: a fixed pattern, a banned call, a file-location rule, a missing declaration | A deterministic check in the project's own lint, test, hook, or CI, whichever is cheapest there; read what the project already runs first, because a check that exists and is unwired is the finding |
 | Reviewer path rule | The violation is a judgement no check can make | A review rule scoped to the affected paths in the project's `.no-mistakes.yaml` |
 | Navigation line | The worker could not find a file, an owner, or a command | One pointer line in the project's `AGENTS.md` or the brief include |
+| Process change | The cost came from the shared pipeline configuration, the supervisor's own workflow, or this retro procedure, not from the project | The owner file of that process, named in the proposal, with a note that it needs its own approval |
 
 The reason for the order: the implementing worker carries the most context pressure, and the reviewer reads only a diff.
 So standards belong to a check or to the reviewer, and a lesson never goes into the implementer's instructions or `AGENTS.md` unless it is navigation.
-A change to the shared pipeline configuration, to the supervisor's own workflow, or to this retro procedure is also a valid proposal; name its owner file and say that it needs its own approval.
 
 Each proposal must pass all four gates, which exist to stop overfitting to one ticket.
 
-1. Recurrence or severity: it appears in at least two independent tickets, or its one occurrence shipped something wrong, dropped a stated requirement, or lost work.
+1. Recurrence or severity: it appears in at least two independent tickets, the same review comment was written in two review rounds of this ticket, or its one occurrence shipped something wrong, dropped a stated requirement, or lost work.
 2. Stated as a behaviour: you can name a future situation it fires on that is not this incident.
 3. Small ongoing cost: minutes or one command per future ticket, and small against what it prevents.
 4. Checkable and retirable: it names one metric from the block, the number of tickets after which it is judged, and the condition under which it is dropped.
@@ -214,7 +218,7 @@ A change to this file is a proposal like any other and counts toward the five.
 
 ## Report shape
 
-Write the report to the path your instructions name, with `# Retro: <ticket>` as its first line.
+Write the report to the path your instructions name, with `# Retro: <ticket>` as its first line and `Project: <project>` as its second, so later retros of the same project can find it.
 Keep the sections in this order: sources read, previous follow-ups, metrics block, what cost time, debt inventory, steering-file growth, proposals, could not establish, the practice itself.
 
 A retro must cost less than the ticket it studies.
