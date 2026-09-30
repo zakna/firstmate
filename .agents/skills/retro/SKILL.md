@@ -51,7 +51,7 @@ Open the pipeline database read-only.
 - The backlog item and its notes.
 - The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
 - The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.
-- The earlier retro reports of the same project in this home: `grep -l '^Project: <project>$' $(grep -l '^# Retro: ' data/*/report.md)`.
+- The earlier retro reports of the same project in this home: `grep -l '^Project: <project>$' /dev/null $(grep -l '^# Retro: ' data/*/report.md)`.
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
 
 Label every statement OBSERVED, naming the record it was read from, or INFERRED.
