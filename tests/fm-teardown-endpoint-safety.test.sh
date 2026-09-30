@@ -1171,6 +1171,76 @@ test_forced_teardown_continues_past_a_close_it_could_not_make() {
   pass "fm-teardown: --force continues past a close it could not make while still reporting it, and the same case refuses without --force"
 }
 
+# A close that refuses after the pool slot was returned keeps the record, and
+# the pool may lease that slot again at once. The retained record must not keep
+# holding the slot: neither the next holder's teardown nor this task's rerun may
+# refuse on the shared slot, and the rerun must not return it a second time.
+test_close_refused_after_slot_return_releases_the_slot_in_the_record() {
+  local dir socket='dedicated.sock' session='slot return' id=returned-task other=next-task rc
+  [ -n "$REAL_TMUX" ] || { echo "skip - tmux not installed"; return 0; }
+  dir=$(make_case close-after-slot-return)
+  mark_case_as_treehouse_pool "$dir"
+  rm -f "$dir/worktree/sentinel"
+  ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-session -d -s "$session" -n control )
+  ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-window -d -t "=$session:" -n "fm-$id" )
+  ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-window -d -t "=$session:" -n "fm-$other" )
+  write_close_failing_tmux_shim "$dir" "$socket" "$REAL_TMUX"
+  fm_write_meta "$dir/home/state/$id.meta" \
+    "window=$session:fm-$id" "endpoint_task_id=$id" \
+    "worktree=$dir/worktree" "project=$dir/project" "kind=ship"
+  claim_pool_slot "$dir" "$id"
+
+  set +e
+  env -u TMUX -u TMUX_PANE FM_TEST_BLOCK_KILL=1 \
+    FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+    PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$id" \
+    > "$dir/refused.out" 2> "$dir/refused.err"
+  rc=$?
+  set -e
+  [ "$rc" -ne 0 ] || fail "teardown reported success after a close that failed: $(cat "$dir/refused.err")"
+  assert_grep "could not be closed" "$dir/refused.err" "teardown did not refuse on the failed close"
+  [ "$(grep -c "treehouse <return>" "$dir/runtime.log")" = 1 ] \
+    || fail "the refused run did not return the slot before its close: $(cat "$dir/runtime.log")"
+  assert_present "$dir/home/state/$id.meta" "the refused close removed the task record"
+  assert_absent "$dir/pool/1/.fm-slot-owner" "the returned slot kept this task's claim"
+
+  # The pool leases the returned slot to the next task.
+  claim_pool_slot "$dir" "$other"
+  fm_write_meta "$dir/home/state/$other.meta" \
+    "window=$session:fm-$other" "endpoint_task_id=$other" \
+    "worktree=$dir/worktree" "project=$dir/project" "kind=ship"
+  ( cd "$dir/worktree" && exec sleep 30 ) &
+  local worker=$!
+
+  env -u TMUX -u TMUX_PANE \
+    FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+    PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$id" \
+    > "$dir/rerun.out" 2> "$dir/rerun.err" \
+    || { kill "$worker" 2>/dev/null; fail "the rerun refused on the slot it had already returned: $(cat "$dir/rerun.err")"; }
+  assert_absent "$dir/home/state/$id.meta" "the rerun left the task record behind"
+  assert_grep "already returned" "$dir/rerun.out" "the rerun did not report the earlier return"
+  [ "$(grep -c "treehouse <return>" "$dir/runtime.log")" = 1 ] \
+    || { kill "$worker" 2>/dev/null; fail "the rerun returned a slot the next task now holds: $(cat "$dir/runtime.log")"; }
+  kill -0 "$worker" 2>/dev/null || fail "the rerun killed the worker in the next task's slot"
+  assert_contains "$(cat "$dir/pool/1/.fm-slot-owner")" "task=$other" "the rerun changed the next task's claim"
+  kill "$worker" 2>/dev/null || true
+  wait "$worker" 2>/dev/null || true
+  isolated_tmux_window_exists "$dir" "$socket" "$session" "fm-$id" \
+    && fail "the rerun did not close the recorded endpoint"
+
+  # Only the next task's record names the slot now, and its teardown returns it.
+  env -u TMUX -u TMUX_PANE \
+    FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+    PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$other" \
+    > "$dir/next.out" 2> "$dir/next.err" \
+    || fail "the next task's teardown refused on the shared slot: $(cat "$dir/next.err")"
+  [ "$(grep -c "treehouse <return>" "$dir/runtime.log")" = 2 ] \
+    || fail "the next task's teardown did not return its slot: $(cat "$dir/runtime.log")"
+
+  ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" kill-server 2>/dev/null ) || true
+  pass "fm-teardown: a close refused after the slot return leaves no record holding the slot, and the rerun finishes without returning it again"
+}
+
 test_unreadable_close_read_refuses_while_a_definitive_absence_completes() {
   local dir socket='dedicated.sock' session='unreadable read' id=unreadable-task rc
   [ -n "$REAL_TMUX" ] || { echo "skip - tmux not installed"; return 0; }
@@ -1394,6 +1464,7 @@ test_recorded_process_identity_cleanup_is_exact
 test_isolated_tmux_invalid_and_valid_cleanup
 test_failed_endpoint_close_refuses_before_removing_the_record
 test_forced_teardown_continues_past_a_close_it_could_not_make
+test_close_refused_after_slot_return_releases_the_slot_in_the_record
 test_unreadable_close_read_refuses_while_a_definitive_absence_completes
 test_forced_secondmate_child_close_failure_still_refuses
 test_orca_close_failure_refuses_even_under_force

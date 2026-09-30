@@ -115,6 +115,13 @@
 # Why Treehouse's own state cannot answer this for crewmate slots, and why the
 # claim file sits on top of it, is owned by bin/fm-wake-lib.sh's slot-owner
 # claim comment.
+# A successful return is written into the record at once as
+# worktree_returned=<the recorded worktree>, because steps after it can still
+# refuse and keep the record while the pool is free to lease the slot again. A
+# record so marked no longer holds its slot: the exclusivity scan ignores its
+# worktree=, and a rerun of its own teardown skips every slot step as it does
+# for a reassigned slot. worktree= itself stays, since endpoint validation
+# refuses a record without it.
 # The recorded endpoint's exact task identity and the record's spawn incarnation
 # are validated separately
 # before cleanup. Its current working directory is only incidental process
@@ -2300,6 +2307,7 @@ require_orca_worktree_path_match_if_present() {
 # record with nothing live to return skips them rather than refusing.
 teardown_live_slot_path() {
   [ "$KIND" != secondmate ] || return 1
+  [ "$TEARDOWN_SLOT_RETURNED" != 1 ] || return 1
   fm_treehouse_pool_slot "$PROJ" "$WT" || return 1
   canonical_existing_dir "$WT"
 }
@@ -2367,6 +2375,11 @@ require_exclusive_worktree_slot_record() {
       for field in worktree home; do
         other_path=$(fm_meta_get "$other" "$field")
         [ -n "$other_path" ] || continue
+        # A record whose teardown already returned this slot no longer holds it.
+        if [ "$field" = worktree ] \
+           && [ "$(fm_meta_get "$other" worktree_returned)" = "$other_path" ]; then
+          continue
+        fi
         other_slot=$(canonical_existing_dir "$other_path") || continue
         [ "$other_slot" = "$slot" ] || continue
         echo "REFUSED: task $record_id's recorded worktree $slot is also task $other_id's recorded $field." >&2
@@ -2430,6 +2443,12 @@ require_owned_worktree_slot_record() {  # <task-id> <worktree>
 TEARDOWN_SLOT_REASSIGNED=0
 TEARDOWN_SLOT_REASSIGNED_TO=
 TEARDOWN_SLOT_REASSIGNED_HOME=
+# An earlier run of this teardown already returned the slot (see the header):
+# it is no longer this task's, whatever now holds it.
+TEARDOWN_SLOT_RETURNED=0
+if [ -n "$WT" ] && [ "$(fm_meta_get "$META" worktree_returned)" = "$WT" ]; then
+  TEARDOWN_SLOT_RETURNED=1
+fi
 require_owned_task_worktree_slot() {
   local slot rc=0
   slot=$(teardown_live_slot_path) || return 0
@@ -2447,7 +2466,16 @@ require_owned_task_worktree_slot() {
 }
 
 teardown_owns_worktree() {
-  [ "$TEARDOWN_SLOT_REASSIGNED" != 1 ]
+  [ "$TEARDOWN_SLOT_REASSIGNED" != 1 ] && [ "$TEARDOWN_SLOT_RETURNED" != 1 ]
+}
+
+# Record the return in this task's record, still under its meta lock, so a
+# later refusal that keeps the record does not leave it holding the slot.
+teardown_record_worktree_returned() {
+  if [ -s "$META" ] && [ -n "$(tail -c 1 -- "$META" 2>/dev/null)" ]; then
+    printf '\n' >> "$META" || return 1
+  fi
+  printf 'worktree_returned=%s\n' "$WT" >> "$META"
 }
 
 firstmate_home_has_treehouse_slot() {
@@ -3602,6 +3630,8 @@ elif [ -d "$WT" ] && [ "$KIND" != secondmate ]; then
     echo "error: treehouse return failed for worktree $WT; teardown aborted" >&2
     exit 1
   }
+  teardown_record_worktree_returned \
+    || echo "warning: could not record in $META that $WT was returned to the pool; if this teardown refuses below, that record still names the slot and blocks whichever task the pool leases it to next" >&2
   # The slot is back in the pool, so this task's claim on it is spent. Dropping
   # it here - and only after a return that succeeded - keeps a returned slot
   # unclaimed until its next holder claims it, and leaves the claim in place
@@ -3808,6 +3838,8 @@ if [ "$TEARDOWN_LEGACY_ACCEPTED" = 1 ]; then
   echo "teardown $ID complete (window ${T:-none}, worktree $WT, legacy record accepted without spawn_gen: endpoint $TEARDOWN_LEGACY_ENDPOINT, incarnation $TEARDOWN_META_SPAWN_GEN)"
 elif teardown_owns_worktree; then
   echo "teardown $ID complete (window ${T:-none}, worktree $WT)"
+elif [ "$TEARDOWN_SLOT_RETURNED" = 1 ]; then
+  echo "teardown $ID complete (window ${T:-none}; pool slot $WT was already returned by an earlier run)"
 else
   echo "teardown $ID complete (window ${T:-none}; pool slot $WT left to task $TEARDOWN_SLOT_REASSIGNED_TO${TEARDOWN_SLOT_REASSIGNED_HOME:+ (home $TEARDOWN_SLOT_REASSIGNED_HOME)}, which it was reassigned to)"
 fi
