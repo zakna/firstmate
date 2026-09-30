@@ -2569,7 +2569,7 @@ test_no_run_permission_dialog_reads_blocked_with_command() {
   local out; out=$(run_crew_state "$d" feat-pd)
   assert_contains "$out" "state: blocked" "a pending permission dialog reads blocked"
   assert_contains "$out" "source: pane" "the blocked verdict comes from the pane"
-  assert_contains "$out" "permission dialog pending: git push ..." "the reason names the pending command"
+  assert_contains "$out" "permission dialog pending: git ..." "the reason names the pending program"
   assert_not_contains "$out" "Push the branch" "only the command's first line is reported"
   pass "a Claude permission dialog reads blocked and names the pending command"
 }
@@ -2588,7 +2588,7 @@ test_permission_dialog_outranks_active_run() {
   export FM_FAKE_BUSY_TEXT
   local out; out=$(run_crew_state "$d" feat-pr)
   assert_contains "$out" "state: blocked" "a pending permission dialog outranks the run-step"
-  assert_contains "$out" "permission dialog pending: git push ..." "the reason names the pending command"
+  assert_contains "$out" "permission dialog pending: git ..." "the reason names the pending program"
   pass "a pending permission dialog outranks an attributed run"
 }
 
@@ -2615,6 +2615,12 @@ test_permission_dialog_redacts_command_arguments() {
   out=$(run_crew_state "$d" feat-px)
   assert_contains "$out" "permission dialog pending: Bash command" "a command with no plain leading word falls back to the dialog title"
   assert_not_contains "$out" "fake-cred-222" "an inline VAR=value credential is never reported"
+
+  FM_FAKE_BUSY_TEXT=$(claude_permission_dialog_text | sed 's|^   git push -u origin fm/example$|   login fakecred333 --quiet|')
+  export FM_FAKE_BUSY_TEXT
+  out=$(run_crew_state "$d" feat-px)
+  assert_contains "$out" "permission dialog pending: login ..." "a plain-word argument is dropped like any other"
+  assert_not_contains "$out" "fakecred333" "a plain-word credential argument is never reported"
   pass "a pending permission dialog reports a redacted command name, never its arguments"
 }
 

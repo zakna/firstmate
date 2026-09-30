@@ -1006,10 +1006,11 @@ fm_busy_gemini_launch_prompt_tail() {
 # pending command and returns 0. The command's arguments can carry a
 # credential (an Authorization header, a signed URL, an inline VAR=value), and
 # the printed name reaches durable fleet state and published summaries, so only
-# its leading plain words are kept: at most two, each a letter followed by
-# letters, digits, dot, underscore, or dash, with " ..." marking dropped
-# arguments. With no such leading word, the dialog title ("Bash command",
-# "Edit file", ...) is printed instead. Only the LAST question counts and
+# the program name is kept, and only when it is a plain word (a letter
+# followed by letters, digits, dot, underscore, or dash), with " ..." marking
+# dropped arguments; any argument, even a plain word, can be a credential.
+# With no such program name, the dialog title ("Bash command", "Edit file",
+# ...) is printed instead. Only the LAST question counts and
 # only while the dialog is still the bottom of the pane: an option list must
 # follow it, at most 12 non-blank lines may follow it, and no horizontal rule
 # may follow it, because the idle composer always draws its own rules below
@@ -1054,11 +1055,8 @@ fm_busy_claude_permission_prompt_command() {
       if (cmd == "") cmd = title
       n = split(cmd, word, " ")
       name = ""
-      for (i = 1; i <= n && i <= 2; i++) {
-        if (word[i] !~ /^[A-Za-z][A-Za-z0-9._-]*$/) break
-        name = name (name == "" ? "" : " ") word[i]
-      }
-      if (name != "" && i <= n) name = name " ..."
+      if (n >= 1 && word[1] ~ /^[A-Za-z][A-Za-z0-9._-]*$/) name = word[1]
+      if (name != "" && n > 1) name = name " ..."
       if (name == "" && cmd != title) name = title
       if (name == "") name = "command not visible in capture"
       if (length(name) > 120) name = substr(name, 1, 117) "..."
