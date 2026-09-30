@@ -1002,9 +1002,14 @@ fm_busy_gemini_launch_prompt_tail() {
 # you want to <verb> ...?"), then a numbered option list opening with "1. Yes"
 # and carrying a "No" option, and an "Esc to cancel" footer. Older releases
 # drew the same text inside a rounded box, whose side borders are stripped.
-# Consumes a captured tail on stdin; on a match prints the first line of the
-# pending command (or the dialog title when no content line is visible,
-# bounded to 120 characters) and returns 0. Only the LAST question counts and
+# Consumes a captured tail on stdin; on a match prints a redacted name for the
+# pending command and returns 0. The command's arguments can carry a
+# credential (an Authorization header, a signed URL, an inline VAR=value), and
+# the printed name reaches durable fleet state and published summaries, so only
+# its leading plain words are kept: at most two, each a letter followed by
+# letters, digits, dot, underscore, or dash, with " ..." marking dropped
+# arguments. With no such leading word, the dialog title ("Bash command",
+# "Edit file", ...) is printed instead. Only the LAST question counts and
 # only while the dialog is still the bottom of the pane: an option list must
 # follow it, at most 12 non-blank lines may follow it, and no horizontal rule
 # may follow it, because the idle composer always draws its own rules below
@@ -1047,10 +1052,17 @@ fm_busy_claude_permission_prompt_command() {
         }
       }
       if (cmd == "") cmd = title
-      if (cmd == "") cmd = "command not visible in capture"
-      gsub(/ · /, " - ", cmd)
-      if (length(cmd) > 120) cmd = substr(cmd, 1, 117) "..."
-      print cmd
+      n = split(cmd, word, " ")
+      name = ""
+      for (i = 1; i <= n && i <= 2; i++) {
+        if (word[i] !~ /^[A-Za-z][A-Za-z0-9._-]*$/) break
+        name = name (name == "" ? "" : " ") word[i]
+      }
+      if (name != "" && i <= n) name = name " ..."
+      if (name == "" && cmd != title) name = title
+      if (name == "") name = "command not visible in capture"
+      if (length(name) > 120) name = substr(name, 1, 117) "..."
+      print name
     }
   '
 }
