@@ -18,11 +18,9 @@
 # bin/fm-pr-merge.sh records through this script with FM_PR_CHECK_MERGE=1 and
 # skips this refusal, because its own merge-time draft refusal is authoritative.
 # When it records a GitHub pr_head, it also counts the inline review comments
-# whose commit_id is that exact head, from any author, and records the count as
-# pr_head_review_comments=<n> and prints "review comments: <n> inline on head
-# <sha>". An unreadable count records nothing and prints "unknown"; it never
-# refuses arming. The count is written before pr= because the metadata identity
-# parser accepts only known keys after it.
+# whose commit_id is that exact head, from any author, and prints "review
+# comments: <n> inline on head <sha>". An unreadable count prints "unknown"; it
+# never refuses arming.
 # Usage: fm-pr-check.sh <task-id> <pr-url>
 set -eu
 
@@ -198,11 +196,10 @@ STATE_DEVICE=$(fm_pr_file_device "$STATE") || exit 1
 META_TMP=$(mktemp "$STATE/.fm-pr-meta.XXXXXX") || exit 1
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
-    pr=*|pr_head=*|pr_head_review_comments=*) ;;
+    pr=*|pr_head=*) ;;
     *) printf '%s\n' "$line" >> "$META_TMP" || exit 1 ;;
   esac
 done < "$META"
-[ -z "$REVIEW_COMMENTS" ] || printf 'pr_head_review_comments=%s\n' "$REVIEW_COMMENTS" >> "$META_TMP" || exit 1
 printf 'pr=%s\n' "$URL" >> "$META_TMP" || exit 1
 [ -z "$PR_HEAD" ] || printf 'pr_head=%s\n' "$PR_HEAD" >> "$META_TMP" || exit 1
 chmod 0600 "$META_TMP" || exit 1

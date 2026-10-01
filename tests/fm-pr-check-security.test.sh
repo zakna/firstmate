@@ -657,8 +657,6 @@ test_review_comments_on_recorded_head_are_counted() {
     || fail "registration with head review comments failed: $(cat "$dir/stderr")"
   grep -qxF "review comments: 2 inline on head $head" "$dir/stdout" \
     || fail "registration did not print the head review-comment count: $(cat "$dir/stdout")"
-  grep -qxF 'pr_head_review_comments=2' "$dir/home/state/task-a.meta" \
-    || fail "registration did not record the head review-comment count"
   grep -q '^armed: ' "$dir/stdout" || fail "counting review comments stopped the merge poll from arming"
 
   FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"}]]" \
@@ -666,18 +664,12 @@ test_review_comments_on_recorded_head_are_counted() {
     || fail "re-registration on a new head failed: $(cat "$dir/stderr")"
   grep -qxF "review comments: 0 inline on head $other" "$dir/stdout" \
     || fail "comments on an earlier head were counted against the new head: $(cat "$dir/stdout")"
-  [ "$(grep -c '^pr_head_review_comments=' "$dir/home/state/task-a.meta")" = 1 ] \
-    || fail "re-registration appended a second recorded count"
-  grep -qxF 'pr_head_review_comments=0' "$dir/home/state/task-a.meta" \
-    || fail "re-registration did not replace the recorded count"
 
   FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE_FAIL=1 \
     run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
     || fail "an unreadable review-comment count refused registration: $(cat "$dir/stderr")"
   grep -qxF "review comments: unknown inline on head $head" "$dir/stdout" \
     || fail "an unreadable count was not disclosed as unknown: $(cat "$dir/stdout")"
-  ! grep -q '^pr_head_review_comments=' "$dir/home/state/task-a.meta" \
-    || fail "an unreadable count left a stale recorded count"
   grep -q '^armed: ' "$dir/stdout" || fail "an unreadable count stopped the merge poll from arming"
   pass "registration counts inline review comments on the exact recorded head"
 }
