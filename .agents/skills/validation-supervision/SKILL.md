@@ -27,7 +27,7 @@ Require the matching `resolved` event, forbid `--yes`, and require the worker to
 Resume fleet supervision immediately after the decision lands.
 
 When the captain approves review remedies after a PR exists, append the approval to the brief's `## Captain's intent` under the `AGENTS.md` section 7 mid-task rule.
-The re-validation order tells the worker to write the approved remedies in its own words to a file and pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, so the next review can check them; `bin/fm-dod-lib.sh` owns that contract.
+Firstmate's re-validation order must tell the worker to write the approved remedies in its own words to a file and pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, so the next review can check them; `bin/fm-dod-lib.sh` owns that contract.
 
 Judge validation by the resolved state line from [`bin/fm-crew-state.sh`](../../../bin/fm-crew-state.sh), whose header owns outcome mappings and CI-monitor/daemon exceptions, never by shell liveness, the last status event, or a raw run record.
 Workers parked at approval or fix-review must follow the active gate help.
