@@ -1,0 +1,68 @@
+== effective rules after merge (trusted=target): 2
+  path=".agents/skills/*/SKILL.md" instr_bytes=436
+  path="skills/*/SKILL.md" instr_bytes=436
+
+== case "agents skill edit" changed=[.agents/skills/ship-landing/SKILL.md bin/fm-ship.sh] -> blocks=1 unmatched=[skills/*/SKILL.md] dup=[] unusable=[]
+  step log: applied 1 trusted review instruction block(s) for changed paths: .agents/skills/*/SKILL.md (1 file(s))
+  step log: 1 trusted review instruction rule(s) matched no changed path: skills/*/SKILL.md
+  --- rendered review-prompt section ---
+
+Repository review instructions for the changed paths (trusted, from the default branch). Each block below applies only to the files listed under its path, and adds to the requirements above:
+path: .agents/skills/*/SKILL.md
+matched files: .agents/skills/ship-landing/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+  --- end ---
+
+== case "public skills/ edit" changed=[skills/stow/SKILL.md] -> blocks=1 unmatched=[.agents/skills/*/SKILL.md] dup=[] unusable=[]
+  step log: applied 1 trusted review instruction block(s) for changed paths: skills/*/SKILL.md (1 file(s))
+  step log: 1 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md
+  --- rendered review-prompt section ---
+
+Repository review instructions for the changed paths (trusted, from the default branch). Each block below applies only to the files listed under its path, and adds to the requirements above:
+path: skills/*/SKILL.md
+matched files: skills/stow/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+  --- end ---
+
+== case "both trees" changed=[.agents/skills/retro/SKILL.md skills/stow/SKILL.md] -> blocks=2 unmatched=[] dup=[] unusable=[]
+  step log: applied 2 trusted review instruction block(s) for changed paths: .agents/skills/*/SKILL.md (1 file(s)); skills/*/SKILL.md (1 file(s))
+  --- rendered review-prompt section ---
+
+Repository review instructions for the changed paths (trusted, from the default branch). Each block below applies only to the files listed under its path, and adds to the requirements above:
+path: .agents/skills/*/SKILL.md
+matched files: .agents/skills/retro/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+
+path: skills/*/SKILL.md
+matched files: skills/stow/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+  --- end ---
+
+== case "non-skill change only" changed=[bin/fm-lint.sh docs/configuration.md README.md] -> blocks=0 unmatched=[.agents/skills/*/SKILL.md skills/*/SKILL.md] dup=[] unusable=[]
+  step log: 2 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md, skills/*/SKILL.md
+
+== case "skill reference file (not SKILL.md)" changed=[.agents/skills/retro/references/notes.md] -> blocks=0 unmatched=[.agents/skills/*/SKILL.md skills/*/SKILL.md] dup=[] unusable=[]
+  step log: 2 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md, skills/*/SKILL.md
+
+== case "nested deeper SKILL.md" changed=[.agents/skills/a/b/SKILL.md] -> blocks=0 unmatched=[.agents/skills/*/SKILL.md skills/*/SKILL.md] dup=[] unusable=[]
+  step log: 2 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md, skills/*/SKILL.md
+
+== case "lowercase skill.md" changed=[.agents/skills/retro/skill.md] -> blocks=0 unmatched=[.agents/skills/*/SKILL.md skills/*/SKILL.md] dup=[] unusable=[]
+  step log: 2 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md, skills/*/SKILL.md
+
+== pre-merge (pushed=target, trusted=base): effective rules=0
+  skills/stow/SKILL.md -> blocks=0 section=""
+
+== prompt budget: ReviewPathInstructionsBytes=1567 max=16384
