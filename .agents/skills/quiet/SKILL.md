@@ -25,9 +25,10 @@ exits it.
 
 1. **Enter the lifecycle through `bin/fm-afk-launch.sh`, exactly as `/afk`
    does, with `FM_AFK_MODE=quiet` set first.**
-   Follow the `afk` skill's "What it does" steps 1-3 verbatim (terminal-
-   backed vs harness-native entry, daemon-already-running refresh, never
-   arming a separate `fm-watch.sh`) with one addition: export
+   Follow the `afk` skill's "Entering" steps 1-5 verbatim (terminal-
+   backed vs harness-native entry, daemon-already-running refresh, saving
+   open work and asking for compaction, never arming a separate
+   `fm-watch.sh`) with one addition: export
    `FM_AFK_MODE=quiet` in the shell that invokes `bin/fm-afk-launch.sh start`
    (or `start-native`), so `state/.afk`'s first line reads `quiet` instead of
    `away`.

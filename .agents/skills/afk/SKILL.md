@@ -48,7 +48,11 @@ Hold-for-return is the default and the only reach profile this release records: 
    Then give your own plain-sentence restatement of the words in `AGENTS.md` section 9 language - what you read them as asking for, sentence by sentence, never a numbered field list - beside the expected return, the spend cap, and the one-sentence reach announcement.
    Say plainly which sentence, if any, you could not act on while away (a red merge, a discard, anything on the never-set, local-only landing); it waits for their return.
    This read-back is informational: the record already stands, so never ask for a go or wait for a reply; a captain who wants a different reading sends `/afk` again with new words.
-4. **Do not separately arm `fm-watch.sh` where the daemon runs.** The daemon manages the watcher as its child; the singleton lock no-ops a stray arm harmlessly.
+4. **Save open work, then compact, before the first away wait.**
+   A prompt cache lasts about an hour and away wakes often arrive further apart, so every wake would otherwise reread the whole long conversation at full price.
+   First run the `stow` procedure so every open decision and work record is on disk, because compaction can drop what lives only in this conversation.
+   No verified primary harness lets the agent compact its own conversation, so end the entry reply by asking the captain to run that harness's compact command (`/compact` on every verified primary harness) before stepping away.
+5. **Do not separately arm `fm-watch.sh` where the daemon runs.** The daemon manages the watcher as its child; the singleton lock no-ops a stray arm harmlessly.
    On Pi nothing changes about arming: the supervision session's own cycle continues.
 
 ## While away
