@@ -1,0 +1,40 @@
+=== RUN   TestFirstmateSkillReviewRule
+S1 loaded branch config: 2 rules
+  rule path=".agents/skills/*/SKILL.md" bytes=480
+  rule path="skills/*/SKILL.md" bytes=480
+  prompt budget bytes=1655 (max 16384)
+
+S2/S3 changed=[.agents/skills/retro/SKILL.md bin/fm-lint.sh] -> review prompt section:
+
+Repository review instructions for the changed paths (trusted, from the default branch). Each block below applies only to the files listed under its path, and adds to the requirements above:
+path: .agents/skills/*/SKILL.md
+matched files: .agents/skills/retro/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+  step log: applied 1 trusted review instruction block(s) for changed paths: .agents/skills/*/SKILL.md (1 file(s))
+  step log: 1 trusted review instruction rule(s) matched no changed path: skills/*/SKILL.md
+
+S2/S3 changed=[skills/firstmate/SKILL.md bin/fm-lint.sh] -> review prompt section:
+
+Repository review instructions for the changed paths (trusted, from the default branch). Each block below applies only to the files listed under its path, and adds to the requirements above:
+path: skills/*/SKILL.md
+matched files: skills/firstmate/SKILL.md
+instructions:
+A skill is a procedure another agent will follow.
+For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+When a skill is named in the README skills table, check the row still matches the skill.
+  step log: applied 1 trusted review instruction block(s) for changed paths: skills/*/SKILL.md (1 file(s))
+  step log: 1 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md
+
+S4 tracked SKILL.md=30 covered=30
+
+S5 adversarial non-skill paths -> blocks=0 section=""
+  step log: 2 trusted review instruction rule(s) matched no changed path: .agents/skills/*/SKILL.md, skills/*/SKILL.md
+
+S6 trusted=base(default branch), pushed=this branch -> rules=0 section=""
+S6 trusted=this branch (after merge) -> rules=2
+--- PASS: TestFirstmateSkillReviewRule (0.00s)
+PASS
+ok  	github.com/kunchenguid/no-mistakes/internal/pipeline/steps	0.791s
