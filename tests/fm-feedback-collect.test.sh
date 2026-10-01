@@ -77,6 +77,32 @@ make_inbox() { # <home>
   printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-NEW line one\nline two\n' > "$1/state/task-a.inbox/handled/001.msg"
   printf 'schema=fm-task-inbox.v1\nat=2026-08-02T08:00:00Z\n--\nSTEER-OLD\n' > "$1/state/task-a.inbox/handled/002.msg"
   printf 'schema=fm-task-inbox.v1\nat=2026-09-23T08:00:00Z\n--\nSTEER-PENDING\n' > "$1/state/task-a.inbox/003.msg"
+  mkdir -p "$1/state/task-open.inbox" "$1/state/task-old.inbox"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-UNLANDED\n' > "$1/state/task-open.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-EARLIER-LANDING\n' > "$1/state/task-old.inbox/001.msg"
+}
+
+make_backlog() { # <home>
+  mkdir -p "$1/data"
+  cat > "$1/data/backlog.md" <<'MD'
+# Backlog
+
+- [ ] task-open - Still open (repo: app) (kind: ship)
+- [ ] app-retro-r1-guard - Retro proposal: add a guard (repo: app) (kind: captain) (hold: captain go needed) (hold-kind: captain)
+  Captain hold set: 2026-09-22T00:00:00Z
+  PROPOSAL-HELD
+- [ ] task-plain-hold - Not a retro (repo: app) (kind: captain) (hold: x) (hold-kind: captain)
+- [x] task-a - Task A https://github.com/o/app/pull/7 (repo: app, merged 2026-09-21) (kind: ship)
+- [x] task-old - Task old https://github.com/o/app/pull/2 (repo: app, merged 2026-08-01) (kind: ship)
+- [x] app-retro-r2-rule - Retro proposal: new rule (repo: app) (kind: captain) (done 2026-09-24) (hold: x) (hold-kind: captain)
+  Resolution recorded by fm-captain-hold.
+  Resolution mode: answered
+  Captain decision:
+  PROPOSAL-DECLINED
+- [x] app-retro-r0-old - Retro proposal: old (repo: app) (kind: captain) (done 2026-08-02)
+  Captain decision:
+  PROPOSAL-OLD
+MD
 }
 
 test_collects_every_source_in_the_window() {
@@ -85,12 +111,13 @@ test_collects_every_source_in_the_window() {
   make_db "$dir/state.sqlite"
   make_pages "$dir/pages"
   make_inbox "$dir/home"
+  make_backlog "$dir/home"
   fakebin=$(make_fakebin "$dir" "$dir/pages")
   out=$(PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/out/feedback" \
     --nm-db "$dir/state.sqlite" --home "$dir/home") || fail "collector failed: $out"
   json="$dir/out/feedback.json" md="$dir/out/feedback.md"
   [ -f "$json" ] && [ -f "$md" ] || fail 'collector did not write both output files'
-  jq -e '[.inputs[] | .status] == ["read", "read", "read"]' "$json" >/dev/null \
+  jq -e '[.inputs[] | .status] == ["read", "read", "read", "read"]' "$json" >/dev/null \
     || fail "every present input should read: $(jq -c .inputs "$json")"
   jq -e '
     def texts($s): [.records[] | select(.source == $s) | .text];
@@ -101,9 +128,12 @@ test_collects_every_source_in_the_window() {
     and ([.records[] | select(.source == "finding")] | all(.ticket == "https://github.com/o/app/pull/7"))
     and ([.records[] | select(.source == "review-comment") | .kind] | sort) == ["conversation", "inline", "review"]
     and ([.records[] | select(.kind == "inline")][0] | .file == "a.sh" and .line == 12 and .author_type == "Bot")
-    and (texts("steer") | sort) == ["STEER-NEW line one\nline two", "STEER-PENDING"]' "$json" >/dev/null \
+    and (texts("steer") | sort) == ["STEER-NEW line one\nline two", "STEER-PENDING"]
+    and ([.records[] | select(.source == "steer")] | all(.ticket == "https://github.com/o/app/pull/7"))
+    and ([.records[] | select(.source == "retro-proposal") | [.task, .kind]] | sort)
+        == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined-or-answered"]]' "$json" >/dev/null \
     || fail "records do not match the fixture: $(jq -c .records "$json")"
-  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD; do
+  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
   done
   assert_grep '| finding | 3 |' "$md" 'markdown counts records by source'
@@ -114,7 +144,7 @@ test_collects_every_source_in_the_window() {
   ! grep -q '^#* *IGNORE' "$md" || fail 'review text never becomes markdown structure'
   [ "$(jq '.records | length' "$json")" -eq "$(awk '/^## Source: / { on = 1 } on && /^- / { n++ } END { print n + 0 }' "$md")" ] \
     || fail 'markdown and JSON hold different record counts'
-  pass 'collector gathers gate answers, unfixed findings, review comments, and steers in the window'
+  pass 'collector gathers gate answers, unfixed findings, review comments, landed steers, and retro proposals'
 }
 
 test_absent_inputs_are_reported_not_fatal() {
@@ -122,9 +152,10 @@ test_absent_inputs_are_reported_not_fatal() {
   mkdir -p "$dir/home"
   out=$("$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/missing.sqlite" \
     --home "$dir/home") || fail "collector failed on absent inputs: $out"
-  jq -e '(.inputs | map({(.name): .status}) | add) == {"no-mistakes": "absent", "review-comments": "absent", steers: "absent"}
+  jq -e '(.inputs | map({(.name): .status}) | add) == {"no-mistakes": "absent", "review-comments": "absent", "retro-proposals": "absent", steers: "absent"}
     and .records == []' "$dir/feedback.json" >/dev/null || fail "absent inputs misreported: $(jq -c . "$dir/feedback.json")"
   assert_grep '- no-mistakes: absent' "$dir/feedback.md" 'markdown names the absent pipeline database'
+  assert_grep '- retro-proposals: absent' "$dir/feedback.md" 'markdown names the absent retro proposals'
   pass 'absent inputs are named in the output instead of failing'
 }
 
