@@ -45,8 +45,10 @@
 #   task id. Cleanup deletes a task's inbox, so steers survive only for tasks
 #   not yet cleaned up; the output says so.
 # - Retro proposals held or declined: backlog rows whose id contains `retro`
-#   that are still held for the captain (`hold-kind: captain`), or that carry a
-#   recorded `Captain decision:` and closed inside the window.
+#   that are still held for the captain (`hold-kind: captain`), labeled `held`,
+#   or closed inside the window with a recorded `Captain decision:` that
+#   matches decline, declined, reject, rejected, or skip as a whole word (any
+#   case), labeled `declined`; the decision text is quoted verbatim.
 set -eu
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -180,18 +182,21 @@ if [ -f "$BACKLOG" ]; then
   ' "$BACKLOG" > "$WORK/backlog.json"
 fi
 jq --arg since "$SINCE" '
-  map(select((.id | contains("retro"))
-    and ((.done | not) and (.line | contains("(hold-kind: captain)"))
-      or (.body | contains("Captain decision:")) and .done and (.closed // "") >= $since))
-  | {ticket: (.pr // .id), task: .id, kind: (if .done then "declined-or-answered" else "held" end),
-     text: (.line + "\n" + .body | rtrimstr("\n"))})
+  map(select(.id | contains("retro"))
+    | (.body | split("Captain decision:\n")[1] // null | if . then split("Resolution recorded by")[0] | rtrimstr("\n") else . end) as $decision
+    | if (.done | not) and (.line | contains("(hold-kind: captain)")) then {kind: "held", decision: $decision}
+      elif .done and (.closed // "") >= $since and $decision
+        and ($decision | test("\\b(declined?|rejected?|skip)\\b"; "i")) then {kind: "declined", decision: $decision}
+      else empty end
+    + {ticket: (.pr // .id), task: .id, text: (.line + "\n" + .body | rtrimstr("\n"))}
+    | with_entries(select(.value != null)))
 ' "$WORK/backlog.json" > "$WORK/proposals.json"
 if [ ! -f "$BACKLOG" ]; then
   note_input retro-proposals absent "no backlog at $BACKLOG"
 elif [ "$(jq length "$WORK/proposals.json")" = 0 ]; then
-  note_input retro-proposals absent "no held or answered retro row in $BACKLOG"
+  note_input retro-proposals absent "no held or declined retro row in $BACKLOG"
 else
-  note_input retro-proposals read "$BACKLOG: $(jq length "$WORK/proposals.json") held or answered retro rows"
+  note_input retro-proposals read "$BACKLOG: $(jq length "$WORK/proposals.json") held or declined retro rows"
 fi
 
 # --- steers to workers -------------------------------------------------------

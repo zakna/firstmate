@@ -98,7 +98,14 @@ make_backlog() { # <home>
   Resolution recorded by fm-captain-hold.
   Resolution mode: answered
   Captain decision:
-  PROPOSAL-DECLINED
+  Declined: PROPOSAL-DECLINED
+- [x] app-retro-r3-approved - Retro proposal: approved (repo: app) (kind: captain) (done 2026-09-24)
+  Resolution recorded by fm-captain-hold.
+  Captain decision:
+  Approved, ship PROPOSAL-APPROVED
+- [x] app-retro-r4-skipper - Retro proposal: skipper (repo: app) (kind: captain) (done 2026-09-24)
+  Captain decision:
+  Go with the skipper PROPOSAL-WORDPART
 - [x] app-retro-r0-old - Retro proposal: old (repo: app) (kind: captain) (done 2026-08-02)
   Captain decision:
   PROPOSAL-OLD
@@ -131,9 +138,10 @@ test_collects_every_source_in_the_window() {
     and (texts("steer") | sort) == ["STEER-NEW line one\nline two", "STEER-PENDING"]
     and ([.records[] | select(.source == "steer")] | all(.ticket == "https://github.com/o/app/pull/7"))
     and ([.records[] | select(.source == "retro-proposal") | [.task, .kind]] | sort)
-        == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined-or-answered"]]' "$json" >/dev/null \
+        == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined"]]
+    and ([.records[] | select(.source == "retro-proposal" and .kind == "declined")][0].decision == "Declined: PROPOSAL-DECLINED")' "$json" >/dev/null \
     || fail "records do not match the fixture: $(jq -c .records "$json")"
-  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD task-plain-hold; do
+  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-WORDPART task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
   done
   assert_grep '| finding | 3 |' "$md" 'markdown counts records by source'
