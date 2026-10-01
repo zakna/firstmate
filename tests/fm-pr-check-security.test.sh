@@ -643,9 +643,6 @@ test_invalid_entrypoints_have_zero_side_effects() {
   pass "PR and teardown entrypoints reject invalid arguments before every side effect"
 }
 
-# A draft cannot be merged, so arming a merge poll on one would wait for an event
-# that cannot occur. Only a positive draft reading refuses, and it refuses before
-# anything is recorded or armed; a ready or unreadable one arms as before.
 # Registration counts the inline review comments on the exact recorded head,
 # so a finding posted after the ready report is visible without opening the PR.
 test_review_comments_on_recorded_head_are_counted() {
@@ -685,6 +682,9 @@ test_review_comments_on_recorded_head_are_counted() {
   pass "registration counts inline review comments on the exact recorded head"
 }
 
+# A draft cannot be merged, so arming a merge poll on one would wait for an event
+# that cannot occur. Only a positive draft reading refuses, and it refuses before
+# anything is recorded or armed; a ready or unreadable one arms as before.
 test_draft_pull_request_is_not_armed() {
   local dir rc
   dir=$(make_case draft-refused)
