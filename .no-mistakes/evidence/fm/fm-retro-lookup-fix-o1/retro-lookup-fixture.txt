@@ -1,0 +1,51 @@
+== fixture: head -2 of each report ==
+--- data/legacy-a/report.md
+# Retro: legacy-a
+
+See https://github.com/zakna/fm-tooling/pull/3
+--- data/legacy-b/report.md
+# Retro: legacy-b
+
+See https://github.com/zakna/firstmate/pull/9
+--- data/legacy-c/report.md
+# Retro: legacy-c
+
+See https://github.com/zakna/fm-tooling-x/pull/1
+--- data/line3/report.md
+# Retro: l3
+
+Project: fm-tooling
+--- data/new-a/report.md
+# Retro: a-1
+Project: fm-tooling
+
+--- data/new-b/report.md
+# Retro: b-1
+Project: fm-tooling
+--- data/notretro/report.md
+# Scout: x
+Project: fm-tooling
+--- data/other-proj/report.md
+# Retro: o-1
+Project: ha-climate
+--- data/prefix/report.md
+# Retro: p-1
+Project: fm-tooling-extra
+--- data/regexp/report.md
+# Retro: r
+Project: fmXtooling
+
+== NEW project lookup (P=fm-tooling) ==
+data/new-a/report.md
+data/new-b/report.md
+
+== NEW project lookup (P=fm.tooling, regex metachar) ==
+(empty = no regex interpretation)
+
+== NEW legacy lookup (repo github.com/zakna/fm-tooling) ==
+data/legacy-a/report.md
+
+== OLD (base) lookup, for comparison ==
+data/new-a/report.md
+data/new-b/report.md
+data/line3/report.md

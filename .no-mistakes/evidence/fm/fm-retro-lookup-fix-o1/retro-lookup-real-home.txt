@@ -1,0 +1,31 @@
+== real home: retro reports (line1, line2) ==
+data/dotagents-239-retro-s1/report.md | Project: dotagents
+data/dotagents-250-retro-s1/report.md | Project: dotagents
+data/firstmate-15-retro-s1/report.md | Project: firstmate
+data/goldwin-38-retro-s1/report.md | Project: goldwin
+data/ha-70-retro-s1/report.md | Project: ha
+data/ha-71-retro-s1/report.md | Project: ha
+data/ha-72-retro-s1/report.md | Project: ha
+data/ha-76-retro-s1/report.md | Project: ha
+data/portfolio-43-retro-s1/report.md | Project: portfolio
+data/retro-bazzite-remote-desktop-r1/report.md | Project: unraid
+data/sdlc-81-retro-s1/report.md | Project: agentic-sdlc
+data/sdlc-92-retro-s1/report.md | Project: agentic-sdlc
+data/unraid-43-retro-s1/report.md | Project: unraid
+data/unraid-58-retro-s1/report.md | Project: unraid
+data/unraid-67-retro-s1/report.md | Project: unraid
+
+== NEW project lookup P=fm-tooling ==
+
+== NEW project lookup P=firstmate ==
+data/firstmate-15-retro-s1/report.md
+
+== NEW legacy lookup (reports lacking Project line 2) ==
+(empty = backfill complete)
+
+== data/retro-workflow-followups.md ==
+ls: data/retro-workflow-followups.md: No such file or directory
+data/retro-bazzite-remote-desktop-r1/report.md
+data/unraid-43-retro-s1/report.md
+data/unraid-58-retro-s1/report.md
+data/unraid-67-retro-s1/report.md
