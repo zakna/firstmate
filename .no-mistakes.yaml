@@ -33,6 +33,18 @@ document:
 commands:
   lint: 'bin/fm-lint.sh'
 
+# Trusted review rules for skill files, which are procedures another agent follows.
+# The installed matcher expands only a trailing "/**"; elsewhere "*" stays within one path segment.
+review:
+  path_instructions:
+    - path: ".agents/skills/*/SKILL.md"
+      instructions: &skill_review_instructions |
+        A skill is a procedure another agent will follow.
+        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+        When a skill is named in the README skills table, check the row still matches the skill.
+    - path: "skills/*/SKILL.md"
+      instructions: *skill_review_instructions
+
 # Publish each run's test evidence to the orphan no-mistakes/evidence branch linked from the PR.
 # The evidence is not committed to the feature or default branch.
 test:
