@@ -1,0 +1,105 @@
+$ FM_HOME=$LAB bin/fm-contributions.sh poll
+contribution-wake: check: contributions sdlc-94 5d09ed9e1363bb1b17147320eaefd206921fc6d1716da8ca6a5f91e7fa000c66
+contribution-wake: check: contributions sdlc-94 b669fb18d7975a54dd749dd0c61ee076d6d381905e5ef8c290073208a8a6fc35
+contribution-wake: check: contributions sdlc-94 0b6aa57ec9848aa536ff39f22dc83d7d1fefb760aba643138cbdc2b3c9e9f08e
+contribution-wake: check: contributions sdlc-94 49ca5bd20146b5e7add41f36833cd00c418e246d3d19a0c10c055374630b5b8a
+contribution-wake: check: contributions sdlc-94 5479173447f39475dfe29dfee8e6d97d57a975ff54656e05bfc025c3824fc3d4
+contribution-wake: check: contributions sdlc-94 0b9e402d9f45d17ff53bd9c03cfbe2a5c77589dffca1af87252ddb7ea05080f8
+contribution-wake: check: contributions sdlc-92 a46c19dbce830ba51acd51348f47c6e3c1a613a64f57fe9cf531b98225195eae
+contribution-wake: check: contributions sdlc-92 8a48150f8261fbd423a72dea118c6f1823798a2cf7e0a6a3960e74312816a52a
+contribution-wake: check: contributions sdlc-92 c7a1103ad90e94403f62b8f35170af01cf139c81ddd0ee991bd023d4cd764836
+rc=0
+
+$ FM_HOME=$LAB bin/fm-contributions.sh pending
+[
+  {
+    "task": "sdlc-92",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/92",
+    "type": "review-comment",
+    "author": "chatgpt-codex-connector[bot]",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/92#discussion_r4143835680",
+    "head": "7d7a6e1a",
+    "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub>"
+  },
+  {
+    "task": "sdlc-92",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/92",
+    "type": "review-comment",
+    "author": "chatgpt-codex-connector[bot]",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/92#discussion_r4143835694",
+    "head": "7d7a6e1a",
+    "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub>"
+  },
+  {
+    "task": "sdlc-92",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/92",
+    "type": "review",
+    "author": "chatgpt-codex-connector[bot]",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/92#pullrequestreview-5365281023",
+    "head": "7d7a6e1a",
+    "body": "\n### 💡 Codex Review\n\nHere are some automated review suggestions for this pull re"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review-comment",
+    "author": "Copilot",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#discussion_r4155483604",
+    "head": "f15ea753",
+    "body": "This summary contradicts the detailed note: only triage, spec, and implementatio"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review-comment",
+    "author": "Copilot",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#discussion_r4155483698",
+    "head": "f15ea753",
+    "body": "The collector does not establish that reactions are from non-bots: it reads aggr"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review-comment",
+    "author": "Copilot",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#discussion_r4155483754",
+    "head": "f15ea753",
+    "body": "The fan-out cardinality is reversed. The skill specifies about 4–6 bounded deleg"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review-comment",
+    "author": "Copilot",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#discussion_r4155483803",
+    "head": "f15ea753",
+    "body": "The reaction precedence is more permissive than described. The collector marks a"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review-comment",
+    "author": "Copilot",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#discussion_r4155483850",
+    "head": "f15ea753",
+    "body": "The cost-trigger inventory omits the spec and implementation runs started by `Re"
+  },
+  {
+    "task": "sdlc-94",
+    "url": "https://github.com/zakna/agentic-sdlc/pull/94",
+    "type": "review",
+    "author": "copilot-pull-request-reviewer[bot]",
+    "reviewer": "bot",
+    "source": "https://github.com/zakna/agentic-sdlc/pull/94#pullrequestreview-5379382538",
+    "head": "f15ea753",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n"
+  }
+]

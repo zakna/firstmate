@@ -1,0 +1,31 @@
+# live head + inline comments on that head, from GitHub
+#94 head=147ad02ed93152b8d0a4683674ef2c78d27f24f8 inline_on_head=0
+#92 head=7d7a6e1af34b316925141933f33f8f54d1a27ecc inline_on_head=2
+
+$ FM_HOME=$LAB bin/fm-pr-check.sh prc-94 https://github.com/zakna/agentic-sdlc/pull/94
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  2 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  After draining queued wakes, watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+review comments: 0 inline on head 147ad02ed93152b8d0a4683674ef2c78d27f24f8
+armed: state/prc-94.check.sh
+rc=0
+
+$ FM_HOME=$LAB bin/fm-pr-check.sh prc-92 https://github.com/zakna/agentic-sdlc/pull/92
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+review comments: 2 inline on head 7d7a6e1af34b316925141933f33f8f54d1a27ecc
+armed: state/prc-92.check.sh
+rc=0
+
+# recorded meta
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dS2ofV/project
+pr=https://github.com/zakna/agentic-sdlc/pull/92
+pr_head=7d7a6e1af34b316925141933f33f8f54d1a27ecc
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dS2ofV/project
+pr=https://github.com/zakna/agentic-sdlc/pull/94
+pr_head=147ad02ed93152b8d0a4683674ef2c78d27f24f8

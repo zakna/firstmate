@@ -1,0 +1,5 @@
+# BASE commit 51187ae (before change), same two real PRs
+$ bin/fm-contributions.sh poll
+rc=0
+$ bin/fm-contributions.sh pending | jq length
+0
