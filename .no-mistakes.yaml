@@ -41,12 +41,12 @@ review:
     - path: ".agents/skills/*/SKILL.md"
       instructions: |
         A skill is a procedure another agent will follow.
-        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
         When a skill is named in the README skills table, check the row still matches the skill.
     - path: "skills/*/SKILL.md"
       instructions: |
         A skill is a procedure another agent will follow.
-        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, and multi-project home that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
         When a skill is named in the README skills table, check the row still matches the skill.
 
 # Publish each run's test evidence to the orphan no-mistakes/evidence branch linked from the PR.
