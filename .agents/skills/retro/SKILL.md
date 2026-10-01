@@ -30,6 +30,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
    Add nothing that this file already states.
 4. When the scout reports, handle it as any finished investigation.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
+   The supervisor records each open workflow-level follow-up and each approved Process change in `data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure
 
