@@ -1,0 +1,24 @@
+## S1 run-1 intent passes
+$ fm-intent-check.sh check brief run1-intent
+exit=0
+
+## S2 run-2 intent with remedies, no --resolved (adversarial: unauthorized remedy line refused)
+intent-check: line 2: outside the authorized intent: Retries stop after three attempts and the error names the attempt count.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/tmp.HdjhVGhw0e/brief.md
+exit=1
+
+## S3 run-2 intent with remedies passed via --resolved
+exit=0
+
+## S4 run-2 intent differs from run-1 (PR 15 failure was byte-identical)
+DIFFERENT
+1a2
+> Retries stop after three attempts and the error names the attempt count.
+
+## S5 captain-approved remedies appended to Captain's intent pass without --resolved
+exit=0
+
+## S6 --resolved still applies refusal classes (adversarial: direct address in remedy)
+intent-check: line 2: direct address: You must make retries stop after three attempts.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/tmp.HdjhVGhw0e/brief.md
+exit=1
