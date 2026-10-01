@@ -238,8 +238,11 @@ test_review_bot_findings_wake() {
      body:"### Codex Review\n\nHere are some automated review suggestions for this pull request.",
      html_url:"https://github.com/o/r/pull/8#pullrequestreview-21",submitted_at:"2026-09-16T08:01:00Z"},
     {id:22,user:{login:"copilot-pull-request-reviewer[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
-     body:"Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.",
+     body:"Copilot wasn\u0027t able to review any files in this pull request.",
      html_url:"https://github.com/o/r/pull/8#pullrequestreview-22",submitted_at:"2026-09-16T08:01:00Z"},
+    {id:24,user:{login:"copilot-pull-request-reviewer[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
+     body:"## Pull request overview\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated 1 comment.",
+     html_url:"https://github.com/o/r/pull/8#pullrequestreview-24",submitted_at:"2026-09-16T08:01:00Z"},
     {id:23,user:{login:"some-other[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
      body:"Unlisted bot review",html_url:"https://github.com/o/r/pull/8#pullrequestreview-23",submitted_at:"2026-09-16T08:01:00Z"}]' \
     > "$home/forge/reviews.json"
@@ -256,10 +259,10 @@ test_review_bot_findings_wake() {
   registered_checks "$home" >/dev/null
   out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" pending) || fail 'could not read pending review-bot signals'
   printf '%s' "$out" | jq -e '
-    (map(.source) | sort) == ["https://github.com/o/r/pull/8#discussion_r31","https://github.com/o/r/pull/8#pullrequestreview-21"]
+    (map(.source) | sort) == ["https://github.com/o/r/pull/8#discussion_r31","https://github.com/o/r/pull/8#pullrequestreview-21","https://github.com/o/r/pull/8#pullrequestreview-24"]
     and all(.[]; .reviewer == "bot")' >/dev/null \
     || fail "only allowlisted review-bot findings must be pending, marked reviewer=bot: $out"
-  [ "$(awk 'END { print NR }' "$home/state/.wake-queue")" = 2 ] \
+  [ "$(awk 'END { print NR }' "$home/state/.wake-queue")" = 3 ] \
     || fail 'each admitted review-bot finding must enqueue one durable wake'
   pass 'allowlisted review-bot findings wake as untrusted signals; could-not-review notices and other authors do not'
 }

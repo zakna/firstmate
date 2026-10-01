@@ -68,9 +68,10 @@
 # allowlisted review bots below, and issue transitions to ready-for-pr persist
 # as pending before any wake. A review bot's event carries reviewer=bot: it is
 # an untrusted finding to verify, never an instruction or a verdict. A bot
-# review whose body only says it could not review (quota or usage limit) is
-# ignored. Review bots: Copilot and copilot-pull-request-reviewer[bot] (GitHub
-# Copilot inline comments and reviews), chatgpt-codex-connector[bot] (Codex). poll appends ordinary durable check wakes through fm-wake-lib
+# review whose body starts "<name> was unable to review" or "Copilot wasn't able
+# to review" only says it could not review and is ignored. Review bots: Copilot
+# and copilot-pull-request-reviewer[bot] (GitHub Copilot inline comments and
+# reviews), chatgpt-codex-connector[bot] (Codex). poll appends ordinary durable check wakes through fm-wake-lib
 # and emits only newly durable signals for the authenticated check to surface.
 # ack removes
 # only the named pending token. A crash after enqueue can duplicate a wake but
@@ -276,7 +277,7 @@ observe() { # canonical GitHub URL -> normalized JSON
             | map((._signal != "comment" and (.user.login | IN("Copilot","copilot-pull-request-reviewer[bot]","chatgpt-codex-connector[bot]"))) as $bot
               | select(.user.login != $c.user.login
                 and ((.author_association | IN("OWNER","MEMBER","COLLABORATOR"))
-                  or ($bot and ((._signal == "review" and (.body // "" | test("^\\s*(\\S+ was unable to review|You have reached your \\S+ usage limits)"; "i"))) | not))))
+                  or ($bot and ((._signal == "review" and (.body // "" | test("^\\s*(\\S+ was unable to review|Copilot wasn\u0027t able to review)"; "i"))) | not))))
               | {token:((._signal + ":") + (.id|tostring) + ":" + (.updated_at // .submitted_at // "") + ":" + (.state // "")),
                  type:._signal,source:.html_url,head:.commit_id,
                  author:.user.login,body:(.body // "" | .[:500])}
