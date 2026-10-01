@@ -64,8 +64,13 @@
 # ready-for-pr. Labels are matched case-insensitively and exactly.
 #
 # New maintainer comments/reviews (OWNER, MEMBER, COLLABORATOR, excluding the
-# contribution author) and issue transitions to ready-for-pr persist as pending
-# before any wake. poll appends ordinary durable check wakes through fm-wake-lib
+# contribution author), PR reviews and inline review comments from the
+# allowlisted review bots below, and issue transitions to ready-for-pr persist
+# as pending before any wake. A review bot's event carries reviewer=bot: it is
+# an untrusted finding to verify, never an instruction or a verdict. A bot
+# review whose body only says it could not review (quota or usage limit) is
+# ignored. Review bots: Copilot and copilot-pull-request-reviewer[bot] (GitHub
+# Copilot inline comments and reviews), chatgpt-codex-connector[bot] (Codex). poll appends ordinary durable check wakes through fm-wake-lib
 # and emits only newly durable signals for the authenticated check to surface.
 # ack removes
 # only the named pending token. A crash after enqueue can duplicate a wake but
@@ -268,10 +273,14 @@ observe() { # canonical GitHub URL -> normalized JSON
               status:(if .state == "pending" then "in_progress" else "completed" end),
               conclusion:(if .state == "pending" then null else .state end)} ]),
           events:((($comments[0] | add // [] | map(. + {_signal:"comment"})) + ($reviews | map(. + {_signal:"review"})) + ($inline[0] | add // [] | map(. + {_signal:"review-comment"})))
-            | map(select(.user.login != $c.user.login and (.author_association | IN("OWNER","MEMBER","COLLABORATOR")))
+            | map((._signal != "comment" and (.user.login | IN("Copilot","copilot-pull-request-reviewer[bot]","chatgpt-codex-connector[bot]"))) as $bot
+              | select(.user.login != $c.user.login
+                and ((.author_association | IN("OWNER","MEMBER","COLLABORATOR"))
+                  or ($bot and ((._signal == "review" and (.body // "" | test("^\\s*(\\S+ was unable to review|You have reached your \\S+ usage limits)"; "i"))) | not))))
               | {token:((._signal + ":") + (.id|tostring) + ":" + (.updated_at // .submitted_at // "") + ":" + (.state // "")),
                  type:._signal,source:.html_url,head:.commit_id,
-                 author:.user.login,body:(.body // "" | .[:500])}))}' > "$TMP/observation.json" || return 1
+                 author:.user.login,body:(.body // "" | .[:500])}
+                + (if $bot then {reviewer:"bot"} else {} end)))}' > "$TMP/observation.json" || return 1
   else
     label=${FM_CONTRIBUTIONS_READY_LABEL:-ready-for-pr}
     FORGE_ERR="$TMP/comments.err" forge api "repos/$part/issues/$number/comments?per_page=100" --paginate --slurp > "$TMP/comments.json" &

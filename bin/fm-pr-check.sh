@@ -17,6 +17,12 @@
 # draft state does not refuse, matching how the head read below is optional.
 # bin/fm-pr-merge.sh records through this script with FM_PR_CHECK_MERGE=1 and
 # skips this refusal, because its own merge-time draft refusal is authoritative.
+# When it records a GitHub pr_head, it also counts the inline review comments
+# whose commit_id is that exact head, from any author, and records the count as
+# pr_head_review_comments=<n> and prints "review comments: <n> inline on head
+# <sha>". An unreadable count records nothing and prints "unknown"; it never
+# refuses arming. The count is written before pr= because the metadata identity
+# parser accepts only known keys after it.
 # Usage: fm-pr-check.sh <task-id> <pr-url>
 set -eu
 
@@ -133,6 +139,17 @@ if [ "$PROVIDER" = github ] && [ -n "$WT" ] && [ -d "$WT" ] && command -v gh >/d
   fi
 fi
 
+REVIEW_COMMENTS=
+if [ -n "$PR_HEAD" ] && command -v jq >/dev/null 2>&1; then
+  if INLINE_JSON=$(gh api "repos/$PROJECT_PATH/pulls/$NUMBER/comments?per_page=100" --paginate --slurp 2>/dev/null) \
+    && REVIEW_COMMENTS=$(printf '%s' "$INLINE_JSON" | jq -er --arg head "$PR_HEAD" \
+      'select(type == "array" and all(.[]; type == "array")) | [.[][] | select(.commit_id == $head)] | length' 2>/dev/null); then
+    case "$REVIEW_COMMENTS" in ''|*[!0-9]*) REVIEW_COMMENTS= ;; esac
+  else
+    REVIEW_COMMENTS=
+  fi
+fi
+
 MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)
 PROJECT=$(grep '^project=' "$META" | tail -1 | cut -d= -f2- || true)
 # The gate is asked about the ready report this task's worker was told to give;
@@ -181,10 +198,11 @@ STATE_DEVICE=$(fm_pr_file_device "$STATE") || exit 1
 META_TMP=$(mktemp "$STATE/.fm-pr-meta.XXXXXX") || exit 1
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
-    pr=*|pr_head=*) ;;
+    pr=*|pr_head=*|pr_head_review_comments=*) ;;
     *) printf '%s\n' "$line" >> "$META_TMP" || exit 1 ;;
   esac
 done < "$META"
+[ -z "$REVIEW_COMMENTS" ] || printf 'pr_head_review_comments=%s\n' "$REVIEW_COMMENTS" >> "$META_TMP" || exit 1
 printf 'pr=%s\n' "$URL" >> "$META_TMP" || exit 1
 [ -z "$PR_HEAD" ] || printf 'pr_head=%s\n' "$PR_HEAD" >> "$META_TMP" || exit 1
 chmod 0600 "$META_TMP" || exit 1
@@ -247,4 +265,7 @@ case "$READY_RC" in
   0|1) ;;
   *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
 esac
+if [ -n "$PR_HEAD" ]; then
+  printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
+fi
 printf 'armed: state/%s.check.sh\n' "$ID"
