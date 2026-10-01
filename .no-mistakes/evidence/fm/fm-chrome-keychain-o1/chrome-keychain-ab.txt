@@ -1,0 +1,21 @@
+== with-fix-run1 flags: --use-mock-keychain
+dom_has_probe: 1  dom_bytes:       88
+new dialog-ish windows seen during run:
+Google Chrome	RenderCV
+stderr keychain lines:
+== with-fix-run2 flags: --use-mock-keychain
+dom_has_probe: 1  dom_bytes:       88
+new dialog-ish windows seen during run:
+Google Chrome	RenderCV
+stderr keychain lines:
+== with-fix-run3 flags: --use-mock-keychain
+dom_has_probe: 1  dom_bytes:       88
+new dialog-ish windows seen during run:
+Google Chrome	RenderCV
+stderr keychain lines:
+== base-no-fix-control flags: 
+dom_has_probe: 1  dom_bytes:       88
+new dialog-ish windows seen during run:
+Google Chrome	RenderCV
+SecurityAgent	Keychain Not Found
+stderr keychain lines:
