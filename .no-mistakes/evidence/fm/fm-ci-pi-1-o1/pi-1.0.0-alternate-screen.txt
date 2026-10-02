@@ -1,0 +1,2 @@
+== args='' alternate_on=1
+== args='--tui-mode regular' alternate_on=0
