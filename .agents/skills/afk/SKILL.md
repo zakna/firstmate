@@ -2,7 +2,7 @@
 name: afk
 description: >-
   Enter the away posture when the captain invokes /afk, says they are going afk, `state/.afk-contract` or `state/.afk` exists, an incoming message starts with `FM_INJECT_MARK`, or any `state/.subsuper-*` marker is involved.
-  It writes the durable away-posture record with the captain's away words verbatim as the whole mandate in the same turn as /afk, after open work is stowed and compaction is requested and without waiting for a further go, reads the words back in plain sentences after entry, announces hold-for-return only at entry, keeps the one supervision session running in the away posture (on Pi the supervision branch acts on the words by its own judgment and takes every safe actionable wake with main parked, as the supervision host does on a non-Pi home that opted into it; the daemon still delivers batched digests elsewhere for now), and on the first unmarked message renders the return brief from durable records before ordinary work resumes.
+  It writes the durable away-posture record with the captain's away words verbatim as the whole mandate in the same turn as /afk, after open work is stowed and compaction is requested where the harness supports it, and without waiting for a further go, reads the words back in plain sentences after entry, announces hold-for-return only at entry, keeps the one supervision session running in the away posture (on Pi the supervision branch acts on the words by its own judgment and takes every safe actionable wake with main parked, as the supervision host does on a non-Pi home that opted into it; the daemon still delivers batched digests elsewhere for now), and on the first unmarked message renders the return brief from durable records before ordinary work resumes.
 user-invocable: true
 metadata:
   internal: true
@@ -23,9 +23,10 @@ Hold-for-return is the default and the only reach profile this release records: 
    A prompt cache lasts about an hour and away wakes often arrive further apart, so every wake would otherwise reread the whole long conversation at full price.
    First run the `stow` procedure so every open decision and work record is on disk, because compaction can drop what lives only in this conversation.
    If `stow` stops on an exception, do not write the record; report the exception instead.
-   No verified primary harness lets the agent compact its own conversation, so ask the captain to run that harness's compact command (`/compact` on every verified primary harness) before stepping away.
+   No verified primary harness lets the agent compact its own conversation, so where the harness has a tracked post-compaction context restore (`docs/sessionstart-nudge.md`), ask the captain to run its compact command (`/compact`) before stepping away; on the Codex interactive TUI and Cursor, which have none, say nothing about compaction.
+   Claude Code's `switchModelsOnFlag` setting does not switch models mid-session to save quota: it only chooses whether to ask or switch when a safety classifier flags a request, so it needs no guard here.
 2. **Write the record in this same turn.**
-   After stowing open work and asking the captain to compact, run `bin/fm-afk-launch.sh enter --words-file <path> [--expected-return <UTC ISO 8601>] [--spend <n>]` (or `--words <text>`).
+   After stowing open work and making any compaction request, run `bin/fm-afk-launch.sh enter --words-file <path> [--expected-return <UTC ISO 8601>] [--spend <n>]` (or `--words <text>`).
    It writes `state/.afk-contract` at once, with no separate confirmation step, then prints the entry announcement and the record's read-back.
    The words are the whole mandate: `bin/fm-afk-contract.sh` records them exactly as given, with no clause fields, verbs, ids, or merge-grant list, and by the captain's mandate no parser, tokenizer, classifier, or grammar reads them anywhere.
    Read `bin/fm-afk-contract.sh --help` for the flags rather than memorizing them.
