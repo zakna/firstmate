@@ -163,8 +163,8 @@ test_collects_every_source_in_the_window() {
     --nm-db "$dir/state.sqlite" --home "$dir/home") || fail "collector failed: $out"
   json="$dir/out/feedback.json" md="$dir/out/feedback.md"
   [ -f "$json" ] && [ -f "$md" ] || fail 'collector did not write both output files'
-  mode_json=$(stat -f '%Lp' "$json" 2>/dev/null || stat -c '%a' "$json")
-  mode_md=$(stat -f '%Lp' "$md" 2>/dev/null || stat -c '%a' "$md")
+  mode_json=$(stat -c '%a' "$json" 2>/dev/null || stat -f '%Lp' "$json")
+  mode_md=$(stat -c '%a' "$md" 2>/dev/null || stat -f '%Lp' "$md")
   [ "$mode_json" = 600 ] && [ "$mode_md" = 600 ] \
     || fail "collector reports must be private: json=$mode_json md=$mode_md"
   jq -e '[.inputs[] | .status] == ["read", "read", "read", "read"]' "$json" >/dev/null \
