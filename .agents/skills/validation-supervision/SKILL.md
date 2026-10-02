@@ -1,6 +1,6 @@
 ---
 name: validation-supervision
-description: Load when a ship starts or already has an active no-mistakes validation run, including a mid-run requirement change or finding, and before deciding or answering any ask-user finding.
+description: Load when a ship starts or already has an active no-mistakes validation run, including a mid-run requirement change or finding, when review remedies are approved after a run ended or a PR exists, and before deciding or answering any ask-user finding.
 user-invocable: false
 metadata:
   internal: true
@@ -28,7 +28,7 @@ Resume fleet supervision immediately after the decision lands.
 
 When approved review remedies must be covered by a later validation run, whether or not a PR exists, make that run's intent carry them so its review can check them; `bin/fm-dod-lib.sh` owns the mechanics.
 Append captain-approved remedies to the brief's `## Captain's intent` under the `AGENTS.md` section 7 mid-task rule; never put remedies firstmate approves under `ask-user-authority` there.
-Firstmate's re-validation order must tell the worker to write every approved remedy in its own words to a file and pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent.
+Firstmate's re-validation order must tell the worker to write every firstmate-approved remedy in its own words to a file, pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, and confirm before re-running that the new intent contains every remedy in that file word for word.
 
 Judge validation by the resolved state line from [`bin/fm-crew-state.sh`](../../../bin/fm-crew-state.sh), whose header owns outcome mappings and CI-monitor/daemon exceptions, never by shell liveness, the last status event, or a raw run record.
 Workers parked at approval or fix-review must follow the active gate help.
