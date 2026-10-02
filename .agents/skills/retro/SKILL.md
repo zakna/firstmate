@@ -13,7 +13,7 @@ metadata:
 A retro studies one landed ticket and asks what in the process let each defect, delay, or repeated comment happen.
 Its product is a small number of changes to the environment of the next ticket, each placed where it costs the least.
 It is knowledge only: no branch, no push, no pull request, and no configuration change.
-Feedback across several landed tickets, for the periodic trend review, comes from `bin/fm-feedback-collect.sh` instead.
+Feedback across several tickets merged through no-mistakes pipeline runs, for the periodic trend review, comes from `bin/fm-feedback-collect.sh` instead.
 
 This skill has two readers.
 The supervisor that receives `/retro <ticket>` follows "Dispatch".
