@@ -1,0 +1,35 @@
+Stopped after stage 2 (source inventory and previous follow-ups). The one `/` deviation: the skill's awk snippets use `retro-current` where `$0` belongs, so I r
+an them with `$0`.
+
+**Paths read**
+- `data/retro-current/instructions.md`
+- `data/retro-same-project/report.md`
+- `data/retro-legacy/report.md`
+- `data/retro-workflow-followups.md`
+- `data/retro-legacy-other/report.md` (legacy scan candidate, rejected)
+- `data/retro-other-project/report.md` (excluded)
+- `data/not-a-retro/report.md` (excluded)
+
+**Missing:** there was no task status log, backlog item, PR, or pipeline database to read for the fixture, so the sources the procedure expects there were not r
+ead.
+
+**Previous follow-ups (not verified against a merged tree; none exists in the fixture):**
+- `data/retro-same-project/report.md`: "preserve the project line" is open and not verified.
+- `data/retro-legacy/report.md`: "check the old lookup" is open and not verified.
+- `WF-OPEN-1` and `WF-PROCESS-2` in the workflow file are open and not verified.
+
+CURRENT_MATCHES: data/retro-same-project/report.md - first line is "# Retro: ", second line is exactly "Project: github.com/example/acme"
+LEGACY_MATCHES: data/retro-legacy/report.md - retro heading, no "Project:" second line, body links to github.com/example/acme/
+WORKFLOW_FOLLOWUPS: data/retro-workflow-followups.md - WF-OPEN-1 (open, verify retro lookup) and WF-PROCESS-2 (approved Process change, keep ledger current); re
+-verified on every retro
+EXCLUDED: data/retro-other-project/report.md (Project is github.com/example/other); data/retro-legacy-other/report.md (legacy, links to github.com/example/other
+/, not acme); data/not-a-retro/report.md (heading is "# Investigation: ", not "# Retro: "); data/retro-current/instructions.md (the current ticket's own instruc
+tions, not a report)
+
+CLAUDE_EXIT=0
+
+--- exact documented lookup commands against the same fixture ---
+CURRENT:
+data/retro-same-project/report.md
+LEGACY:
+data/retro-legacy/report.md
