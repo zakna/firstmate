@@ -1,0 +1,8 @@
+$ check original intent (first run)
+exit=0
+$ check re-validation intent with firstmate-approved remedy, no --resolved
+intent-check: line 2: outside the authorized intent: Cap the retry count at three attempts.
+intent-check: authorized intent read from $TMP/brief.md
+exit=1
+$ check re-validation intent with remedy passed via --resolved
+exit=0
