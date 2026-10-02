@@ -8,7 +8,7 @@ You are a crewmate: an autonomous worker agent managed by firstmate. Work on you
 {FIRSTMATE_SPEC}
 
 # Scope allowance
-However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
 
 # Herdr lifecycle declaration - NOT ENABLED
 **HARD SAFETY GATE:** this scaffold cannot inspect the task text filled in above.
@@ -22,7 +22,7 @@ You are in a disposable git worktree of demo, at a detached HEAD on a clean defa
 The path check is authoritative: `git rev-parse --git-dir` and `git rev-parse --git-common-dir` can help inspect the repo, but they do not prove you are outside the primary checkout.
 If the top-level path is the primary checkout or not the worktree you were launched in, STOP - do not branch or commit here - append `blocked [at=<epoch>]: launched in primary checkout, not an isolated worktree` to the status file and stop.
 
-1. First action: create your branch: `git checkout -b fm/bug-no-mistakes --`
+1. First action: create your branch: `git checkout -b fm/bugt-no-mistakes --`
 2. Run `no-mistakes doctor`; if it reports the repo is not initialized here, run `no-mistakes init`.
 
 # Rules
@@ -30,7 +30,7 @@ If the top-level path is the primary checkout or not the worktree you were launc
 2. Stay inside this worktree; modify nothing outside it.
 3. Use gh-axi for GitHub operations and chrome-devtools-axi for browser operations.
 4. Report status by appending one line:
-   `echo "{state} [at=<epoch>]: {one short line}" >> '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.status' && { [ ! -e '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/config/fleet-ledger' ] || '/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/bin/fm-fleet-ledger.sh' appended '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/config' '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.status' >/dev/null 2>&1 || true; }`
+   `echo "{state} [at=<epoch>]: {one short line}" >> '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.status' && { [ ! -e '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/config/fleet-ledger' ] || '/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/bin/fm-fleet-ledger.sh' appended '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/config' '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.status' >/dev/null 2>&1 || true; }`
    States: working, needs-decision, blocked, paused, done, failed.
    Substitute `<epoch>` with the current Unix time in seconds - run `date +%s` and write the number it printed; a stamp that is not plain digits records no time at all.
    Each append wakes firstmate, so report sparingly: only phase changes a supervisor
@@ -54,8 +54,8 @@ If the top-level path is the primary checkout or not the worktree you were launc
 5. If you hit the same obstacle twice, append `blocked [at=<epoch>]: {why}` and stop; firstmate will help.
 6. If a decision belongs above the implementation worker (product choices, destructive actions),
    append `needs-decision [at=<epoch>]: {summary of options}` and stop. Firstmate will reply with the decision.
-   For a no-mistakes ask-user gate specifically, escalate all ask-user findings as one event plus one snapshot file, using that same shape even when the gate holds only a single ask-user finding: write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority), to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes/nm-<run>-findings.txt`, then report the gate with
-   `needs-decision [at=<epoch>] [key=nm-<run>-<step>]: ask-user findings=<id1>,<id2>,... file=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes/nm-<run>-findings.txt`
+   For a no-mistakes ask-user gate specifically, escalate all ask-user findings as one event plus one snapshot file, using that same shape even when the gate holds only a single ask-user finding: write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority), to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes/nm-<run>-findings.txt`, then report the gate with
+   `needs-decision [at=<epoch>] [key=nm-<run>-<step>]: ask-user findings=<id1>,<id2>,... file=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes/nm-<run>-findings.txt`
    naming every ask-user finding id from that gate. The status line only points at the file; it never restates or summarizes a finding's content.
    A decision or blocker you opened stays open until a `resolved` line carrying its exact key lands; a later `done:` or `working:` line never closes it, even when the answer is what started that work.
    Firstmate's reply normally writes that closing line at answer time; when a blocker or wait clears WITHOUT a firstmate reply, append `resolved [at=<epoch>]: {how it cleared}` yourself (same `[key=<slug>]` if you opened it with one) as you resume.
@@ -81,22 +81,22 @@ If the top-level path is the primary checkout or not the worktree you were launc
      that it is free, and returning your own worktree is firstmate's job at cleanup, not yours.
    If you genuinely need a second checkout, another slot, or the daemon touched, append
    `blocked [at=<epoch>]: {what you need}` and stop; firstmate arranges it.
-8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/bin/fm-brief.sh --help` owns the procedure).
+8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/bin/fm-brief.sh --help` owns the procedure).
 9. When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
    Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
 
 # Firstmate instruction inbox
-Firstmate steers you through durable message files in '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.inbox'.
-When a terminal message says an instruction is waiting there - and at any natural checkpoint when you are unsure - list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.inbox'/*.msg, read and act on each message in numeric order, then acknowledge each handled message by moving it: `mv '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.inbox'/NNN.msg '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/state/bug-no-mistakes.inbox'/handled/`.
+Firstmate steers you through durable message files in '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.inbox'.
+When a terminal message says an instruction is waiting there - and at any natural checkpoint when you are unsure - list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.inbox'/*.msg, read and act on each message in numeric order, then acknowledge each handled message by moving it: `mv '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.inbox'/NNN.msg '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/state/bugt-no-mistakes.inbox'/handled/`.
 The move IS the acknowledgement: without it firstmate rings again and eventually treats you as stuck. An empty or absent inbox needs no action.
 
 # Project memory
 A project's `AGENTS.md` or `CLAUDE.md` is loaded into every agent session in that project, so edit it only to correct information that is factually wrong - including information your own change made wrong - and never to add knowledge because it is missing.
-A correction edits only the wrong text: do not run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/bin/fm-ensure-agents-md.sh`, create either file, or add sections, headings, or pointers alongside it.
+A correction edits only the wrong text: do not run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/bin/fm-ensure-agents-md.sh`, create either file, or add sections, headings, or pointers alongside it.
 
 # Definition of done
 Delivery contract: mode=no-mistakes
-Ship branch: fm/bug-no-mistakes
+Ship branch: fm/bugt-no-mistakes
 The task is complete only when committed on your branch.
 When you believe it is complete, append `done [at=<epoch>]: {summary}` to the status file and stop.
 Firstmate will then instruct you to run /no-mistakes to validate and ship a PR.
@@ -113,9 +113,9 @@ The `--intent` string you pass must be self-sufficient: that string plus the cod
 When the captain's intent refers to a report, decision, or PR ("do items 1, 2, 3, and 7 of the report"), write the substance of the referenced items into `--intent` in the captain's terms, not only the pointer; that substance is the captain's ask by reference, while Firstmate's build instructions and your own decisions still stay out.
 This replaces the no-mistakes skill's advice to enrich `--intent` with decisions and tradeoffs; that advice does not apply to Firstmate-dispatched work.
 The pipeline publishes the `--intent` string as the pull request body, so check it before the run starts.
-From this repository, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/bin/fm-intent-check.sh scrub /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes` to print the authorized words with a `Refs #<n>` last line for each issue of this repository the brief links and the words do not already reference; never add a reference the brief does not name.
+From this repository, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/bin/fm-intent-check.sh scrub /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes` to print the authorized words with a `Refs #<n>` last line for each issue of this repository the brief links and the words do not already reference; never add a reference the brief does not name.
 Scrub never removes or rewords a sentence: when it refuses a line it prints nothing, names each refused line, and exits non-zero.
-Write the exact string you will pass to a file, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3VYV39GNVZRT7ZK81CJ9NG9/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.RcmbYJ/data/bug-no-mistakes <file>`, and pass that file's content unchanged only when the check passes.
+Write the exact string you will pass to a file, run `/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3XNTVMPR6BB87AAWVZ5Q2WZ/bin/fm-intent-check.sh check /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Nw7z3H/data/bugt-no-mistakes <file>`, and pass that file's content unchanged only when the check passes.
 The check refuses speaker labels, direct address, attributed quotes, these fleet terms where this repository's own files do not use them (captain, firstmate, first mate, crewmate, secondmate, second mate, supervisor, fleet, no-mistakes, the brief, this brief, firstmate spec, status file, the worker, the user), and any sentence outside the authorized words; name later captain words with `--captain-words <file>` and the resolved substance of a referenced report, decision, or PR with `--resolved <file>`, which still pass every other rule.
 When scrub or the check refuses a line, never drop or reword it yourself: ask firstmate to reword the authorized intent in the source file the refusal names, and in `brief.md`'s `## Captain's intent` so a relaunch agrees, then rerun the check, or stop; never start the run with a refused string.
 Do not hand-edit, commit, or fix findings yourself while a run is active - the pipeline applies every fix.
