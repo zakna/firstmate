@@ -1,0 +1,47 @@
+summary: "18 passed, 2 failed, 20 total"
+checks[20]{name,conclusion}:
+  Lint 1,pass
+  PR must be raised via no-mistakes,pass
+  Lint 2,pass
+  Test coverage guard,pass
+  Behavior portable parallel 1,pass
+  Behavior portable parallel 2,pass
+  Behavior portable serial 1,pass
+  Behavior portable serial 2,pass
+  Behavior portable serial 3,pass
+  Behavior portable serial 4,pass
+  Behavior portable serial 5,fail
+  Behavior portable serial 6,pass
+  Behavior portable serial 7,pass
+  Behavior portable serial 8,pass
+  Behavior portable serial 9,pass
+  Behavior tests (Herdr),pass
+  Pi latest (warning only),fail
+  Stock macOS Bash snapshot compatibility,pass
+  Repo invariants,pass
+  Behavior timing aggregate,pass
+help[2]:
+  Run `gh-axi pr view 29` to see PR details
+  Run `gh-axi pr merge 29` to merge when ready
+Pi latest (warning only)	Install the newest Pi package	2026-10-02T07:35:04.4539555Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@latest^[[0m
+Pi latest (warning only)	Install the newest Pi package	2026-10-02T07:35:04.4541525Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Pi latest (warning only)	Install the newest Pi package	2026-10-02T07:35:16.0578066Z └── @earendil-works/pi-coding-agent@1.0.0
+Behavior portable parallel 1	Install the Pi package for the Pi extension tests	2026-10-02T07:38:51.6391263Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable parallel 1	Install the Pi package for the Pi extension tests	2026-10-02T07:38:51.6391691Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Behavior portable parallel 1	Install the Pi package for the Pi extension tests	2026-10-02T07:39:02.1699835Z └── @earendil-works/pi-coding-agent@0.99.2
+Behavior portable serial 6	Install the Pi package for the Pi extension tests	2026-10-02T07:37:16.1939299Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable serial 6	Install the Pi package for the Pi extension tests	2026-10-02T07:37:16.1939748Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Behavior portable serial 6	Install the Pi package for the Pi extension tests	2026-10-02T07:37:28.1816112Z └── @earendil-works/pi-coding-agent@0.99.2
+Behavior portable serial 3	Install the Pi package for the Pi extension tests	2026-10-02T07:37:20.2356194Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable serial 3	Install the Pi package for the Pi extension tests	2026-10-02T07:37:20.2356645Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Behavior portable serial 3	Install the Pi package for the Pi extension tests	2026-10-02T07:37:30.1818813Z └── @earendil-works/pi-coding-agent@0.99.2
+Behavior portable serial 1	Install the Pi package for the Pi extension tests	2026-10-02T07:38:57.9088469Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable serial 1	Install the Pi package for the Pi extension tests	2026-10-02T07:38:57.9088925Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Behavior portable serial 1	Install the Pi package for the Pi extension tests	2026-10-02T07:39:06.8418990Z └── @earendil-works/pi-coding-agent@0.99.2
+Behavior portable serial 7	Install the Pi package for the Pi extension tests	2026-10-02T07:37:29.5897093Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable serial 7	Install the Pi package for the Pi extension tests	2026-10-02T07:37:29.5897482Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Behavior portable serial 7	Install the Pi package for the Pi extension tests	2026-10-02T07:37:38.4630110Z └── @earendil-works/pi-coding-agent@0.99.2
+Behavior portable serial 5	Install the Pi package for the Pi extension tests	2026-10-02T07:37:58.6766248Z ^[[36;1mnpm install -g @earendil-works/pi-coding-agent@0.99.2^[[0m
+Behavior portable serial 5	Install the Pi package for the Pi extension tests	2026-10-02T07:37:58.6766708Z ^[[36;1mnpm ls -g --depth 0 @earendil-works/pi-coding-agent^[[0m
+Pi latest (warning only)	Run the Pi extension tests against the newest Pi	2026-10-02T07:35:54.6731875Z not ok - calm mode was not off by default (missing: 'CALM_E2E_OUTPUT')
+Behavior portable serial 5	Run portable serial shard 5	2026-10-02T08:00:00.7634364Z not ok - ci.yml jobs and the timeout tiers disagree; every job must join one tier
