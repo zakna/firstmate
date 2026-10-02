@@ -1,0 +1,7 @@
+2 rules; identical text: True
+tracked SKILL.md: 30 covered: 30 uncovered: []
+non-SKILL hits: []
+skills/a/b/SKILL.md False
+skills/a/skill.md False
+skills/a/references/x.md False
+bin/SKILL.md False
