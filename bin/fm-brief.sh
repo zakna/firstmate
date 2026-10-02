@@ -678,7 +678,6 @@ $ASK_USER_BLOCK
    Firstmate's reply normally writes that closing line at answer time; when a blocker or wait clears WITHOUT a firstmate reply, append \`resolved [at=<epoch>]: {how it cleared}\` yourself (same \`[key=<slug>]\` if you opened it with one) as you resume.
 $SHARED_INFRA_RULE
 8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to \`$DATA/$ID/review-comments.md\` and append one status line \`note [at=<epoch>]: review-comment inventory: N comments, $DATA/$ID/review-comments.md\`; at ready time settle each one in the PR body, keeping the ready line single (\`$FM_ROOT/bin/fm-brief.sh --help\` owns the procedure).
-
 $INBOX_SECTION
 
 # Project memory

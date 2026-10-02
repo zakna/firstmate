@@ -216,6 +216,13 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
+    assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$brief" \
+      "$id: brief missing the failing-bug-test-first rule"
+    assert_grep "Never edit, weaken, skip, or delete that test to make it pass" "$brief" \
+      "$id: brief missing the never-weaken-the-bug-test rule"
+    # shellcheck disable=SC2016  # single quotes are deliberate: the backticks must stay literal
+    assert_grep 'if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it' "$brief" \
+      "$id: brief missing the wrong-bug-test report-blocked-and-stop rule"
     assert_no_grep "EOF" "$brief" "$id: brief leaked a heredoc EOF marker (unterminated heredoc)"
   done
   pass "fm-brief.sh: no-mistakes/direct-PR/local-only briefs generate cleanly"

@@ -363,6 +363,13 @@ STUB
       "$mode: promoted worker did not receive the documentation-accuracy scope allowance"
     assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$home/data/$id/brief.md" \
       "$mode: promoted brief did not carry the documentation-accuracy scope allowance for a relaunch"
+    assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$payload" \
+      "$mode: promoted worker did not receive the failing-bug-test-first rule"
+    assert_grep "Never edit, weaken, skip, or delete that test to make it pass" "$payload" \
+      "$mode: promoted worker did not receive the never-weaken-the-bug-test rule"
+    # shellcheck disable=SC2016  # single quotes are deliberate: the backticks must stay literal
+    assert_grep 'if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it' "$payload" \
+      "$mode: promoted worker missing the wrong-bug-test report-blocked-and-stop rule"
 
     # Compare the public outputs of both real generation paths. The promoted
     # payload ends at its Definition of done, as does an ordinary generated

@@ -663,6 +663,13 @@ Keep the whole ready line on one line, with the URL as the first word after \`PR
 EOF
 }
 
+fm_bug_fix_test_contract() {
+  cat <<'EOF'
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+EOF
+}
+
 fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<data-dir>]
   local mode=$1 id=$2 forge=${4:-none}
   local branch=${3:-fm/$id} intent_dir=${5:-data}/$2
@@ -784,6 +791,7 @@ EOF
       echo "error: fm_dod_block: unknown delivery mode '$mode'" >&2
       return 1 ;;
   esac
+  fm_bug_fix_test_contract
 }
 
 # 0 when <sha> is contained in a ref under <namespace> in <repo>.
