@@ -30,7 +30,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
    Add nothing that this file already states.
 4. When the scout reports, handle it as any finished investigation.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
-   The supervisor records each open workflow-level follow-up and each approved Process change in `data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
+   The supervisor records each open workflow-level follow-up and each approved Process change in `${FM_HOME:?}/data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure
 
@@ -53,11 +53,11 @@ Open the pipeline database read-only.
 - The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
 - The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.
 - The earlier retro reports of the same project in this home: the reports whose first line starts with `# Retro: ` and whose second line is exactly `Project: <project>`.
-  `P='<project>'; export P; if [ -d data ]; then find data -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' {} +; fi`
+  `P='<project>'; export P; if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' {} +; fi`
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
 - The earlier retro reports with no `Project:` line anywhere, which were written before this skill: keep each one whose body links into the project's repository, and name every report found this way in your list of sources.
-  `if [ -d data ]; then find data -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 && substr($0, 1, 9) == "# Retro: " { print FILENAME }' {} +; fi | while IFS= read -r f; do grep -q '^Project:' "$f" || grep -lE '(^|[^[:alnum:]_.-])<repository address>([^[:alnum:]_-]|$)' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`; for Gerrit, use `gerrit.example.com/(c/)?<project>` so both the repository root and canonical change URLs match.
-- This home's workflow follow-ups, `data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
+  `if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 && substr($0, 1, 9) == "# Retro: " { print FILENAME }' {} +; fi | while IFS= read -r f; do grep -q '^Project:' "$f" || grep -lE '(^|[^[:alnum:]_.-])<repository address>([^[:alnum:]_-]|$)' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`; for Gerrit, use `gerrit.example.com/(c/)?<project>` so both the repository root and canonical change URLs match.
+- This home's workflow follow-ups, `${FM_HOME:?}/data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
   Every retro re-verifies them, whatever its project; when the file is absent, treat it as empty.
 
 Label every statement OBSERVED, naming the record it was read from, or INFERRED.
@@ -65,7 +65,7 @@ List the sources you actually read at the top of the report, and name every expe
 
 ### 2. Previous follow-ups first
 
-Before looking for anything new, take the open follow-ups and proposals of the earlier retros and of the workflow follow-ups file.
+Before looking for anything new, take the open follow-ups and proposals of the earlier retros and of the workflow follow-ups in `${FM_HOME:?}/data/retro-workflow-followups.md`.
 Re-verify each one in the artefact - the merged tree, the current instructions template, the current review rules - not in the backlog.
 Give each a status: shipped and measured, shipped and not measured, not shipped, or retired.
 Record passes as well as failures: a pattern an earlier retro named that demonstrably did not fire on this ticket is evidence.
@@ -107,16 +107,10 @@ Run the per-run queries for each run the first query returns, report M2 to M6 pe
 ```sh
 DB="${NM_HOME:-$HOME/.no-mistakes}/state.sqlite"
 
-# every attempt: all runs for the delivery's repository and its PR or landing identity
+# every attempt: all runs on the delivery's branch or pull request, with the repository they belong to
 sqlite3 -readonly "$DB" "SELECT r.id, p.upstream_url, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
   FROM runs r JOIN repos p ON p.id = r.repo_id
-  WHERE p.upstream_url = '<repository upstream URL>'
-    AND (
-      ('<pull request url>' <> '' AND r.pr_url = '<pull request url>')
-      OR ('<pull request url>' = '' AND COALESCE(r.pr_url, '') = ''
-          AND r.branch = '<branch>' AND r.head_sha = '<landing commit>')
-    )
-  ORDER BY r.created_at;"
+  WHERE r.branch = '<branch>' OR r.pr_url = '<pull request url>' ORDER BY r.created_at;"
 
 # M2, and per-step durations
 sqlite3 -readonly "$DB" "SELECT step_name, status, duration_ms FROM step_results
