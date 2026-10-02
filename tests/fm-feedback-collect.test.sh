@@ -108,7 +108,7 @@ make_backlog() { # <home>
 - [x] task-old - Task old https://github.com/o/app/pull/2 (repo: app, merged 2026-08-01) (kind: ship)
 - [x] app-retro-r2-rule - Retro proposal: new rule (repo: app) (kind: captain) (done 2026-09-24) (hold: x) (hold-kind: captain)
   Resolution recorded by fm-captain-hold.
-  Decision digest: retro-r2
+  Decision digest: 5ff267f98fa89f9e7158a094a77ba2f71e7d3f1dc02796dd5294cd5aa3ef7233
   Resolution mode: answered
 
   Captain decision:
@@ -117,7 +117,7 @@ make_backlog() { # <home>
   Original proposal says skip this proposal.
 - [x] app-retro-r3-approved - Retro proposal: approved (repo: app) (kind: captain) (done 2026-09-24)
   Resolution recorded by fm-captain-hold.
-  Decision digest: retro-r3
+  Decision digest: 736a2415f26b24079336ebc9e05ce2f53fda7a19ac07fc58ee6bccbd1d20aca1
   Resolution mode: answered
 
   Captain decision:
@@ -126,11 +126,22 @@ make_backlog() { # <home>
   Original proposal says skip this proposal: PROPOSAL-APPROVED-OLD
 - [x] app-retro-r4-skipper - Retro proposal: skipper (repo: app) (kind: captain) (done 2026-09-24)
   Resolution recorded by fm-captain-hold.
-  Decision digest: retro-r4
+  Decision digest: 94288f343edd5b948906ea1acd0845d146e5b8b13290468d25d0a16984a4d712
   Resolution mode: answered
 
   Captain decision:
   Go with the skipper PROPOSAL-WORDPART
+- [x] app-retro-r5-multiline - Retro proposal: multiline (repo: app) (kind: captain) (done 2026-09-24)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: 298765124d2bb13233b9dd0beb455fc18efb0a98a9a4fa724b0c727b133eaaf9
+  Resolution mode: answered
+
+  Captain decision:
+  Declined in the first paragraph.
+
+  Skip this proposal in the second paragraph.
+
+  Original proposal retained below.
 - [x] app-retro-r6-unrecorded - Retro proposal: unrecorded (repo: app) (kind: captain) (done 2026-09-24)
   Captain decision:
   Declined: PROPOSAL-NO-RECORD
@@ -141,7 +152,7 @@ MD
 }
 
 test_collects_every_source_in_the_window() {
-  local dir="$TMP_ROOT/full" fakebin out json md
+  local dir="$TMP_ROOT/full" fakebin out json md mode_json mode_md
   mkdir -p "$dir/home"
   make_db "$dir/state.sqlite"
   make_pages "$dir/pages"
@@ -152,6 +163,10 @@ test_collects_every_source_in_the_window() {
     --nm-db "$dir/state.sqlite" --home "$dir/home") || fail "collector failed: $out"
   json="$dir/out/feedback.json" md="$dir/out/feedback.md"
   [ -f "$json" ] && [ -f "$md" ] || fail 'collector did not write both output files'
+  mode_json=$(stat -f '%Lp' "$json" 2>/dev/null || stat -c '%a' "$json")
+  mode_md=$(stat -f '%Lp' "$md" 2>/dev/null || stat -c '%a' "$md")
+  [ "$mode_json" = 600 ] && [ "$mode_md" = 600 ] \
+    || fail "collector reports must be private: json=$mode_json md=$mode_md"
   jq -e '[.inputs[] | .status] == ["read", "read", "read", "read"]' "$json" >/dev/null \
     || fail "every present input should read: $(jq -c .inputs "$json")"
   jq -e '
@@ -169,8 +184,10 @@ test_collects_every_source_in_the_window() {
     and (texts("steer") | sort) == ["STEER-NEW line one\nline two", "STEER-PENDING"]
     and ([.records[] | select(.source == "steer")] | all(.ticket == "https://github.com/o/app/pull/7"))
     and ([.records[] | select(.source == "retro-proposal") | [.task, .kind]] | sort)
-        == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined"]]
-    and ([.records[] | select(.source == "retro-proposal" and .kind == "declined")][0].decision == "Declined: PROPOSAL-DECLINED")' "$json" >/dev/null \
+        == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined"], ["app-retro-r5-multiline", "declined"]]
+    and ([.records[] | select(.source == "retro-proposal" and .kind == "declined") | select(.task == "app-retro-r5-multiline")][0].decision
+        == "Declined in the first paragraph.\n\nSkip this proposal in the second paragraph.")
+    and ([.records[] | select(.source == "retro-proposal" and .kind == "declined") | select(.task == "app-retro-r2-rule")][0].decision == "Declined: PROPOSAL-DECLINED")' "$json" >/dev/null \
     || fail "records do not match the fixture: $(jq -c .records "$json")"
   for absent in OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-APPROVED-OLD PROPOSAL-WORDPART PROPOSAL-NO-RECORD task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
@@ -185,6 +202,44 @@ test_collects_every_source_in_the_window() {
   [ "$(jq '.records | length' "$json")" -eq "$(awk '/^## Source: / { on = 1 } on && /^- / { n++ } END { print n + 0 }' "$md")" ] \
     || fail 'markdown and JSON hold different record counts'
   pass 'collector gathers gate answers, unfixed findings, review comments, landed steers, and retro proposals'
+}
+
+test_reused_branch_keeps_landing_identity() {
+  local dir="$TMP_ROOT/reused-branch" fakebin in2
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  in2=$(epoch 2026-09-22T10:00:00Z)
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO runs VALUES
+  ('reused-before', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/6', 'merged', $OLD, $OLD, $OLD),
+  ('reused-attempt-1', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
+  ('reused-land-1', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $IN, $IN),
+  ('reused-attempt-2', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN + 10)), $((IN + 10))),
+  ('reused-land-2', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/8', 'merged', $in2, $in2, $in2);
+INSERT INTO step_results VALUES
+  ('s-reused-1', 'reused-attempt-1', 'review', 'completed', 'REUSED-ONE', NULL, NULL, $IN),
+  ('s-reused-2', 'reused-attempt-2', 'review', 'completed', 'REUSED-TWO', NULL, NULL, $in2);
+SQL
+  printf '%s' '[{"user":{"login":"carol","type":"User"},"body":"PR8-COMMENT","created_at":"2026-09-22T10:00:00Z"}]' \
+    > "$dir/pages/_repos_o_app_issues_8_comments.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_reviews.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_comments.json"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on reused branch landings'
+  jq -e '
+    ([.records[] | select(.source == "gate-answer" and .text == "REUSED-ONE")][0].ticket
+      == "https://github.com/o/app/pull/7")
+    and ([.records[] | select(.source == "gate-answer" and .text == "REUSED-TWO")][0].ticket
+      == "https://github.com/o/app/pull/8")
+    and ([.records[] | select(.source == "review-comment") | .ticket] | unique | sort
+      == ["https://github.com/o/app/pull/7", "https://github.com/o/app/pull/8"])
+    and ([.records[] | select(.source == "review-comment" and .text == "PR8-COMMENT")] | length == 1)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "reused branch evidence was misattributed: $(jq -c .records "$dir/feedback.json")"
+  pass 'reused branch attempts retain their landing identities'
 }
 
 test_empty_forge_pages_are_successful() {
@@ -367,8 +422,9 @@ test_usage_errors() {
 }
 
 failures=0
-for test_name in test_collects_every_source_in_the_window test_empty_forge_pages_are_successful \
-  test_malformed_forge_wrapper_is_reported test_corrupt_round_payload_is_reported \
+for test_name in test_collects_every_source_in_the_window test_reused_branch_keeps_landing_identity \
+  test_empty_forge_pages_are_successful test_malformed_forge_wrapper_is_reported \
+  test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
   test_malformed_steer_records_are_reported test_missing_backlog_skips_steers \
   test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported test_usage_errors; do

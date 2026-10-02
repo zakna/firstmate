@@ -50,6 +50,7 @@
 #   matches decline, declined, reject, rejected, or skip as a whole word (any
 #   case), labeled `declined`; the decision text is quoted verbatim.
 set -eu
+umask 077
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=bin/fm-task-inbox-lib.sh
@@ -101,18 +102,34 @@ nm_query() { # <out-file> <sql>
   rows=$(sqlite3 -readonly -json "$NM_DB" "$2") || return 1
   printf '%s' "${rows:-[]}" > "$1"
 }
-WINDOW_RUNS="SELECT w.id FROM runs w WHERE EXISTS (SELECT 1 FROM runs m
-    WHERE m.repo_id = w.repo_id AND m.branch = w.branch AND m.pr_state = 'merged'
-      AND COALESCE(m.pr_state_observed_at, m.updated_at) >= $SINCE_EPOCH)"
+LANDED_RUNS="WITH merged_landings AS (
+    SELECT m.repo_id, m.branch, m.pr_url,
+      COALESCE(m.pr_state_observed_at, m.updated_at) AS landed_at,
+      COALESCE(
+        LAG(COALESCE(m.pr_state_observed_at, m.updated_at)) OVER (
+          PARTITION BY m.repo_id, m.branch
+          ORDER BY COALESCE(m.pr_state_observed_at, m.updated_at), m.id
+        ), -1
+      ) AS previous_landed_at
+    FROM runs m
+    WHERE m.pr_state = 'merged'
+      AND COALESCE(m.pr_state_observed_at, m.updated_at) IS NOT NULL
+  ), landings AS (
+    SELECT * FROM merged_landings WHERE landed_at >= $SINCE_EPOCH
+  )
+  SELECT r.id AS run_id, l.repo_id, l.branch, l.pr_url, r.status, r.created_at
+  FROM runs r JOIN landings l
+    ON l.repo_id = r.repo_id AND l.branch = r.branch
+   AND r.created_at > l.previous_landed_at
+   AND r.created_at <= l.landed_at"
+WINDOW_RUNS="SELECT run_id FROM ($LANDED_RUNS)"
 if ! command -v sqlite3 >/dev/null 2>&1; then
   note_input no-mistakes absent "sqlite3 is not installed"
 elif [ ! -s "$NM_DB" ]; then
   note_input no-mistakes absent "no database at $NM_DB"
-elif nm_query "$WORK/runs.json" "SELECT r.id AS run_id, p.upstream_url AS repo, r.branch,
-      (SELECT m.pr_url FROM runs m WHERE m.repo_id = r.repo_id AND m.branch = r.branch
-        AND m.pr_state = 'merged' ORDER BY m.updated_at DESC LIMIT 1) AS pr_url,
-      r.status, r.created_at
-    FROM runs r JOIN repos p ON p.id = r.repo_id WHERE r.id IN ($WINDOW_RUNS)" \
+elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.branch,
+      r.pr_url, r.status, r.created_at
+    FROM ($LANDED_RUNS) r JOIN repos p ON p.id = r.repo_id" \
   && nm_query "$WORK/steps.json" "SELECT s.run_id, s.step_name AS step, s.status,
       s.approval_reason, s.override_reason, s.skip_reason, s.completed_at
     FROM step_results s WHERE s.run_id IN ($WINDOW_RUNS)
@@ -241,8 +258,83 @@ if [ -f "$BACKLOG" ] && ! jq -Rs '
   BACKLOG_ERROR=1
   printf '[]' > "$WORK/backlog.json"
 fi
+sha256_text() {
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$1" | sha256sum | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+captain_decision_text() { # <body>
+  local body=$1 record digest mode payload prefix='' remaining part
+  local line_end=$'\n' separator=$'\n\n' decision_marker=$'\n\nCaptain decision:\n'
+  local resolution_header
+  resolution_header="Resolution recorded by fm-captain-hold.$line_end"
+  case "$body" in
+    *"$resolution_header"*) record=${body#*"$resolution_header"} ;;
+    *)
+      resolution_header="Resolution recorded by fm-decision-hold.$line_end"
+      case "$body" in
+        *"$resolution_header"*) record=${body#*"$resolution_header"} ;;
+        *) return 1 ;;
+      esac
+      ;;
+  esac
+  case "$record" in
+    "Decision digest: "*"$line_end"*) ;;
+    *) return 1 ;;
+  esac
+  digest=${record#"Decision digest: "}
+  digest=${digest%%"$line_end"*}
+  record=${record#*"$line_end"}
+  case "$record" in
+    "Resolution mode: "*"$decision_marker"*) ;;
+    *) return 1 ;;
+  esac
+  mode=${record#"Resolution mode: "}
+  mode=${mode%%"$line_end"*}
+  case "$mode" in
+    answered|repaired|routed) ;;
+    *) return 1 ;
+  esac
+  case "$digest" in
+    ''|*[!0-9a-fA-F]*) return 1 ;;
+  esac
+  [ "${#digest}" -eq 64 ] || return 1
+  payload=${record#*"$decision_marker"}
+  remaining=$payload
+  while :; do
+    case "$remaining" in
+      *"$separator"*)
+        part=${remaining%%"$separator"*}
+        remaining=${remaining#"$part$separator"}
+        if [ -n "$prefix" ]; then prefix+=$separator; fi
+        prefix+=$part
+        [ "$(sha256_text "$prefix")" = "$digest" ] || continue
+        printf '%s' "$prefix"
+        return 0
+        ;;
+      *)
+        if [ -n "$prefix" ]; then prefix+=$separator; fi
+        prefix+=$remaining
+        [ "$(sha256_text "$prefix")" = "$digest" ] || return 1
+        printf '%s' "$prefix"
+        return 0
+        ;;
+    esac
+  done
+}
+jq -c '.[]' "$WORK/backlog.json" |
+while IFS= read -r row; do
+  body=$(jq -r '.body' <<<"$row")
+  decision=$(captain_decision_text "$body" 2>/dev/null || true)
+  jq -c --arg decision "$decision" \
+    '. + {captain_decision: (if $decision == "" then null else $decision end)}' <<<"$row"
+done | jq -s . > "$WORK/backlog.decisions.json"
 jq --arg since "$SINCE" '
-  def decision_text:
+  def legacy_decision_text:
     if test("(^|\n)Resolution recorded by fm-(captain|decision)-hold\\.\n") then
       (if contains("Resolution recorded by fm-captain-hold.\n")
        then split("Resolution recorded by fm-captain-hold.\n")[1]
@@ -252,14 +344,14 @@ jq --arg since "$SINCE" '
        | if . == null then null else split("\n\n")[0] | rtrimstr("\n") end)
     else null end;
   map(select(.id | contains("retro"))
-    | (.body | decision_text) as $decision
+    | ((.captain_decision // (.body | legacy_decision_text))) as $decision
     | if (.done | not) and (.line | contains("(hold-kind: captain)")) then {kind: "held", decision: $decision}
       elif .done and (.closed // "") >= $since and $decision
         and ($decision | test("\\b(declined?|rejected?|skip)\\b"; "i")) then {kind: "declined", decision: $decision}
       else empty end
     + {ticket: (.pr // .id), task: .id, text: (.line + "\n" + .body | rtrimstr("\n"))}
     | with_entries(select(.value != null)))
-' "$WORK/backlog.json" > "$WORK/proposals.json"
+' "$WORK/backlog.decisions.json" > "$WORK/proposals.json"
 if [ "$BACKLOG_ERROR" = 1 ]; then
   note_input retro-proposals error "could not read $BACKLOG"
 elif [ ! -f "$BACKLOG" ]; then
