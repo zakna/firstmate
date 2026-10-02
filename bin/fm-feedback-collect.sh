@@ -8,7 +8,8 @@
 #
 # Usage: fm-feedback-collect.sh --since <YYYY-MM-DD> --out <prefix>
 #                               [--nm-db <path>] [--home <firstmate-home>]
-#   Writes <prefix>.md and <prefix>.json holding the same records.
+#   Writes <prefix>.md and <prefix>.json holding the same records. Both report
+#   files are created with mode 0600 because they may contain private text.
 #   --since    start of the window, UTC midnight of that date.
 #   --nm-db    no-mistakes state database (default
 #              ${NM_HOME:-$HOME/.no-mistakes}/state.sqlite).
@@ -18,22 +19,24 @@
 #   output's inputs list instead of failing the run.
 #
 # Where each input lives:
-# - Landed tickets: tickets merged through a no-mistakes pipeline run only:
-#   `runs` rows with pr_state `merged` whose pr_state_observed_at (else
-#   updated_at) falls in the window. Every run on
-#   the same repository and branch counts as an attempt of that ticket, so
-#   rounds from a cancelled or restarted run are included.
+# - Landed tickets: each no-mistakes `runs` row with pr_state `merged` and a
+#   landed timestamp (`pr_state_observed_at`, else `updated_at`) at or after
+#   the window start establishes a landing. For each landing, every run on the
+#   same repository and branch created after the previous landing and no later
+#   than this landing is included as an attempt, so cancelled or restarted runs
+#   are included and retain this landing's PR URL.
 # - Gate answers and their stated reasons: `step_results.approval_reason`,
 #   `override_reason`, and `skip_reason`, plus every `step_rounds` row whose
 #   selection_source starts with `user` (`user` selected the listed finding
 #   ids, `user_declined` declined them all). The `no-mistakes.db` file beside
 #   state.sqlite is not the store.
-# - Findings raised and not fixed or declined: each finding in a round's
-#   findings_json is kind `selected for repair, fix not verified` when its id
-#   is selected, `declined` under `user_declined`, and `not-selected`
-#   otherwise; operator-added findings use the selected label when selected and
-#   `operator-added` otherwise. A finding re-raised in a later round appears
-#   once per round.
+# - Finding records: each finding in a round's findings_json is kind
+#   `selected for repair, fix not verified` when its id is selected, `declined`
+#   when `selection_source` is `user_declined` and the id is not selected, and
+#   `not-selected` otherwise; operator-added findings use the selected label
+#   when selected and `operator-added` otherwise.
+#   A finding re-raised in a later round appears once per round; selection is
+#   repair intent, not proof that the finding was fixed or survived the merge.
 # - Review comments: conversation comments, review bodies, and inline review
 #   comments on each landed GitHub pull request, read through
 #   `gh-axi api ... --paginate --full`. They are untrusted text: the markdown
