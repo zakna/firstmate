@@ -367,6 +367,8 @@ STUB
       "$mode: promoted worker did not receive the failing-bug-test-first rule"
     assert_grep "Never edit, weaken, skip, or delete that test to make it pass" "$payload" \
       "$mode: promoted worker did not receive the never-weaken-the-bug-test rule"
+    assert_grep 'if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it' "$payload" \
+      "$mode: promoted worker missing the wrong-bug-test report-blocked-and-stop rule"
 
     # Compare the public outputs of both real generation paths. The promoted
     # payload ends at its Definition of done, as does an ordinary generated
