@@ -1,0 +1,5 @@
+Actual authenticated forge page sizes used by the full live collector run:
+issues/27/comments=1
+pulls/27/reviews=1
+pulls/27/comments=0
+Collector evidence: live-current-full.json reports review-comments status=read with conversation and review records.

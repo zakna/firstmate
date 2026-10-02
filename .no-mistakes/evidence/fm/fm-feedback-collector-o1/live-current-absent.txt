@@ -1,0 +1,4 @@
+command=bin/fm-feedback-collect.sh --since 2026-09-20 --out <evidence>/live-current-absent --nm-db <missing-db> --home <empty-home>
+input_statuses=[{"name":"no-mistakes","status":"absent"},{"name":"review-comments","status":"absent"},{"name":"retro-proposals","status":"absent"},{"name":"steers","status":"absent"}]
+record_count=0
+markdown_input_lines=- no-mistakes: absent - no database at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-absent-current.uufOK9/missing.sqlite;- review-comments: absent - no landed GitHub pull request in the window;- retro-proposals: absent - no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-absent-current.uufOK9/empty-home/data/backlog.md;- steers: absent - no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-absent-current.uufOK9/empty-home/state; cleanup deletes a task's inbox;

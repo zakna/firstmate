@@ -1,0 +1,11 @@
+command=bin/fm-feedback-collect.sh --since 2026-09-20 --out <evidence>/live-current-full --nm-db <isolated-db> --home <isolated-home>
+json_mode=600 markdown_mode=600
+git_status_unchanged=yes
+input_statuses=[{"name":"no-mistakes","status":"read"},{"name":"review-comments","status":"read"},{"name":"retro-proposals","status":"read"},{"name":"steers","status":"read"}]
+record_sources=[{"source":"finding","count":2},{"source":"gate-answer","count":3},{"source":"retro-proposal","count":2},{"source":"review-comment","count":2},{"source":"steer","count":1}]
+gate_override=LIVE-OVERRIDE-REASON
+finding_kinds=["operator-added","selected for repair, fix not verified"]
+review_comment_kinds=["conversation","review"]
+steer_text=LIVE-WORKER-CORRECTION
+retro_kinds=[{"task":"live-retro-held","kind":"held","decision":null},{"task":"live-retro-declined","kind":"declined","decision":"Declined because the proposal is not ready.\n\nSkip this proposal until the next review."}]
+markdown_review_text_is_indented=yes

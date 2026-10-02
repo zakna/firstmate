@@ -1,0 +1,9 @@
+command=bin/fm-feedback-collect.sh --since 2026-09-20 --out <evidence>/live-current-adversarial --nm-db <isolated-db> --home <isolated-home>
+no_mistakes={"name":"no-mistakes","status":"error","detail":"/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-adversarial-current.cLNuUI/state.sqlite: 1 unreadable step_rounds payload(s); valid rows retained"}
+override=OVERRIDE-REASON-RETAINED
+valid_finding_count=1
+malformed_finding_count=0
+uppercase_backlog_records=["steer","retro-proposal"]
+steer_count=1
+retro_count=1
+markdown_counts=| finding | 1 |;| retro-proposal | 1 |;| steer | 1 |;

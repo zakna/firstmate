@@ -1,0 +1,5 @@
+command=bin/fm-feedback-collect.sh --since 2026-09-20 --out <evidence>/live-current-reused --nm-db <isolated-db> --home <isolated-home>
+landed_run_count=2
+landing_tickets=[{"text":"REUSED-LIVE-ONE","ticket":"https://github.com/zakna/firstmate/pull/27"},{"text":"REUSED-LIVE-TWO","ticket":"https://github.com/zakna/firstmate/pull/31"}]
+review_tickets=["https://github.com/zakna/firstmate/pull/27","https://github.com/zakna/firstmate/pull/31"]
+review_status={"status":"read","detail":"2 pull requests"}
