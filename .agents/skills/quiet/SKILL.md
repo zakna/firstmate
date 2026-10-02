@@ -23,12 +23,14 @@ exits it.
 
 ## What it does
 
-1. **Enter the lifecycle through `bin/fm-afk-launch.sh`, exactly as `/afk`
-   does, with `FM_AFK_MODE=quiet` set first.**
-   Follow the `afk` skill's "Entering" steps 1-5 verbatim (terminal-
-   backed vs harness-native entry, daemon-already-running refresh, saving
-   open work and asking for compaction, never arming a separate
-   `fm-watch.sh`) with one addition: export
+1. **Save open work, then compact, before entering quiet supervision.**
+   Follow the `afk` skill's "Entering" step 1 verbatim.
+
+2. **Enter the lifecycle through `bin/fm-afk-launch.sh`, exactly as `/afk`
+   does, with `FM_AFK_MODE=quiet` set for the lifecycle invocation.**
+   Follow the `afk` skill's "Entering" steps 2-5 verbatim (terminal-
+   backed vs harness-native entry, daemon-already-running refresh, never
+   arming a separate `fm-watch.sh`) with one addition: export
    `FM_AFK_MODE=quiet` in the shell that invokes `bin/fm-afk-launch.sh start`
    (or `start-native`), so `state/.afk`'s first line reads `quiet` instead of
    `away`.
@@ -38,7 +40,7 @@ exits it.
    `/afk`-shaped refresh call never resets quiet back to away underneath the
    captain.
 
-2. **Acknowledge** in `AGENTS.md` section 9 language: "Captain, quiet mode is
+3. **Acknowledge** in `AGENTS.md` section 9 language: "Captain, quiet mode is
    active; I will batch routine updates and surface only decisions, failures,
    credentials, or review-ready work - ordinary chat will not exit this, say
    `/quiet off` when you want normal per-wake responses back."
