@@ -13,7 +13,7 @@
 # entry announcement says so every time.
 #
 # ENTRY IS THE GO. `/afk` itself is the captain's go: after the `/afk` skill
-# stows open work and asks for any compaction, `enter` writes the record in
+# stows open work and asks the captain to compact, `enter` writes the record in
 # the same turn and never waits for a further human response, because the
 # captain who typed /afk may not look at the screen again.
 # The read-back is printed after the record exists; it is informational, never a

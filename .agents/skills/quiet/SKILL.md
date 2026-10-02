@@ -23,8 +23,8 @@ exits it.
 
 ## What it does
 
-1. **Save open work before entering quiet supervision.**
-   Run the `stow` procedure as the `afk` skill's "Entering" step 1 describes, including its exception rule; skip that step's compaction request, because the captain stays present.
+1. **Save open work, then compact, before entering quiet supervision.**
+   Follow the `afk` skill's "Entering" step 1, which owns the stow, compaction request, and context reload.
 
 2. **Enter the lifecycle through `bin/fm-afk-launch.sh`, exactly as `/afk`
    does, with `FM_AFK_MODE=quiet` set for the lifecycle invocation.**
