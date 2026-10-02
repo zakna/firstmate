@@ -1,0 +1,7 @@
+== tagged lookup (P=firstmate)
+data/a/report.md
+== untagged fallback (github.com/zakna/firstmate)
+data/c/report.md
+== old lookup (base) for comparison
+data/a/report.md
+data/f/report.md
