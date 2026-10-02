@@ -607,8 +607,8 @@ The [`firstmate-coding-guidelines` skill](../.agents/skills/firstmate-coding-gui
 `commands.test` executes code, so no-mistakes honors it only from the default-branch copy of `.no-mistakes.yaml`; a pushed branch cannot change what the gate runs.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the firstmate-specific local test policy and entry points.
 
-`review.path_instructions` gives the Review step the same rule for every `.agents/skills/*/SKILL.md` and `skills/*/SKILL.md`: each input, path, or query a skill tells its reader to use must be reachable under every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse.
-The rule text lives only in `.no-mistakes.yaml`.
+`review.path_instructions` adds a skill-file review rule for every `.agents/skills/*/SKILL.md` and `skills/*/SKILL.md`.
+`.no-mistakes.yaml` is the sole owner of the rule text.
 
 Portable shard evidence and coverage rules are in [fm-test-portable-shards.md](fm-test-portable-shards.md); [herdr-backend.md](herdr-backend.md#destructive-lab-safety) owns the real-Herdr lane's isolation boundary, and [runtime-backends.md](verification/runtime-backends.md#herdr) owns active evidence.
 

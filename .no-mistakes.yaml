@@ -41,13 +41,15 @@ review:
     - path: ".agents/skills/*/SKILL.md"
       instructions: |
         A skill is a procedure another agent will follow.
-        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
-        When a skill is named in the README skills table, check the row still matches the skill.
+        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable in every context the skill says it applies to, across the forges, delivery modes, runtimes, multi-project homes, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+        A skill deliberately scoped to one runtime or context is checked only within that scope.
+        When the README skills table has a row for this skill file, check the row still describes this exact file; a row for another skill with the same name does not count.
     - path: "skills/*/SKILL.md"
       instructions: |
         A skill is a procedure another agent will follow.
-        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable for every supported forge, delivery mode, runtime, multi-project home, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
-        When a skill is named in the README skills table, check the row still matches the skill.
+        For every input, path, or query the skill tells its reader to use, check that it exists and is reachable in every context the skill says it applies to, across the forges, delivery modes, runtimes, multi-project homes, repeated validation attempts, and branch reuse that bin/ and docs/configuration.md support, and that every filter or query matches what the prose around it promises.
+        A skill deliberately scoped to one runtime or context is checked only within that scope.
+        When the README skills table has a row for this skill file, check the row still describes this exact file; a row for another skill with the same name does not count.
 
 # Publish each run's test evidence to the orphan no-mistakes/evidence branch linked from the PR.
 # The evidence is not committed to the feature or default branch.
