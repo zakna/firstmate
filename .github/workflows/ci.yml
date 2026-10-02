@@ -431,7 +431,8 @@ jobs:
           set -eu
           bin/fm-test-run.sh \
             --fail-on-gate-skip 'Pi extension typecheck prerequisite not found' \
-            tests/fm-pi-primary-types.test.sh tests/fm-calm-pi-extension.test.sh
+            tests/fm-pi-primary-types.test.sh tests/fm-calm-pi-extension.test.sh \
+            tests/fm-pi-branch-extension.test.sh
 
   macos-stock-bash:
     name: Stock macOS Bash snapshot compatibility
