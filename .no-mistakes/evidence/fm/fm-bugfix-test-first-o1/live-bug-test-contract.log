@@ -1,0 +1,58 @@
+COMMAND ROOT: /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM
+TEMP FIXTURE: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR (removed on exit)
+
+=== LIVE SHIP BRIEF: mode=no-mistakes ===
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-brief-nomistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+-- generated public Definition of done clauses --
+# Definition of done
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+OBSERVATION: shared bug-fix contract is present in the generated ship brief.
+
+=== LIVE SHIP BRIEF: mode=direct-PR ===
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-brief-directPR/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+-- generated public Definition of done clauses --
+# Definition of done
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+OBSERVATION: shared bug-fix contract is present in the generated ship brief.
+
+=== LIVE SHIP BRIEF: mode=local-only ===
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-brief-localonly/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+-- generated public Definition of done clauses --
+# Definition of done
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+OBSERVATION: shared bug-fix contract is present in the generated ship brief.
+
+=== LIVE PROMOTION HANDOFF: mode=no-mistakes ===
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+promoted live-promote-nomistakes to ship mode=no-mistakes yolo=off (teardown protection restored)
+wrote ship instructions for mode=no-mistakes: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-nomistakes/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home bin/fm-send.sh live-promote-nomistakes "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-nomistakes/ship-instructions.md)"
+OBSERVATION: after task-id normalization, promoted ship instructions and ordinary ship brief have identical Definition of done output.
+OBSERVATION: promoted handoff retains the failing-test-first, no-weakening, and report-blocked clauses.
+
+=== LIVE PROMOTION HANDOFF: mode=direct-PR ===
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+promoted live-promote-directPR to ship mode=direct-PR yolo=off (teardown protection restored)
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-directPR/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home bin/fm-send.sh live-promote-directPR "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-directPR/ship-instructions.md)"
+OBSERVATION: after task-id normalization, promoted ship instructions and ordinary ship brief have identical Definition of done output.
+OBSERVATION: promoted handoff retains the failing-test-first, no-weakening, and report-blocked clauses.
+
+=== LIVE PROMOTION HANDOFF: mode=local-only ===
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+promoted live-promote-localonly to ship mode=local-only yolo=off (teardown protection restored)
+wrote ship instructions for mode=local-only: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-localonly/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home bin/fm-send.sh live-promote-localonly "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contract.amx5NR/home/data/live-promote-localonly/ship-instructions.md)"
+OBSERVATION: after task-id normalization, promoted ship instructions and ordinary ship brief have identical Definition of done output.
+OBSERVATION: promoted handoff retains the failing-test-first, no-weakening, and report-blocked clauses.
+
+RESULT: live product generation and promotion paths preserved the shared bug-fix contract for all supported ship modes.

@@ -1,3 +1,4 @@
+COMMAND: bash tests/fm-task-delivery.test.sh
 ok - fm-spawn/fm-promote: authorized intent preserves exact words and refuses operator-address lines
 ok - fm-spawn: every legacy worker receives scoped role instructions without changing project or primary instructions
 ok - fm-spawn: a ship spawn requires a valid explicit mode and yolo before anything is created
@@ -13,17 +14,17 @@ ok - fm-promote: a promoted worker receives the same mode-specific delivery cont
 ●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
 ●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
 ●  This is a supervision warning only; the guarded operation WILL still run.
-●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5C8D67B7XYM9C6N8GSC63/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5C8D67B7XYM9C6N8GSC63/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
+●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ok - fm-promote: a selected branch prefix reaches both worker instructions and durable task state
-Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-task-delivery.qedpo1/promote-branch-shell-safe-marker)/promote-branch-safe-e3'
+Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-task-delivery.ePSLhg/promote-branch-shell-safe-marker)/promote-branch-safe-e3'
 ok - fm-promote: ref-format-valid shell metacharacters stay literal in promotion branch commands
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ●  WATCHER DOWN - SUPERVISION IS OFF
 ●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
 ●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
 ●  This is a supervision warning only; the guarded operation WILL still run.
-●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5C8D67B7XYM9C6N8GSC63/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5C8D67B7XYM9C6N8GSC63/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
+●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ok - fm-merge-local: a registry change cannot redirect an in-flight local-only task
 ok - fm-project-mode: the registry lookup matches a whole multi-word name, not just its first token
@@ -42,3 +43,5 @@ ok - fm-spawn/fm-promote: leftover Task placeholders are refused until both subs
 ok - fm-spawn/fm-promote: a Firstmate spec handing gate responses to the worker draws a warning and proceeds; the stated rule does not
 ok - fm-project-mode: --branch-prefix resolves order-independently and defaults to the legacy fm/ prefix
 # all fm-task-delivery tests passed
+
+EXIT_STATUS: 0

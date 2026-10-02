@@ -1,0 +1,20 @@
+COMMAND ROOT: /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM
+TEMP FIXTURE: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-adversarial.2pdpe2 (removed on exit)
+
+=== ADVERSARIAL LIVE PROMOTION ===
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair a missing or failed watcher cycle with the Pi tool fm_watch_arm_pi, or restart Pi with -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-turnend-guard.ts -e /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y84W404E5KX44DKB4F19MM/.pi/extensions/fm-primary-pi-watch.ts if the extensions are not loaded.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+promoted live-adversarial-promote to ship mode=no-mistakes yolo=off (teardown protection restored)
+wrote ship instructions for mode=no-mistakes: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-adversarial.2pdpe2/home/data/live-adversarial-promote/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-adversarial.2pdpe2/home bin/fm-send.sh live-adversarial-promote "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-adversarial.2pdpe2/home/data/live-adversarial-promote/ship-instructions.md)"
+-- current promoted delivery clauses --
+# Definition of done
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+OBSERVATION: the promoted current ship contract contains all required clauses even when the scout brief carries deliberately weakened prior text.
+RESULT: adversarial promotion handoff retained the shared bug-fix contract.

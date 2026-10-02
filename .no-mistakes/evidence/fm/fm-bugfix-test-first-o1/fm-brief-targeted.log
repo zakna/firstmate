@@ -1,6 +1,7 @@
+COMMAND: bash tests/fm-brief.test.sh
 ok - fm-brief: scaffolds leave the worker role scope to the launch boundary and keep the secondmate contract
 ok - fm-brief.sh: bash -n succeeds
-/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.YsAM2H/heredoc-in-substitution.sh:2
+/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.gyLfmt/heredoc-in-substitution.sh:2
 ok - fm-brief.sh: no heredoc is nested inside a command substitution (Bash 3.2 parse-safe)
 ok - fm-brief.sh: --help renders the complete header
 ok - fm-brief.sh: no-mistakes/direct-PR/local-only briefs generate cleanly
@@ -34,7 +35,9 @@ ok - fm-brief.sh: a --branch-prefix override renders identically across every ge
 ok - fm-brief.sh: an empty --branch-prefix override resolves to a bare <task-id> branch
 ok - fm-brief.sh: --branch-prefix is refused on scout and secondmate scaffolds
 ok - fm-brief.sh: --branch-prefix value is validated against embedded spaces and a leading dash
-Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.YsAM2H/branch-prefix-shell-safe-marker)brief-branch-safe-g3'
+Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.gyLfmt/branch-prefix-shell-safe-marker)brief-branch-safe-g3'
 ok - fm-brief.sh: ref-format-valid shell metacharacters stay literal in generated branch commands
 ok - fm-brief.sh: every crewmate scaffold forbids administering the shared worktree pool
 ok - fm-brief.sh: ship briefs require an existing automated-review comment inventory
+
+EXIT_STATUS: 0
