@@ -108,16 +108,32 @@ make_backlog() { # <home>
 - [x] task-old - Task old https://github.com/o/app/pull/2 (repo: app, merged 2026-08-01) (kind: ship)
 - [x] app-retro-r2-rule - Retro proposal: new rule (repo: app) (kind: captain) (done 2026-09-24) (hold: x) (hold-kind: captain)
   Resolution recorded by fm-captain-hold.
+  Decision digest: retro-r2
   Resolution mode: answered
+
   Captain decision:
   Declined: PROPOSAL-DECLINED
+
+  Original proposal says skip this proposal.
 - [x] app-retro-r3-approved - Retro proposal: approved (repo: app) (kind: captain) (done 2026-09-24)
   Resolution recorded by fm-captain-hold.
+  Decision digest: retro-r3
+  Resolution mode: answered
+
   Captain decision:
   Approved, ship PROPOSAL-APPROVED
+
+  Original proposal says skip this proposal: PROPOSAL-APPROVED-OLD
 - [x] app-retro-r4-skipper - Retro proposal: skipper (repo: app) (kind: captain) (done 2026-09-24)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: retro-r4
+  Resolution mode: answered
+
   Captain decision:
   Go with the skipper PROPOSAL-WORDPART
+- [x] app-retro-r6-unrecorded - Retro proposal: unrecorded (repo: app) (kind: captain) (done 2026-09-24)
+  Captain decision:
+  Declined: PROPOSAL-NO-RECORD
 - [x] app-retro-r0-old - Retro proposal: old (repo: app) (kind: captain) (done 2026-08-02)
   Captain decision:
   PROPOSAL-OLD
@@ -153,9 +169,10 @@ test_collects_every_source_in_the_window() {
         == [["app-retro-r1-guard", "held"], ["app-retro-r2-rule", "declined"]]
     and ([.records[] | select(.source == "retro-proposal" and .kind == "declined")][0].decision == "Declined: PROPOSAL-DECLINED")' "$json" >/dev/null \
     || fail "records do not match the fixture: $(jq -c .records "$json")"
-  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-WORDPART task-plain-hold; do
+  for absent in FIXED-ONE OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-APPROVED-OLD PROPOSAL-WORDPART PROPOSAL-NO-RECORD task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
   done
+  assert_grep 'Landed set: tickets merged through a no-mistakes pipeline run only.' "$md" 'markdown states the landed-set boundary'
   assert_grep '| finding | 3 |' "$md" 'markdown counts records by source'
   assert_grep '| warning | 2 |' "$md" 'markdown counts findings by severity'
   assert_grep '| a.sh | 1 |' "$md" 'markdown counts records by file'
@@ -200,17 +217,19 @@ test_malformed_forge_wrapper_is_reported() {
 }
 
 test_corrupt_round_payload_is_reported() {
-  local dir="$TMP_ROOT/corrupt-round"
+  local dir="$TMP_ROOT/corrupt-round" fakebin
   mkdir -p "$dir/home"
   make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
   sqlite3 "$dir/state.sqlite" <<SQL
 INSERT INTO step_rounds VALUES
   ('rd-bad-selected', 's-review-2', 2, 'initial', 'user', 'not-json', '{}', '{}', $IN),
   ('rd-bad-findings', 's-review-2', 3, 'initial', 'user', '[]', 'not-json', '{}', $IN),
   ('rd-bad-user-findings', 's-review-2', 4, 'initial', 'user', '[]', '{}', 'not-json', $IN);
 SQL
-  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
-    --home "$dir/home" --no-github >/dev/null \
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null \
     || fail 'collector failed on corrupt step_rounds payloads'
   jq -e '
     ([.inputs[] | select(.name == "no-mistakes")][0] | .status == "error"
