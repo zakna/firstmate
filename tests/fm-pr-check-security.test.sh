@@ -182,6 +182,10 @@ case "${1:-} ${2:-}" in
     ;;
 esac
 case " $* " in
+  *" api repos/"*"/pulls/"*"/comments?per_page=100 "*)
+    [ "${FM_TEST_GH_INLINE_FAIL:-0}" = 0 ] || exit 1
+    printf '%s\n' "${FM_TEST_GH_INLINE:-[[]]}"
+    ;;
   *" api repos/"*"/issues/"*"/comments?per_page=100 "*|*" api repos/"*"/pulls/"*"/reviews?per_page=100 "*|*" api repos/"*"/pulls/"*"/comments?per_page=100 "*)
     printf '%s\n' '[[]]'
     ;;
@@ -637,6 +641,37 @@ test_invalid_entrypoints_have_zero_side_effects() {
   [ ! -s "$dir/guard.log" ] || fail "invalid direct or merge data called the guard"
   [ ! -e "$TMP_ROOT/escape.check.sh" ] || fail "task traversal wrote outside state"
   pass "PR and teardown entrypoints reject invalid arguments before every side effect"
+}
+
+# Registration counts the inline review comments on the exact recorded head,
+# so a finding posted after the ready report is visible without opening the PR.
+test_review_comments_on_recorded_head_are_counted() {
+  local dir head other out
+  dir=$(make_case head-review-comments)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  head=0123456789abcdef0123456789abcdef01234567
+  other=89abcdef0123456789abcdef0123456789abcdef
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$other\"}],[{\"id\":3,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration with head review comments failed: $(cat "$dir/stderr")"
+  grep -qxF "review comments: 2 inline on head $head" "$dir/stdout" \
+    || fail "registration did not print the head review-comment count: $(cat "$dir/stdout")"
+  grep -q '^armed: ' "$dir/stdout" || fail "counting review comments stopped the merge poll from arming"
+
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration on a new head failed: $(cat "$dir/stderr")"
+  grep -qxF "review comments: 0 inline on head $other" "$dir/stdout" \
+    || fail "comments on an earlier head were counted against the new head: $(cat "$dir/stdout")"
+
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE_FAIL=1 \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "an unreadable review-comment count refused registration: $(cat "$dir/stderr")"
+  grep -qxF "review comments: unknown inline on head $head" "$dir/stdout" \
+    || fail "an unreadable count was not disclosed as unknown: $(cat "$dir/stdout")"
+  grep -q '^armed: ' "$dir/stdout" || fail "an unreadable count stopped the merge poll from arming"
+  pass "registration counts inline review comments on the exact recorded head"
 }
 
 # A draft cannot be merged, so arming a merge poll on one would wait for an event
@@ -3538,6 +3573,7 @@ test_secondmate_record_refuses_a_pr_watch
 test_unpushed_named_head_refuses_registration
 test_direct_pr_unpushed_commit_refuses_registration
 test_valid_recording_and_merge_derivation
+test_review_comments_on_recorded_head_are_counted
 test_rejected_metacharacter_bytes_are_inert
 test_static_poll_contract
 test_atomic_interruption_leaves_no_partial_artifact

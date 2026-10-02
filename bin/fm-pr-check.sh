@@ -17,6 +17,10 @@
 # draft state does not refuse, matching how the head read below is optional.
 # bin/fm-pr-merge.sh records through this script with FM_PR_CHECK_MERGE=1 and
 # skips this refusal, because its own merge-time draft refusal is authoritative.
+# When it records a GitHub pr_head, it also counts the inline review comments
+# whose commit_id is that exact head, from any author, and prints "review
+# comments: <n> inline on head <sha>". An unreadable count prints "unknown"; it
+# never refuses arming.
 # Usage: fm-pr-check.sh <task-id> <pr-url>
 set -eu
 
@@ -130,6 +134,17 @@ if [ "$PROVIDER" = github ] && [ -n "$WT" ] && [ -d "$WT" ] && command -v gh >/d
   if REMOTE_HEAD=$(cd "$WT" && gh pr view "$URL" --json headRefOid -q .headRefOid 2>/dev/null) \
     && fm_pr_head_valid "$REMOTE_HEAD"; then
     PR_HEAD=$REMOTE_HEAD
+  fi
+fi
+
+REVIEW_COMMENTS=
+if [ -n "$PR_HEAD" ] && command -v jq >/dev/null 2>&1; then
+  if INLINE_JSON=$(gh api "repos/$PROJECT_PATH/pulls/$NUMBER/comments?per_page=100" --paginate --slurp 2>/dev/null) \
+    && REVIEW_COMMENTS=$(printf '%s' "$INLINE_JSON" | jq -er --arg head "$PR_HEAD" \
+      'select(type == "array" and all(.[]; type == "array")) | [.[][] | select(.commit_id == $head)] | length' 2>/dev/null); then
+    case "$REVIEW_COMMENTS" in ''|*[!0-9]*) REVIEW_COMMENTS= ;; esac
+  else
+    REVIEW_COMMENTS=
   fi
 fi
 
@@ -247,4 +262,7 @@ case "$READY_RC" in
   0|1) ;;
   *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
 esac
+if [ -n "$PR_HEAD" ]; then
+  printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
+fi
 printf 'armed: state/%s.check.sh\n' "$ID"
