@@ -1,0 +1,6 @@
+# Live workflow ledger result
+source=Claude Code one-shot primary in a private lab tmux session
+path=FM_HOME/data/retro-workflow-followups.md
+contains=open workflow-level follow-up
+contains=approved Process change
+assertions=both entries persisted under active FM_HOME

@@ -1,0 +1,8 @@
+fixture=isolated FM_HOME; project=github.com/zakna/firstmate
+project-tagged lookup:
+FM_HOME/data/tagged/report.md
+legacy repository-link lookup:
+FM_HOME/data/legacy/report.md
+workflow ledger:
+FM_HOME/data/retro-workflow-followups.md
+assertions=tagged report selected; legacy report selected; wrong-project and unrelated reports excluded
