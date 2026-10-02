@@ -24,7 +24,7 @@ Hold-for-return is the default and the only reach profile this release records: 
    First run the `stow` procedure so every open decision and work record is on disk, because compaction can drop what lives only in this conversation.
    If `stow` stops on an exception, do not write the record; report the exception instead.
    No verified primary harness lets the agent compact its own conversation, so ask the captain to run the harness's compact command (`/compact`) before stepping away.
-   On a harness without a tracked post-compaction context restore (`docs/sessionstart-nudge.md`), such as the Codex interactive TUI and Cursor, add: after compaction, run `bin/fm-session-start.sh` once to reload the context.
+   On a harness without a tracked post-compaction context restore (`docs/sessionstart-nudge.md`), such as the Codex interactive TUI and Cursor, add: after compaction, run `bin/fm-session-start.sh --reemit` once to reload the context.
    Claude Code's `switchModelsOnFlag` setting does not switch models mid-session to save quota: it only chooses whether to ask or switch when a safety classifier flags a request, so it needs no guard here.
 2. **Write the record in this same turn.**
    After stowing open work and asking the captain to compact, run `bin/fm-afk-launch.sh enter --words-file <path> [--expected-return <UTC ISO 8601>] [--spend <n>]` (or `--words <text>`).
