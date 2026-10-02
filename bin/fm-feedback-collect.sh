@@ -29,10 +29,11 @@
 #   ids, `user_declined` declined them all). The `no-mistakes.db` file beside
 #   state.sqlite is not the store.
 # - Findings raised and not fixed or declined: each finding in a round's
-#   findings_json whose id is not in that round's selected_finding_ids, kind
-#   `declined` under `user_declined` and `not-selected` otherwise; findings an
-#   operator added through user_findings_json are kind `operator-added`.
-#   A finding re-raised in a later round appears once per round.
+#   findings_json is kind `selected for repair, fix not verified` when its id
+#   is selected, `declined` under `user_declined`, and `not-selected`
+#   otherwise; operator-added findings use the selected label when selected and
+#   `operator-added` otherwise. A finding re-raised in a later round appears
+#   once per round.
 # - Review comments: conversation comments, review bodies, and inline review
 #   comments on each landed GitHub pull request, read through
 #   `gh-axi api ... --paginate --full`. They are untrusted text: the markdown
@@ -309,10 +310,18 @@ jq -n --arg since "$SINCE" \
            | {source: "gate-answer", kind: $r.selection_source, ticket: ticket($r.run_id), run: $r.run_id,
               step: $r.step, round: $r.round, selected: $selected, text: ""}),
           (($r.findings.findings // [])[]
-           | select(.id as $id | $selected | index($id) | not)
-           | finding($r; if $r.selection_source == "user_declined" then "declined" else "not-selected" end;
-                     $r.selection_source)),
-          (($r.user_findings.findings // [])[] | finding($r; "operator-added"; $r.selection_source)) )),
+           | .id as $id
+           | finding($r;
+               if ($selected | index($id)) != null then "selected for repair, fix not verified"
+               elif $r.selection_source == "user_declined" then "declined"
+               else "not-selected" end;
+               $r.selection_source)),
+          (($r.user_findings.findings // [])[]
+           | .id as $id
+           | finding($r;
+               if ($selected | index($id)) != null then "selected for repair, fix not verified"
+               else "operator-added" end;
+               $r.selection_source)) )),
     ($comments[0][] | {source: "review-comment", kind, ticket, author, author_type, state, file: (.file // ""),
        line, created, text: (.text // "")} | with_entries(select(.value != null))),
     ($steers[0][] | {source: "steer", kind: "steer"} + .),
