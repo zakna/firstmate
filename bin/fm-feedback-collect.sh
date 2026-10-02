@@ -133,7 +133,7 @@ elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.bran
   && nm_query "$WORK/steps.json" "SELECT s.run_id, s.step_name AS step, s.status,
       s.approval_reason, s.override_reason, s.skip_reason, s.completed_at
     FROM step_results s WHERE s.run_id IN ($WINDOW_RUNS)
-      AND COALESCE(s.approval_reason, s.override_reason, s.skip_reason, '') <> ''" \
+      AND COALESCE(NULLIF(s.approval_reason, ''), NULLIF(s.override_reason, ''), NULLIF(s.skip_reason, ''), '') <> ''" \
   && nm_query "$WORK/rounds.json" "SELECT s.run_id, s.step_name AS step, rd.round,
       rd.trigger_type, COALESCE(rd.selection_source, '') AS selection_source,
       COALESCE(NULLIF(rd.selected_finding_ids, ''), '[]') AS selected,
@@ -144,11 +144,23 @@ elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.bran
   if jq '
     def parse_json: try fromjson catch null;
     def valid_selected($value):
-      if ($value | type) != "array" then false else true end;
+      ($value | type) == "array"
+      and ($value | all(.[]; type == "string"));
+    def nonempty_string:
+      if type == "string" then length > 0 else false end;
+    def valid_finding:
+      (type == "object")
+      and (.id | nonempty_string)
+      and ((.severity | type) == "string")
+      and ((.file | type) == "string")
+      and ((.description | type) == "string")
+      and ((.line? == null) or ((.line? | type) == "number") or ((.line? | type) == "string"))
+      and ((.action? == null) or ((.action? | type) == "string"));
     def valid_findings($value):
       if ($value | type) != "object" then false
-      elif (($value.findings // []) | type) != "array" then false
-      else (($value.findings // []) | all(.[]; type == "object"))
+      elif ($value | has("findings") | not) then true
+      elif (($value.findings | type) != "array") then false
+      else ($value.findings | all(.[]; valid_finding))
       end;
     if type != "array" then error("rounds is not an array")
     else
@@ -159,7 +171,8 @@ elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.bran
         | ($round.user_findings | parse_json) as $user_findings
         | select(valid_selected($selected)
           and valid_findings($findings)
-          and valid_findings($user_findings))
+          and valid_findings($user_findings)
+          and (($round.selection_source | type) == "string"))
         | .selected = $selected
         | .findings = $findings
         | .user_findings = $user_findings
@@ -246,8 +259,8 @@ BACKLOG="$HOME_DIR/data/backlog.md"
 BACKLOG_ERROR=0
 if [ -f "$BACKLOG" ] && ! jq -Rs '
     reduce (split("\n")[]) as $l ([];
-      if ($l | startswith("- ")) then
-        . + [{id: ($l | capture("^- \\[.\\] (?<i>[^ ]+)").i), done: ($l | startswith("- [x]")), line: $l, body: ""}]
+      if ($l | test("^[-*] \\[[ xX]\\] ")) then
+        . + [{id: ($l | capture("^[-*] \\[[ xX]\\] (?<i>[^ ]+)").i), done: ($l | test("^[-*] \\[[xX]\\] ")), line: $l, body: ""}]
       elif length > 0 and (($l | startswith("  ")) or $l == "") then
         .[-1].body += (if $l == "" then "\n" else ($l[2:] + "\n") end)
       else . end)
