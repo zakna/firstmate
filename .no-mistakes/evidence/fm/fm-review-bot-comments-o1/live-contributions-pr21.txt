@@ -1,0 +1,52 @@
+$ FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contrib.fNyO65 FM_ROOT_OVERRIDE=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5CB4DD3BXCQWSG4ZRXWK1 bin/fm-contributions.sh poll
+contribution-wake: check: contributions live-review-bot 88967f03f554211b4b7b608e9b5c496c71d76b3f038e3f83dbf7a0d7f2b530d9
+
+$ FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-live-contrib.fNyO65 bin/fm-contributions.sh pending
+[
+  {
+    "token": "review:5380508367:2026-10-01T14:12:25Z:COMMENTED",
+    "type": "review",
+    "source": "https://github.com/zakna/firstmate/pull/21#pullrequestreview-5380508367",
+    "head": "67a4d6aa0f682a5ab09dea77b12a07546b363549",
+    "author": "copilot-pull-request-reviewer[bot]",
+    "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nThe notice filter can suppress real findings whenever a review begins with a matched failure phrase.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nCaptain, this PR surfaces automated review findings before merges and reports inline comments on the recorded PR head.\n\n**Changes:**\n- Admit allowlisted review-bot signals.\n- Report head-specific ",
+    "reviewer": "bot",
+    "task": "live-review-bot",
+    "url": "https://github.com/zakna/firstmate/pull/21"
+  }
+]
+
+$ jq selected durable observation
+{
+  "task": "live-review-bot",
+  "records": [
+    {
+      "url": "https://github.com/zakna/firstmate/pull/21",
+      "checked_at": "2026-10-02T12:00:00Z",
+      "error": null,
+      "head": "de3c858f3a1d4e2de07064db3d9de35e00080e26",
+      "events": [
+        {
+          "token": "review:5380508367:2026-10-01T14:12:25Z:COMMENTED",
+          "type": "review",
+          "source": "https://github.com/zakna/firstmate/pull/21#pullrequestreview-5380508367",
+          "head": "67a4d6aa0f682a5ab09dea77b12a07546b363549",
+          "author": "copilot-pull-request-reviewer[bot]",
+          "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nThe notice filter can suppress real findings whenever a review begins with a matched failure phrase.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nCaptain, this PR surfaces automated review findings before merges and reports inline comments on the recorded PR head.\n\n**Changes:**\n- Admit allowlisted review-bot signals.\n- Report head-specific ",
+          "reviewer": "bot"
+        }
+      ],
+      "pending": [
+        {
+          "token": "review:5380508367:2026-10-01T14:12:25Z:COMMENTED",
+          "type": "review",
+          "source": "https://github.com/zakna/firstmate/pull/21#pullrequestreview-5380508367",
+          "head": "67a4d6aa0f682a5ab09dea77b12a07546b363549",
+          "author": "copilot-pull-request-reviewer[bot]",
+          "body": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nThe notice filter can suppress real findings whenever a review begins with a matched failure phrase.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nCaptain, this PR surfaces automated review findings before merges and reports inline comments on the recorded PR head.\n\n**Changes:**\n- Admit allowlisted review-bot signals.\n- Report head-specific ",
+          "reviewer": "bot"
+        }
+      ]
+    }
+  ]
+}

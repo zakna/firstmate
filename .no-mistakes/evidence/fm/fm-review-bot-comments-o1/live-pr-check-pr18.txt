@@ -1,0 +1,29 @@
+$ FM_HOME=<disposable lab> FM_ROOT_OVERRIDE=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5CB4DD3BXCQWSG4ZRXWK1 bin/fm-pr-check.sh live-pr https://github.com/zakna/firstmate/pull/18
+review comments: 1 inline on head 1790285523f600089efaad8ccfaa2231c1c1a95b
+armed: state/live-pr.check.sh
+
+$ persisted task metadata
+worktree=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5CB4DD3BXCQWSG4ZRXWK1
+kind=ship
+mode=no-mistakes
+project=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M3Y5CB4DD3BXCQWSG4ZRXWK1
+pr=https://github.com/zakna/firstmate/pull/18
+pr_head=1790285523f600089efaad8ccfaa2231c1c1a95b
+
+$ persisted poll identity
+{
+  "provider": "github",
+  "url": "https://github.com/zakna/firstmate/pull/18",
+  "host": "github.com",
+  "path": "zakna/firstmate",
+  "number": "18"
+}
+
+$ live forge input summary (read-only gh api)
+{
+  "recorded_head": "1790285523f600089efaad8ccfaa2231c1c1a95b",
+  "current_head_inline_comments": 1,
+  "other_head_inline_comments": 8
+}
+
+Expected product result: only current-head inline comments are counted; older-head comments are excluded.
