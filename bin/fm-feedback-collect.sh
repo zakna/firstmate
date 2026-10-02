@@ -224,8 +224,8 @@ fi
 # --- backlog -------------------------------------------------------------------
 # One object per markdown row: id, done, line, body, and the close date.
 BACKLOG="$HOME_DIR/data/backlog.md"
-if [ -f "$BACKLOG" ]; then
-  jq -Rs '
+BACKLOG_ERROR=0
+if [ -f "$BACKLOG" ] && ! jq -Rs '
     reduce (split("\n")[]) as $l ([];
       if ($l | startswith("- ")) then
         . + [{id: ($l | capture("^- \\[.\\] (?<i>[^ ]+)").i), done: ($l | startswith("- [x]")), line: $l, body: ""}]
@@ -235,7 +235,9 @@ if [ -f "$BACKLOG" ]; then
     | map(.body |= sub("\n+$"; "")
       | . + {closed: (.line | [scan("(?:done|merged|reported) ([0-9]{4}-[0-9]{2}-[0-9]{2})")[0]] | last),
              pr: (.line | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first)})
-  ' "$BACKLOG" > "$WORK/backlog.json"
+  ' "$BACKLOG" > "$WORK/backlog.json" 2>/dev/null; then
+  BACKLOG_ERROR=1
+  printf '[]' > "$WORK/backlog.json"
 fi
 jq --arg since "$SINCE" '
   def decision_text:
@@ -256,7 +258,9 @@ jq --arg since "$SINCE" '
     + {ticket: (.pr // .id), task: .id, text: (.line + "\n" + .body | rtrimstr("\n"))}
     | with_entries(select(.value != null)))
 ' "$WORK/backlog.json" > "$WORK/proposals.json"
-if [ ! -f "$BACKLOG" ]; then
+if [ "$BACKLOG_ERROR" = 1 ]; then
+  note_input retro-proposals error "could not read $BACKLOG"
+elif [ ! -f "$BACKLOG" ]; then
   note_input retro-proposals absent "no backlog at $BACKLOG"
 elif [ "$(jq length "$WORK/proposals.json")" = 0 ]; then
   note_input retro-proposals absent "no held or declined retro row in $BACKLOG"
@@ -265,15 +269,18 @@ else
 fi
 
 # --- steers to workers -------------------------------------------------------
-found=0
+found=0 unreadable=
 : > "$WORK/steers.jsonl"
 for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.msg; do
   [ -f "$msg" ] || continue
   found=1
   task=${msg#"$HOME_DIR"/state/}
   task=${task%%.inbox/*}
-  awk 'body { print; next } /^--$/ { body = 1 }' "$msg" > "$WORK/body.txt"
-  at=$(sed -n 's/^at=//p;/^--$/q' "$msg")
+  if ! awk 'body { print; next } /^--$/ { body = 1 }' "$msg" > "$WORK/body.txt" 2>/dev/null \
+    || ! at=$(sed -n 's/^at=//p;/^--$/q' "$msg" 2>/dev/null); then
+    unreadable="$unreadable ${msg#"$HOME_DIR"/state/}"
+    continue
+  fi
   jq -cn --arg task "$task" --arg at "$at" --arg seq "${msg##*/}" --rawfile text "$WORK/body.txt" \
     --argjson since "$SINCE_EPOCH" --arg sinceday "$SINCE" --slurpfile backlog "$WORK/backlog.json" \
     '($backlog[0] | map(select(.done and .id == $task and (.line | contains("merged")) and (.closed // "") >= $sinceday)) | first) as $row
@@ -282,7 +289,9 @@ for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.m
     >> "$WORK/steers.jsonl"
 done
 jq -s . "$WORK/steers.jsonl" > "$WORK/steers.json"
-if [ "$found" = 1 ]; then
+if [ -n "$unreadable" ]; then
+  note_input steers error "could not read:$unreadable"
+elif [ "$found" = 1 ]; then
   note_input steers read "$HOME_DIR/state/*.inbox, kept for tasks $BACKLOG closes as merged in the window; tasks already cleaned up keep no steers"
 else
   note_input steers absent "no steering inbox under $HOME_DIR/state; cleanup deletes a task's inbox"

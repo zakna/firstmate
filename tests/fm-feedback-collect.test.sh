@@ -256,6 +256,26 @@ test_absent_inputs_are_reported_not_fatal() {
   pass 'absent inputs are named in the output instead of failing'
 }
 
+test_unreadable_backlog_is_reported() {
+  local dir="$TMP_ROOT/unreadable-backlog" out
+  mkdir -p "$dir/home/data"
+  printf -- '- [ ] retro-x - Retro proposal\n' > "$dir/home/data/backlog.md"
+  chmod 000 "$dir/home/data/backlog.md"
+  if [ -r "$dir/home/data/backlog.md" ]; then
+    chmod 644 "$dir/home/data/backlog.md"
+    pass 'unreadable backlog case skipped: this user can read a mode-000 file'
+    return 0
+  fi
+  out=$("$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/missing.sqlite" \
+    --home "$dir/home") || { chmod 644 "$dir/home/data/backlog.md"; fail "collector aborted on an unreadable backlog: $out"; }
+  chmod 644 "$dir/home/data/backlog.md"
+  [ -f "$dir/feedback.md" ] || fail 'no markdown written for an unreadable backlog'
+  jq -e '.inputs[] | select(.name == "retro-proposals") | .status == "error"
+    and (.detail | contains("backlog.md"))' "$dir/feedback.json" >/dev/null \
+    || fail "unreadable backlog not reported: $(jq -c .inputs "$dir/feedback.json")"
+  pass 'an unreadable backlog is reported as a read error and collection continues'
+}
+
 test_forge_read_failure_is_reported() {
   local dir="$TMP_ROOT/forge-error" fakebin
   mkdir -p "$dir/home" "$dir/pages"
@@ -282,7 +302,8 @@ test_usage_errors() {
 failures=0
 for test_name in test_collects_every_source_in_the_window test_empty_forge_pages_are_successful \
   test_malformed_forge_wrapper_is_reported test_corrupt_round_payload_is_reported \
-  test_absent_inputs_are_reported_not_fatal test_forge_read_failure_is_reported test_usage_errors; do
+  test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
+  test_forge_read_failure_is_reported test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures feedback-collect regressions"
