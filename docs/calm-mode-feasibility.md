@@ -621,7 +621,6 @@ The render step is a vendor-tool step: the assertions that follow it are what pr
 The failure later reproduced deterministically against Google Chrome for Testing 151.0.7922.34, whose first-run initialization never completes when Chrome is pointed at a brand-new `--user-data-dir`: the browser and its renderers start, but `--dump-dom` never returns, so every bounded attempt times out with no bytes.
 The render step now gives each attempt a private `HOME` (with `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` beneath it) instead of an explicit `--user-data-dir` on Linux and every other non-Darwin system, because Chrome creates and initializes its own profile there and renders the same document in about a second, while removing that `HOME` still gives every attempt a private profile.
 macOS derives its profile directory from `~/Library` regardless of `HOME`, so Darwin keeps the explicit `--user-data-dir` that was this file's original isolation.
-Darwin also passes `--use-mock-keychain`, so the isolated profile does not ask macOS for a login-keychain storage key and surface a `Keychain Not Found` dialog during the test.
 It still retries a bounded number of Chrome start-ups and, when every attempt fails, reports the Chrome binary, its version, the installed Pi version, each attempt's exit status, whether that attempt was timed out, and Chrome's own stderr, so the next occurrence is diagnosable from the CI log alone.
 `test_export_dom_render_guard` in the same script pins that behavior with real processes and no browser.
 
@@ -672,6 +671,20 @@ not ok - Pi 0.87.1 lacks the queue-retention capability Calm needs to hide queue
 ```
 
 With the queued-row adapter left uninstalled, the real-Pi Escape case failed on the listed notification, `Pi Calm listed a queued Firstmate notification`.
+
+## 2026-10-02 Pi 0.87.1 macOS Chrome keychain verification
+
+On macOS (Darwin 25.6.0) with Pi 0.87.1 and Google Chrome 154.0.8037.93, the render step's isolated `--user-data-dir` made Chrome ask macOS for a login-keychain storage key under the test's temporary `HOME`, and macOS surfaced a `Keychain Not Found` dialog during the test.
+Darwin now also passes `--use-mock-keychain`, so Chrome keeps that key in an in-memory keychain and no dialog appears.
+`test_export_dom_render_guard` pins the switch with a recording fake Chrome: Darwin passes both `--user-data-dir` and `--use-mock-keychain`, and every other system passes no `--use-mock-keychain`.
+
+The suite ran with a wrapper that logs Chrome's arguments before running the real binary:
+
+```sh
+FM_CHROME_BIN=<argument-logging wrapper around Google Chrome> tests/fm-calm-pi-extension.test.sh
+```
+
+The suite passed, and the logged Chrome command line carried `--user-data-dir=<attempt profile> --use-mock-keychain` beside the existing headless flags.
 
 ## 2026-09-15 Claude Code 2.1.272 mods feasibility and the shipped mod
 

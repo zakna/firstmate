@@ -3902,7 +3902,32 @@ echo attempt >>"$FM_FAKE_CHROME_ATTEMPTS"
 printf '<html><head></head><body>export'
 exec sleep 30
 SH
-  chmod +x "$dir/chrome-ok" "$dir/chrome-flaky" "$dir/chrome-broken" "$dir/chrome-hang"
+  cat >"$dir/chrome-record" <<'SH'
+#!/bin/sh
+case "${1:-}" in --version) echo "FakeChrome 1.2.3"; exit 0 ;; esac
+printf '%s\n' "$@" >"$FM_FAKE_CHROME_ARGV"
+printf '<html><head></head><body>export</body></html>\n'
+SH
+  chmod +x "$dir/chrome-ok" "$dir/chrome-flaky" "$dir/chrome-broken" "$dir/chrome-hang" "$dir/chrome-record"
+
+  # Shadow uname so both platform branches run on any host.
+  uname() { printf '%s\n' "$FM_FAKE_UNAME"; }
+  : >"$out_file"
+  FM_FAKE_UNAME=Darwin FM_FAKE_CHROME_ARGV="$dir/argv-darwin" \
+    render_export_dom "$dir/chrome-record" "$source_file" "$out_file" 9.9.9 >/dev/null \
+    || fail "render_export_dom rejected a recording Chrome on Darwin"
+  : >"$out_file"
+  FM_FAKE_UNAME=Linux FM_FAKE_CHROME_ARGV="$dir/argv-linux" \
+    render_export_dom "$dir/chrome-record" "$source_file" "$out_file" 9.9.9 >/dev/null \
+    || fail "render_export_dom rejected a recording Chrome on Linux"
+  unset -f uname
+  grep -q '^--user-data-dir=' "$dir/argv-darwin" \
+    || fail "the Darwin Chrome launch did not pass an isolated --user-data-dir"
+  grep -Fxq -- '--use-mock-keychain' "$dir/argv-darwin" \
+    || fail "the Darwin Chrome launch did not pass --use-mock-keychain"
+  if grep -Fxq -- '--use-mock-keychain' "$dir/argv-linux"; then
+    fail "a non-Darwin Chrome launch passed --use-mock-keychain"
+  fi
 
   : >"$dir/attempts-ok"
   FM_FAKE_CHROME_ATTEMPTS="$dir/attempts-ok" \
@@ -3952,7 +3977,7 @@ SH
   assert_contains "$report" "timed_out=yes" \
     "the render failure reported its own kill signal without saying the attempt was timed out"
 
-  pass "the rendered-export-DOM guard renders in one pass, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails"
+  pass "the rendered-export-DOM guard renders in one pass, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails, and passes --use-mock-keychain only on Darwin"
 }
 
 test_interactive_terminal_e2e() {
