@@ -115,7 +115,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g @earendil-works/pi-coding-agent@0.99.2
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable parallel shard 1
         run: |
@@ -219,7 +219,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g @earendil-works/pi-coding-agent@0.99.2
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable serial shard ${{ matrix.shard }}
         env:
@@ -408,6 +408,30 @@ jobs:
           name: fm-test-timing-aggregate
           path: ${{ runner.temp }}/fm-test/fm-test-timing-aggregate.json
           if-no-files-found: warn
+
+  # The required lanes pin Pi so a Pi release cannot turn every pull request
+  # red. This job runs the tests that read the installed Pi package against the
+  # newest Pi instead, so a breaking release shows up early without blocking a
+  # merge. Never add it to a required-check list or ruleset.
+  pi-latest:
+    name: Pi latest (warning only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    # Normal tier (see the timeout policy above).
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the newest Pi package
+        run: |
+          set -eu
+          npm install -g @earendil-works/pi-coding-agent@latest
+          npm ls -g --depth 0 @earendil-works/pi-coding-agent
+      - name: Run the Pi extension tests against the newest Pi
+        run: |
+          set -eu
+          bin/fm-test-run.sh \
+            --fail-on-gate-skip 'Pi extension typecheck prerequisite not found' \
+            tests/fm-pi-primary-types.test.sh tests/fm-calm-pi-extension.test.sh
 
   macos-stock-bash:
     name: Stock macOS Bash snapshot compatibility
