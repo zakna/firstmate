@@ -123,7 +123,43 @@ elif nm_query "$WORK/runs.json" "SELECT r.id AS run_id, p.upstream_url AS repo, 
       COALESCE(NULLIF(rd.user_findings_json, ''), '{}') AS user_findings, rd.created_at
     FROM step_rounds rd JOIN step_results s ON s.id = rd.step_result_id
     WHERE s.run_id IN ($WINDOW_RUNS)"; then
-  note_input no-mistakes read "$NM_DB: $(jq length "$WORK/runs.json") runs on landed tickets"
+  if jq '
+    def parse_json: try fromjson catch null;
+    def valid_selected($value):
+      if ($value | type) != "array" then false else true end;
+    def valid_findings($value):
+      if ($value | type) != "object" then false
+      elif (($value.findings // []) | type) != "array" then false
+      else (($value.findings // []) | all(.[]; type == "object"))
+      end;
+    if type != "array" then error("rounds is not an array")
+    else
+      map(
+        . as $round
+        | ($round.selected | parse_json) as $selected
+        | ($round.findings | parse_json) as $findings
+        | ($round.user_findings | parse_json) as $user_findings
+        | select(valid_selected($selected)
+          and valid_findings($findings)
+          and valid_findings($user_findings))
+        | .selected = $selected
+        | .findings = $findings
+        | .user_findings = $user_findings
+      )
+    end
+  ' "$WORK/rounds.json" > "$WORK/rounds.valid.json"; then
+    rounds_total=$(jq length "$WORK/rounds.json")
+    rounds_kept=$(jq length "$WORK/rounds.valid.json")
+    mv "$WORK/rounds.valid.json" "$WORK/rounds.json"
+    if [ "$rounds_total" -eq "$rounds_kept" ]; then
+      note_input no-mistakes read "$NM_DB: $(jq length "$WORK/runs.json") runs on landed tickets"
+    else
+      note_input no-mistakes error "$NM_DB: $((rounds_total - rounds_kept)) unreadable step_rounds payload(s); valid rows retained"
+    fi
+  else
+    printf '[]' > "$WORK/rounds.json"
+    note_input no-mistakes error "could not validate step_rounds payloads in $NM_DB"
+  fi
 else
   printf '[]' > "$WORK/runs.json"; printf '[]' > "$WORK/steps.json"; printf '[]' > "$WORK/rounds.json"
   note_input no-mistakes error "could not query $NM_DB; its schema may have changed"
@@ -133,11 +169,32 @@ fi
 # gh-axi wraps --jq output as a quoted `body:` string, and re-renders output
 # that is itself one JSON value, so each row carries an `R ` prefix.
 gh_rows() { # <api-path> <jq-row-filter>: one JSON row per line on stdout
-  local out body
+  local out body decoded row json
   out=$(gh-axi api "$1" --paginate --full --jq ".[] | $2 | \"R \" + tojson" 2>/dev/null) || return 1
-  body=$(printf '%s\n' "$out" | sed -n 's/^  body: //p')
-  [ -n "$body" ] || return 1
-  printf '%s' "$body" | jq -r . | sed -n 's/^R //p'
+  if ! body=$(printf '%s\n' "$out" | awk '
+    /^  body:/ {
+      sub(/^  body:/, "")
+      sub(/^ /, "")
+      print
+      found = 1
+      exit
+    }
+    END { if (!found) exit 1 }
+  '); then
+    return 1
+  fi
+  [ -n "$body" ] || return 0
+  decoded=$(printf '%s' "$body" | jq -er 'strings') || return 1
+  [ -n "$decoded" ] || return 0
+  while IFS= read -r row; do
+    case "$row" in
+      'R '*) json=${row#R }
+        jq -e 'type == "object"' >/dev/null 2>&1 <<<"$json" || return 1
+        printf '%s\n' "$json"
+        ;;
+      *) return 1 ;;
+    esac
+  done <<< "$decoded"
 }
 PRS=$(jq -r '[.[].pr_url | select(. != null and test("^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"))] | unique | .[]' "$WORK/runs.json")
 if [ "$GITHUB" = 0 ]; then
@@ -240,15 +297,15 @@ jq -n --arg since "$SINCE" \
       | {source: "gate-answer", kind: .[0], ticket: ticket($s.run_id), run: $s.run_id,
          step: $s.step, text: .[1]}),
     ($rounds[0][] as $r
-      | ($r.selected | fromjson) as $selected
+      | ($r.selected) as $selected
       | ( (select($r.selection_source | startswith("user"))
            | {source: "gate-answer", kind: $r.selection_source, ticket: ticket($r.run_id), run: $r.run_id,
               step: $r.step, round: $r.round, selected: $selected, text: ""}),
-          (($r.findings | fromjson | .findings // [])[]
+          (($r.findings.findings // [])[]
            | select(.id as $id | $selected | index($id) | not)
            | finding($r; if $r.selection_source == "user_declined" then "declined" else "not-selected" end;
                      $r.selection_source)),
-          (($r.user_findings | fromjson | .findings // [])[] | finding($r; "operator-added"; $r.selection_source)) )),
+          (($r.user_findings.findings // [])[] | finding($r; "operator-added"; $r.selection_source)) )),
     ($comments[0][] | {source: "review-comment", kind, ticket, author, author_type, state, file: (.file // ""),
        line, created, text: (.text // "")} | with_entries(select(.value != null))),
     ($steers[0][] | {source: "steer", kind: "steer"} + .),

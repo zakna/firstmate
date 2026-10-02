@@ -56,7 +56,13 @@ while [ "\$#" -gt 0 ]; do [ "\$1" = --jq ] && filter=\$2; shift; done
 page="$2/\$(printf '%s' "\$path" | tr '/' '_').json"
 [ -f "\$page" ] || { echo "error: not found" >&2; exit 1; }
 out=\$(jq -r "\$filter" "\$page") || exit 1
-printf 'api_response:\n  body: %s\n  truncated: false\n' "\$(printf '%s' "\$out" | jq -Rs .)"
+if [ "\${FM_FAKE_BAD_BODY:-0}" = 1 ]; then
+  printf 'api_response:\n  body: not-json\n  truncated: false\n'
+elif [ -n "\$out" ]; then
+  printf 'api_response:\n  body: %s\n  truncated: false\n' "\$(printf '%s' "\$out" | jq -Rs .)"
+else
+  printf 'api_response:\n  body:\n  truncated: false\n'
+fi
 SH
   chmod +x "$fakebin/gh-axi"
   printf '%s\n' "$fakebin"
@@ -70,6 +76,12 @@ make_pages() { # <dir>
     > "$1/_repos_o_app_pulls_7_reviews.json"
   printf '%s' '[{"user":{"login":"bot[bot]","type":"Bot"},"path":"a.sh","line":null,"original_line":12,"body":"INLINE-ONE","created_at":"2026-09-21T10:00:00Z"}]' \
     > "$1/_repos_o_app_pulls_7_comments.json"
+}
+
+make_empty_pages() { # <dir>
+  make_pages "$1"
+  printf '%s' '[]' > "$1/_repos_o_app_pulls_7_reviews.json"
+  printf '%s' '[]' > "$1/_repos_o_app_pulls_7_comments.json"
 }
 
 make_inbox() { # <home>
@@ -155,6 +167,61 @@ test_collects_every_source_in_the_window() {
   pass 'collector gathers gate answers, unfixed findings, review comments, landed steers, and retro proposals'
 }
 
+test_empty_forge_pages_are_successful() {
+  local dir="$TMP_ROOT/empty-pages" fakebin
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  make_empty_pages "$dir/pages"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on valid empty forge pages'
+  jq -e '
+    ([.inputs[] | select(.name == "review-comments")][0].status == "read")
+    and ([.records[] | select(.source == "review-comment") | .kind] == ["conversation"])
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "empty forge pages were not treated as successful: $(jq -c . "$dir/feedback.json")"
+  pass 'empty forge pages remain successful reads'
+}
+
+test_malformed_forge_wrapper_is_reported() {
+  local dir="$TMP_ROOT/malformed-forge" fakebin
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  FM_FAKE_BAD_BODY=1 PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed instead of reporting malformed forge data'
+  jq -e '.inputs[] | select(.name == "review-comments") | .status == "error"' \
+    "$dir/feedback.json" >/dev/null \
+    || fail "malformed forge data was silently accepted: $(jq -c .inputs "$dir/feedback.json")"
+  pass 'malformed forge data is reported as an error'
+}
+
+test_corrupt_round_payload_is_reported() {
+  local dir="$TMP_ROOT/corrupt-round"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO step_rounds VALUES
+  ('rd-bad-selected', 's-review-2', 2, 'initial', 'user', 'not-json', '{}', '{}', $IN),
+  ('rd-bad-findings', 's-review-2', 3, 'initial', 'user', '[]', 'not-json', '{}', $IN),
+  ('rd-bad-user-findings', 's-review-2', 4, 'initial', 'user', '[]', '{}', 'not-json', $IN);
+SQL
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" --no-github >/dev/null \
+    || fail 'collector failed on corrupt step_rounds payloads'
+  jq -e '
+    ([.inputs[] | select(.name == "no-mistakes")][0] | .status == "error"
+      and (.detail | contains("3 unreadable step_rounds payload")))
+    and ([.records[] | select(.source == "finding" and .text == "DECLINED-ONE")] | length == 1)
+    and ([.records[] | select(.source == "gate-answer" and .kind == "user_declined")] | length == 1)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "corrupt round payloads were not isolated: $(jq -c . "$dir/feedback.json")"
+  pass 'corrupt round payloads are isolated and reported'
+}
+
 test_absent_inputs_are_reported_not_fatal() {
   local dir="$TMP_ROOT/absent" out
   mkdir -p "$dir/home"
@@ -191,8 +258,9 @@ test_usage_errors() {
 }
 
 failures=0
-for test_name in test_collects_every_source_in_the_window test_absent_inputs_are_reported_not_fatal \
-  test_forge_read_failure_is_reported test_usage_errors; do
+for test_name in test_collects_every_source_in_the_window test_empty_forge_pages_are_successful \
+  test_malformed_forge_wrapper_is_reported test_corrupt_round_payload_is_reported \
+  test_absent_inputs_are_reported_not_fatal test_forge_read_failure_is_reported test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures feedback-collect regressions"
