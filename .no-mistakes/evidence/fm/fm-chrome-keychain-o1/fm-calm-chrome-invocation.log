@@ -1,0 +1,12 @@
+--- chrome invocation ---
+argv[10]=--user-data-dir=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-calm-pi-extension.8IKe6S/chrome-home-1 --use-mock-keychain --headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --disable-background-networking --virtual-time-budget=2000 --dump-dom file:///private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-calm-pi-extension.8IKe6S/calm-export.html
+arg[0]=--user-data-dir=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-calm-pi-extension.8IKe6S/chrome-home-1
+arg[1]=--use-mock-keychain
+arg[2]=--headless=new
+arg[3]=--disable-gpu
+arg[4]=--no-sandbox
+arg[5]=--disable-dev-shm-usage
+arg[6]=--disable-background-networking
+arg[7]=--virtual-time-budget=2000
+arg[8]=--dump-dom
+arg[9]=file:///private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-calm-pi-extension.8IKe6S/calm-export.html
