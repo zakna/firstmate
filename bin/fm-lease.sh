@@ -5,8 +5,8 @@
 # is owned by bin/fm-lease-lib.sh; this is the command surface the two
 # supervision actors use around the overlap set (steering, stopping, cleanup,
 # backlog status, stuck-worker recovery). "backlog" is the reserved resource
-# the branch prompt claims around its own backlog writes; main's tasks-axi path
-# is deliberately unguarded in this scope.
+# either actor claims across a shared backlog read-modify-write; callers hold it
+# from reading through the update and release it afterward.
 #
 # Usage:
 #   fm-lease.sh claim <task> [--actor main|branch]

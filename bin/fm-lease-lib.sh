@@ -87,10 +87,9 @@
 #     a long spawn; a spawn or answer that completes seconds after archive is
 #     standing-authority work the captain had queued anyway (accepted,
 #     confused-agent-grade, like the merge residuals fm-pr-merge.sh documents).
-#   - "backlog" is a reserved claimable resource name used by the branch
-#     prompt around its own data/backlog.md writes. This is deliberately
-#     branch-side containment only; main's tasks-axi path has no executable
-#     backlog lease guard in this scope.
+#   - "backlog" is a reserved claimable resource name for shared backlog
+#     read-modify-writes. Both actors hold it from reading through the
+#     corresponding update; it is not a per-task lease.
 #
 # Sourced by bin/fm-send.sh, bin/fm-control.sh, bin/fm-teardown.sh,
 # bin/fm-pr-merge.sh, bin/fm-merge-local.sh, bin/fm-spawn.sh, and
