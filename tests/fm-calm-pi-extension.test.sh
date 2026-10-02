@@ -125,9 +125,11 @@ render_export_dom() {
     # the same document in about a second. macOS derives its profile directory
     # from ~/Library regardless of HOME, so Darwin keeps the explicit
     # --user-data-dir that was this file's original isolation. Either way each
-    # attempt starts from the fresh directory removed just above.
+    # attempt starts from the fresh directory removed just above. Darwin also
+    # passes --use-mock-keychain, because Chrome there otherwise asks the login
+    # keychain for its storage key and macOS shows a "Keychain Not Found" dialog.
     case "$(uname -s)" in
-      Darwin) profile_arg=(--user-data-dir="$profile") ;;
+      Darwin) profile_arg=(--user-data-dir="$profile" --use-mock-keychain) ;;
       *) profile_arg=() ;;
     esac
     HOME="$profile" XDG_CONFIG_HOME="$profile/.config" XDG_CACHE_HOME="$profile/.cache" \
