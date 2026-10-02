@@ -11,7 +11,7 @@ metadata:
 The `/afk` and `/quiet` skills each own their daemon procedure, which is otherwise identical; these safety facts apply to both:
 
 - Every current daemon injection uses the `away-supervisor` kind from `bin/fm-operational-input.sh` after `FM_OPERATIONAL_PREFIX` (U+2063 INVISIBLE SEPARATOR followed by `FIRSTMATE_OP: `), except that a Claude Code primary, which strips U+2063, receives that owner's record-backed doorbell and it counts as marked only when `bin/fm-operational-input.sh open <path>` verifies its record; the `/afk` skill owns legacy bare-marker compatibility.
-- Pre-entry stowing and the compaction request belong to the [`afk` skill's entry procedure](../afk/SKILL.md#entering-afk-words); `/quiet` follows that preparation before invoking the shared posture-record lifecycle.
+- Pre-entry stowing and the compaction request belong to the [`afk` skill's entry procedure](../afk/SKILL.md#entering-afk-words); `/quiet` follows that same step before invoking the shared posture-record lifecycle.
 - `state/.afk-contract` is the away posture, written in the same turn as `/afk`: no read-back gates entry or waits for a further go; entry announces hold-for-return only, and the away session acts on those words by its own judgment through the guarded scripts under standing authority, holding for the return on doubt.
 - While `state/.afk` exists, the daemon owns supervision; do not arm a separate watcher.
   The daemon is never launched on Pi, where the ordinary supervision session continues under the record with main parked: the branch takes every safe actionable wake it can, and only a declined wake (including a broken branch or unsafe scan) or a watcher failure wakes main.

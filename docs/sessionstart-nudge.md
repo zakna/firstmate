@@ -250,7 +250,7 @@ Native stdout context injection is supported under `codex exec`.
 The Codex interactive TUI is uncovered and has no tracked transport.
 Codex 0.146.0 does not fire the tracked project `SessionStart` hook in its interactive TUI.
 Firstmate ships no global hook and has no tracked compaction or re-emit channel for it.
-Firstmate does not claim instruction-refresh delivery for this surface.
+Firstmate does not claim automatic instruction-refresh delivery for this surface.
 
 ### Pi and pi-signed
 
@@ -365,12 +365,12 @@ A later in-process `clear` re-emits only when this lock owner completed a full s
 Cursor compaction is uncovered and has no tracked transport.
 Cursor's `preCompact` response can return only `user_message` and is absent from Cursor's `additional_context` step set.
 So it cannot inject a re-emit digest.
-Delivering one needs its own design and is deliberately deferred to a follow-up.
-A Cursor primary does not re-emit its digest after a compaction.
+Automatic delivery through a hook needs its own design and is deliberately deferred to a follow-up.
+A Cursor primary does not automatically re-emit its digest after a compaction.
 
 Cursor's compaction surface is uncovered in the same sense as [Codex's interactive TUI](#codex-interactive-tui).
 Firstmate registers nothing for `preCompact`.
-So a compacted Cursor session keeps whatever context survived rather than receiving a fresh digest.
+So a compacted Cursor session keeps whatever context survived rather than receiving a fresh digest automatically.
 
 ## Regression coverage
 

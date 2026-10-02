@@ -8,7 +8,7 @@
 #
 # ENTRY (the posture record). `/afk [words]` is itself the captain's go, because
 # the captain who typed it may not look at the screen again: the `/afk` skill
-# stows open work and asks the captain to compact before invoking `enter`.
+# stows open work and asks the captain to compact before `enter`.
 # `enter` records the away words verbatim straight into state/.afk-contract in
 # the same turn, with no separate confirmation step, then prints the entry
 # announcement (hold-for-return only: no phone channel exists) and the read-back,

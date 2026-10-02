@@ -75,4 +75,4 @@ Tracked hooks register `stop`, `sessionStart`, and two `preToolUse` seatbelts th
 
 `stop` cannot block because exit 2 is a silent no-op, so `../../../bin/fm-turnend-guard-cursor.sh` parks on supervision and returns one bounded `followup_message`.
 It does not fire in headless `cursor-agent -p`.
-`preCompact` is unregistered because it cannot inject context, so digest re-emission after Cursor compaction remains deferred.
+`preCompact` is unregistered because it cannot inject context, so automatic digest re-emission after Cursor compaction remains deferred.

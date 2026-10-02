@@ -24,11 +24,11 @@ exits it.
 ## What it does
 
 1. **Save open work, then compact, before entering quiet supervision.**
-   Follow the `afk` skill's "Entering" step 1 verbatim.
+   Follow the `afk` skill's "Entering" step 1, which owns the stow, compaction request, and context reload.
 
 2. **Enter the lifecycle through `bin/fm-afk-launch.sh`, exactly as `/afk`
    does, with `FM_AFK_MODE=quiet` set for the lifecycle invocation.**
-   Follow the `afk` skill's "Entering" steps 2-5 verbatim (terminal-
+   Follow the `afk` skill's "Entering" steps 2, 3, and 5 verbatim, but not its step 4 away announcement, which step 3 below replaces (terminal-
    backed vs harness-native entry, daemon-already-running refresh, never
    arming a separate `fm-watch.sh`) with one addition: export
    `FM_AFK_MODE=quiet` in the shell that invokes `bin/fm-afk-launch.sh start`
