@@ -53,10 +53,10 @@ Open the pipeline database read-only.
 - The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
 - The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.
 - The earlier retro reports of the same project in this home: the reports whose first line starts with `# Retro: ` and whose second line is exactly `Project: <project>`.
-  `P='<project>' awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' data/*/report.md`
+  `P='<project>'; export P; if [ -d data ]; then find data -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' {} +; fi`
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
 - The earlier retro reports without a `Project:` second line, which were written before this skill: keep each one whose body links into the project's repository, and name every report found this way in your list of sources.
-  `awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && substr($0, 1, 9) != "Project: " { print FILENAME }' data/*/report.md | while IFS= read -r f; do grep -lF '<repository address>/' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`.
+  `if [ -d data ]; then find data -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && substr($0, 1, 9) != "Project: " { print FILENAME }' {} +; fi | while IFS= read -r f; do grep -lF '<repository address>/' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`.
 - This home's workflow follow-ups, `data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
   Every retro re-verifies them, whatever its project; when the file is absent, treat it as empty.
 
