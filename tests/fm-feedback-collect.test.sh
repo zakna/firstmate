@@ -276,6 +276,73 @@ test_unreadable_backlog_is_reported() {
   pass 'an unreadable backlog is reported as a read error and collection continues'
 }
 
+test_malformed_steer_records_are_reported() {
+  local dir="$TMP_ROOT/malformed-steers"
+  mkdir -p "$dir/home/state/task-a.inbox/handled"
+  make_db "$dir/state.sqlite"
+  make_backlog "$dir/home"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nVALID-STEER\n' \
+    > "$dir/home/state/task-a.inbox/handled/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\nTRUNCATED\n' \
+    > "$dir/home/state/task-a.inbox/handled/002.msg"
+  printf 'schema=fm-task-inbox.v1\nat=not-a-timestamp\n--\nBAD-TIMESTAMP\n' \
+    > "$dir/home/state/task-a.inbox/handled/003.msg"
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed on malformed steering records'
+  jq -e '
+    ([.inputs[] | select(.name == "steers")][0].status == "error")
+    and ([.inputs[] | select(.name == "steers")][0].detail | contains("002.msg") and contains("003.msg"))
+    and ([.records[] | select(.source == "steer")] | length == 1)
+    and ([.records[] | select(.source == "steer")][0].text == "VALID-STEER")
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "malformed steering records were not isolated: $(jq -c . "$dir/feedback.json")"
+  pass 'malformed steering records are reported without false reads'
+}
+
+test_missing_backlog_skips_steers() {
+  local dir="$TMP_ROOT/missing-steer-backlog"
+  mkdir -p "$dir/home/state/task-a.inbox/handled"
+  make_db "$dir/state.sqlite"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nVALID-STEER\n' \
+    > "$dir/home/state/task-a.inbox/handled/001.msg"
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed with a missing backlog'
+  jq -e '
+    ([.inputs[] | select(.name == "steers")][0].status == "skipped")
+    and ([.inputs[] | select(.name == "steers")][0].detail | contains("no backlog"))
+    and ([.records[] | select(.source == "steer")] | length == 0)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "missing backlog did not skip steers: $(jq -c . "$dir/feedback.json")"
+  pass 'steers are skipped when the backlog is unavailable'
+}
+
+test_unreadable_backlog_blocks_steers() {
+  local dir="$TMP_ROOT/unreadable-steer-backlog" out
+  mkdir -p "$dir/home/state/task-a.inbox/handled" "$dir/home/data"
+  make_db "$dir/state.sqlite"
+  printf -- '- [ ] task-a - Task A\n' > "$dir/home/data/backlog.md"
+  chmod 000 "$dir/home/data/backlog.md"
+  if [ -r "$dir/home/data/backlog.md" ]; then
+    chmod 644 "$dir/home/data/backlog.md"
+    pass 'unreadable steer-backlog case skipped: this user can read a mode-000 file'
+    return 0
+  fi
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nVALID-STEER\n' \
+    > "$dir/home/state/task-a.inbox/handled/001.msg"
+  out=$(
+    "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+      --home "$dir/home"
+  ) || { chmod 644 "$dir/home/data/backlog.md"; fail "collector failed with an unreadable backlog: $out"; }
+  chmod 644 "$dir/home/data/backlog.md"
+  jq -e '
+    ([.inputs[] | select(.name == "steers")][0].status == "error")
+    and ([.inputs[] | select(.name == "steers")][0].detail | contains("backlog unavailable"))
+    and ([.records[] | select(.source == "steer")] | length == 0)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "unreadable backlog did not block steers: $(jq -c . "$dir/feedback.json")"
+  pass 'steers are errors when the backlog cannot be read'
+}
+
 test_forge_read_failure_is_reported() {
   local dir="$TMP_ROOT/forge-error" fakebin
   mkdir -p "$dir/home" "$dir/pages"
@@ -303,7 +370,8 @@ failures=0
 for test_name in test_collects_every_source_in_the_window test_empty_forge_pages_are_successful \
   test_malformed_forge_wrapper_is_reported test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
-  test_forge_read_failure_is_reported test_usage_errors; do
+  test_malformed_steer_records_are_reported test_missing_backlog_skips_steers \
+  test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures feedback-collect regressions"

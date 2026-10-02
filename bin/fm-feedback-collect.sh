@@ -52,6 +52,8 @@
 set -eu
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=bin/fm-task-inbox-lib.sh
+. "$ROOT/bin/fm-task-inbox-lib.sh"
 
 usage() {
   sed -n '2,/^set -eu$/s/^# \{0,1\}//p' "$0"
@@ -269,28 +271,72 @@ else
 fi
 
 # --- steers to workers -------------------------------------------------------
+read_steer_record() { # <record> <body-out>
+  local msg=$1 body=$2 line schema at separator=0
+  {
+    IFS= read -r schema || return 1
+    [ "$schema" = "schema=$FM_TASK_INBOX_SCHEMA" ] || return 1
+    IFS= read -r at || return 1
+    case "$at" in
+      at=*) at=${at#at=} ;;
+      *) return 1 ;;
+    esac
+    while IFS= read -r line; do
+      if [ "$line" = "--" ]; then
+        separator=1
+        break
+      fi
+      [ "$line" = "delivery=fire-and-forget" ] || return 1
+    done
+    [ "$separator" = 1 ] || return 1
+  } < "$msg" || return 1
+  jq -ner --arg at "$at" \
+    '$at | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+         then fromdateiso8601 else error("invalid timestamp") end' \
+    >/dev/null 2>&1 || return 1
+  fm_task_inbox_body "$msg" > "$body" || return 1
+  printf '%s' "$at"
+}
+
 found=0 unreadable=
+if [ "$BACKLOG_ERROR" = 1 ] || [ ! -f "$BACKLOG" ]; then
+  BACKLOG_AVAILABLE=0
+else
+  BACKLOG_AVAILABLE=1
+fi
 : > "$WORK/steers.jsonl"
 for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.msg; do
   [ -f "$msg" ] || continue
   found=1
   task=${msg#"$HOME_DIR"/state/}
   task=${task%%.inbox/*}
-  if ! awk 'body { print; next } /^--$/ { body = 1 }' "$msg" > "$WORK/body.txt" 2>/dev/null \
-    || ! at=$(sed -n 's/^at=//p;/^--$/q' "$msg" 2>/dev/null); then
+  if ! at=$(read_steer_record "$msg" "$WORK/body.txt"); then
     unreadable="$unreadable ${msg#"$HOME_DIR"/state/}"
     continue
   fi
-  jq -cn --arg task "$task" --arg at "$at" --arg seq "${msg##*/}" --rawfile text "$WORK/body.txt" \
-    --argjson since "$SINCE_EPOCH" --arg sinceday "$SINCE" --slurpfile backlog "$WORK/backlog.json" \
-    '($backlog[0] | map(select(.done and .id == $task and (.line | contains("merged")) and (.closed // "") >= $sinceday)) | first) as $row
-     | select($row and ($at | try fromdateiso8601 catch 0) >= $since)
-     | {ticket: ($row.pr // $task), task: $task, at: $at, message: ($seq | rtrimstr(".msg")), text: ($text | rtrimstr("\n"))}' \
-    >> "$WORK/steers.jsonl"
+  if ! at_epoch=$(jq -nr --arg at "$at" '$at | fromdateiso8601' 2>/dev/null); then
+    unreadable="$unreadable ${msg#"$HOME_DIR"/state/}"
+    continue
+  fi
+  if [ "$BACKLOG_AVAILABLE" = 1 ]; then
+    jq -cn --arg task "$task" --arg at "$at" --arg seq "${msg##*/}" --rawfile text "$WORK/body.txt" \
+      --argjson at_epoch "$at_epoch" --argjson since "$SINCE_EPOCH" --arg sinceday "$SINCE" \
+      --slurpfile backlog "$WORK/backlog.json" \
+      '($backlog[0] | map(select(.done and .id == $task and (.line | contains("merged")) and (.closed // "") >= $sinceday)) | first) as $row
+       | select($row and $at_epoch >= $since)
+       | {ticket: ($row.pr // $task), task: $task, at: $at, message: ($seq | rtrimstr(".msg")), text: ($text | rtrimstr("\n"))}' \
+      >> "$WORK/steers.jsonl"
+  fi
 done
 jq -s . "$WORK/steers.jsonl" > "$WORK/steers.json"
 if [ -n "$unreadable" ]; then
   note_input steers error "could not read:$unreadable"
+elif [ "$found" = 1 ] && [ "$BACKLOG_AVAILABLE" = 0 ]; then
+  if [ "$BACKLOG_ERROR" = 1 ]; then
+    note_input steers error "backlog unavailable; steering records skipped because $BACKLOG could not be read"
+  else
+    note_input steers skipped "no backlog at $BACKLOG; steering records skipped"
+  fi
 elif [ "$found" = 1 ]; then
   note_input steers read "$HOME_DIR/state/*.inbox, kept for tasks $BACKLOG closes as merged in the window; tasks already cleaned up keep no steers"
 else
