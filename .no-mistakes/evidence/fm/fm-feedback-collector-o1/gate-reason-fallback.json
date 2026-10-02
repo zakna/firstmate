@@ -1,0 +1,27 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-02",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gate-reason.qxKr9Y/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gate-reason.qxKr9Y/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gate-reason.qxKr9Y/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": []
+}

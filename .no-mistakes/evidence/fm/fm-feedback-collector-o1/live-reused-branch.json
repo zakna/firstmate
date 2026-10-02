@@ -1,0 +1,97 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-01",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reused-live.IiujJ3/state.sqlite: 2 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "read",
+      "detail": "2 pull requests"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reused-live.IiujJ3/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reused-live.IiujJ3/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/29",
+      "run": "attempt-pr29",
+      "step": "review",
+      "text": "reason-for-pr29"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "attempt-pr31",
+      "step": "review",
+      "text": "reason-for-pr31"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/29",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-02T07:31:55Z",
+      "text": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).\nTo continue using code reviews, you can upgrade your account or add credits to your account and enable them for code reviews in your [settings](https://chatgpt.com/codex/cloud/settings/code-review)."
+    },
+    {
+      "source": "review-comment",
+      "kind": "review",
+      "ticket": "https://github.com/zakna/firstmate/pull/29",
+      "author": "copilot-pull-request-reviewer[bot]",
+      "author_type": "Bot",
+      "state": "COMMENTED",
+      "file": "",
+      "created": "2026-10-02T07:34:58Z",
+      "text": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🟡 Changes recommended\n\nThe new job is missing from the timeout-tier inventory, causing the required workflow contract test to fail.\n\n**Review effort:** Balanced  \n**Findings:** 1 <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.png\" alt=\"High severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture>\n\n<details open>\n<summary><strong>Open (1)</strong></summary>\n\n- <picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-dark.svg\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.svg\"><img src=\"https://github.githubassets.com/static/images/icons/copilot-code-review/high-v2-light.png\" alt=\"High severity\" width=\"62\" height=\"18\" align=\"texttop\"></picture> [Add pi-latest to NORMAL_TIER_JOBS workflow test inventory](#discussion_r4163729756) · New\n</details>\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nCaptain, this PR pins Pi in required CI lanes and adds non-blocking latest-version compatibility coverage.\n\n**Changes:**\n- Pins Pi to 0.99.2 in required lanes.\n- Adds a warning-only `pi-latest` job.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `.github/​workflows/​ci.yml` | Pins Pi and adds latest-Pi testing. |\n</details>\n\n---\n\n💡 <a href=\"/zakna/firstmate/new/main?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review?tool=webui#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>"
+    },
+    {
+      "source": "review-comment",
+      "kind": "inline",
+      "ticket": "https://github.com/zakna/firstmate/pull/29",
+      "author": "Copilot",
+      "author_type": "Bot",
+      "file": ".github/workflows/ci.yml",
+      "line": 421,
+      "created": "2026-10-02T07:34:58Z",
+      "text": "Adding this job breaks the required workflow contract test: `tests/fm-ci-workflow.test.sh:73-78,151-159` requires every CI job to be listed in exactly one timeout tier, but `pi-latest` is absent from `NORMAL_TIER_JOBS`. The portable suite will therefore fail even though this job declares the normal-tier timeout. Add `pi-latest` to that inventory alongside this workflow change."
+    },
+    {
+      "source": "review-comment",
+      "kind": "inline",
+      "ticket": "https://github.com/zakna/firstmate/pull/29",
+      "author": "zakna",
+      "author_type": "User",
+      "file": ".github/workflows/ci.yml",
+      "line": 421,
+      "created": "2026-10-02T08:57:25Z",
+      "text": "Fixed in 2b6f56f7: pi-latest added to NORMAL_TIER_JOBS in tests/fm-ci-workflow.test.sh."
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-02T12:43:52Z",
+      "text": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).\nTo continue using code reviews, you can upgrade your account or add credits to your account and enable them for code reviews in your [settings](https://chatgpt.com/codex/cloud/settings/code-review)."
+    }
+  ]
+}

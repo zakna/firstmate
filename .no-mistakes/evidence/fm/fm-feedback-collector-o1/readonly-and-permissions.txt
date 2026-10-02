@@ -1,0 +1,5 @@
+command: bin/fm-feedback-collect.sh --since 2026-10-02 --out <isolated-prefix> --nm-db <isolated-db> --home <isolated-home>
+product output: wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.ZNnDpN/feedback.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.ZNnDpN/feedback.json (2 records)
+records: [{"source":"gate-answer","kind":"approval","text":"read-only check"},{"source":"steer","kind":"steer","text":"read-only steer"}]
+input hashes unchanged: db=yes, backlog=yes, steer=yes
+output modes: json=600 md=600

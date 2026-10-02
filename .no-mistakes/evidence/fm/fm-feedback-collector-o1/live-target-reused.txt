@@ -1,0 +1,4 @@
+command: bin/fm-feedback-collect.sh --since 2026-09-20 --out <temp>/feedback --nm-db <temp>/state.sqlite --home <temp>/home
+stdout: wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reused.A7PgD5/out/feedback.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reused.A7PgD5/out/feedback.json (5 records) 
+landings: [{"text":"REUSED-LIVE-ONE","ticket":"https://github.com/zakna/firstmate/pull/27"},{"text":"REUSED-LIVE-TWO","ticket":"https://github.com/zakna/firstmate/pull/31"}]
+review tickets: ["https://github.com/zakna/firstmate/pull/27","https://github.com/zakna/firstmate/pull/31"]

@@ -1,0 +1,104 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-01",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-all-sources.VzwHbE/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "read",
+      "detail": "1 pull requests"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-all-sources.VzwHbE/home/data/backlog.md: 1 held or declined retro rows"
+    },
+    {
+      "name": "steers",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-all-sources.VzwHbE/home/state/*.inbox, kept for tasks /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-all-sources.VzwHbE/home/data/backlog.md closes as merged in the window; tasks already cleaned up keep no steers"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "live-landed",
+      "step": "review",
+      "text": "live gate reason"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "user",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "live-landed",
+      "step": "review",
+      "round": 1,
+      "selected": [
+        "F-live"
+      ],
+      "text": ""
+    },
+    {
+      "source": "finding",
+      "kind": "selected for repair, fix not verified",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "live-landed",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": "F-live",
+      "severity": "warning",
+      "file": "bin/example.sh",
+      "line": 7,
+      "action": "auto-fix",
+      "text": "live unresolved finding"
+    },
+    {
+      "source": "finding",
+      "kind": "not-selected",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "live-landed",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": "F-other",
+      "severity": "info",
+      "file": "docs/example.md",
+      "line": 2,
+      "action": "no-op",
+      "text": "live unselected finding"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-02T12:43:52Z",
+      "text": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).\nTo continue using code reviews, you can upgrade your account or add credits to your account and enable them for code reviews in your [settings](https://chatgpt.com/codex/cloud/settings/code-review)."
+    },
+    {
+      "source": "steer",
+      "kind": "steer",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "task": "live-task",
+      "at": "2026-10-02T14:00:00Z",
+      "message": "001",
+      "text": "Live worker correction"
+    },
+    {
+      "source": "retro-proposal",
+      "kind": "held",
+      "ticket": "live-retro-proposal",
+      "task": "live-retro-proposal",
+      "text": "- [ ] live-retro-proposal - Live retro proposal (repo: firstmate) (kind: captain) (hold-kind: captain)\nProposal held for captain approval."
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+command: bin/fm-feedback-collect.sh --since 2026-09-20 --out <temp>/feedback --nm-db <temp>/state.sqlite --home <temp>/home
+stdout: wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reviewers.A1QbKT/out/feedback.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-reviewers.A1QbKT/out/feedback.json (4 records) 
+review authors: [{"kind":"conversation","author":"zakna","author_type":"User"},{"kind":"review","author":"copilot-pull-request-reviewer[bot]","author_type":"Bot"},{"kind":"inline","author":"Copilot","author_type":"Bot"},{"kind":"inline","author":"zakna","author_type":"User"}]

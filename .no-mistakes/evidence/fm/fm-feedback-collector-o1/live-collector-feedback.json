@@ -1,0 +1,46 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-01",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.9fFCgk/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "read",
+      "detail": "1 pull requests"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.9fFCgk/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.9fFCgk/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "run": "live-landed",
+      "step": "review",
+      "text": "live collector validation"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/31",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-02T12:43:52Z",
+      "text": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).\nTo continue using code reviews, you can upgrade your account or add credits to your account and enable them for code reviews in your [settings](https://chatgpt.com/codex/cloud/settings/code-review)."
+    }
+  ]
+}

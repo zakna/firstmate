@@ -1,0 +1,5 @@
+command: bin/fm-feedback-collect.sh --since 2026-09-20 --out <temp>/feedback --nm-db <temp>/missing.sqlite --home <temp>/home
+stdout: wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/out/feedback.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/out/feedback.json (1 records) 
+input hashes unchanged: backlog=yes message=yes marker=yes
+report modes: json=600 md=600
+records: [{"source":"retro-proposal","count":1}]

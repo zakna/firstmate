@@ -1,0 +1,36 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-09-20",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "absent",
+      "detail": "no database at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro.8ye9oh/missing.sqlite"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro.8ye9oh/home/data/backlog.md: 1 held or declined retro rows"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro.8ye9oh/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "retro-proposal",
+      "kind": "declined",
+      "decision": "Declined in the first paragraph.\n\nSkip this proposal in the second paragraph.",
+      "ticket": "retro-live-declined",
+      "task": "retro-live-declined",
+      "text": "- [x] retro-live-declined - Declined proposal (repo: firstmate) (done 2026-10-01) (kind: captain)\nResolution recorded by fm-captain-hold.\nDecision digest: 298765124d2bb13233b9dd0beb455fc18efb0a98a9a4fa724b0c727b133eaaf9\nResolution mode: answered\n\nCaptain decision:\nDeclined in the first paragraph.\n\nSkip this proposal in the second paragraph.\n\nOriginal proposal says skip this proposal but is not the decision."
+    }
+  ]
+}

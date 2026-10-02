@@ -1,0 +1,35 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-09-20",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "absent",
+      "detail": "no database at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/missing.sqlite"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/home/data/backlog.md: 1 held or declined retro rows"
+    },
+    {
+      "name": "steers",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/home/state/*.inbox, kept for tasks /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-readonly.JmyxdU/home/data/backlog.md closes as merged in the window; tasks already cleaned up keep no steers"
+    }
+  ],
+  "records": [
+    {
+      "source": "retro-proposal",
+      "kind": "held",
+      "ticket": "retro-readonly",
+      "task": "retro-readonly",
+      "text": "* [ ] retro-readonly - Hold me (kind: captain) (hold-kind: captain)\nREADONLY-PROPOSAL"
+    }
+  ]
+}

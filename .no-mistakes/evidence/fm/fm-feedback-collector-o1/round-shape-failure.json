@@ -1,0 +1,53 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-02",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-round-shape.eK1p8P/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-round-shape.eK1p8P/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-round-shape.eK1p8P/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "user",
+      "ticket": "https://github.com/zakna/firstmate.git fm/round-shape",
+      "run": "run",
+      "step": "review",
+      "round": 1,
+      "selected": [],
+      "text": ""
+    },
+    {
+      "source": "finding",
+      "kind": "not-selected",
+      "ticket": "https://github.com/zakna/firstmate.git fm/round-shape",
+      "run": "run",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": null,
+      "severity": "warning",
+      "file": "",
+      "line": null,
+      "action": null,
+      "text": "malformed finding without id"
+    }
+  ]
+}

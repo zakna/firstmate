@@ -1,0 +1,7 @@
+command: bin/fm-feedback-collect.sh --since 2026-09-20 --out <temp>/feedback --nm-db <temp>/state.sqlite --home <temp>/home
+stdout: wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.KONZ8J/out/feedback.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.KONZ8J/out/feedback.json (8 records) 
+input statuses: [{"name":"no-mistakes","status":"read"},{"name":"review-comments","status":"read"},{"name":"retro-proposals","status":"read"},{"name":"steers","status":"read"}]
+record sources: [{"source":"finding","count":2},{"source":"gate-answer","count":2},{"source":"retro-proposal","count":1},{"source":"review-comment","count":2},{"source":"steer","count":1}]
+tickets: ["fm-retro-live","https://github.com/zakna/firstmate/pull/27"]
+permission modes: 600 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.KONZ8J/out/feedback.json
+600 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.KONZ8J/out/feedback.md
