@@ -27,7 +27,7 @@ The target window's harness is recorded as `harness=` in `state/<id>.meta`.
 Before any other step, read this home's `data/recovery-lessons.md` when it exists, and check whether a recorded symptom matches the current case.
 After each recovery, append one line to it: `<YYYY-MM-DD> | <symptom> | <cause> | <fix>`.
 Create the file on the first lesson, and prune lines whose cause or fix no longer applies to current tooling.
-When a new incident matches a lesson already in the log, route that lesson as a proposal candidate through the `retro` skill's proposals step rather than only appending again.
+When a new incident matches a lesson already in the log, add the repeat (date, matching lesson, task id) to that task's backlog note; the retro of that task when it lands, or else the next retro of the same project, takes it as a proposal candidate under the retro gates.
 The log is supervisor-side only: never name it in a brief or steer, and workers never read or write it.
 
 ## Session-start reconciliation for a dead ordinary direct report
