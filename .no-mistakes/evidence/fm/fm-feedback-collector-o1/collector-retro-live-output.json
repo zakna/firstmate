@@ -1,0 +1,43 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-09-20",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "absent",
+      "detail": "no database at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro-live.2fMmAJ/missing.sqlite"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro-live.2fMmAJ/home/data/backlog.md: 2 held or declined retro rows"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-retro-live.2fMmAJ/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "retro-proposal",
+      "kind": "held",
+      "ticket": "retro-held",
+      "task": "retro-held",
+      "text": "- [ ] retro-held - Still held (kind: captain) (hold-kind: captain)"
+    },
+    {
+      "source": "retro-proposal",
+      "kind": "declined",
+      "decision": "DECLINED: retain this proposal",
+      "ticket": "retro-declined",
+      "task": "retro-declined",
+      "text": "- [x] retro-declined - Declined (done 2026-09-21)\nResolution recorded by fm-captain-hold.\nResolution mode: answered\n\nCaptain decision:\nDECLINED: retain this proposal"
+    }
+  ]
+}

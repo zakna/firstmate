@@ -1,0 +1,8 @@
+ok - collector gathers gate answers, unfixed findings, review comments, landed steers, and retro proposals
+ok - empty forge pages remain successful reads
+jq: parse error: Invalid numeric literal at EOF at line 1, column 8
+ok - malformed forge data is reported as an error
+ok - corrupt round payloads are isolated and reported
+ok - absent inputs are named in the output instead of failing
+ok - a failed review-comment read is reported per pull request
+ok - usage errors exit 2 and --help prints usage

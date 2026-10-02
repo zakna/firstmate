@@ -1,0 +1,49 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-09-20",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gh-live.AsKGsW/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "read",
+      "detail": "1 pull requests"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no backlog at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gh-live.AsKGsW/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "absent",
+      "detail": "no steering inbox under /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-gh-live.AsKGsW/home/state; cleanup deletes a task's inbox"
+    }
+  ],
+  "records": [
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/27",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-01T14:59:40Z",
+      "text": "You have reached your Codex usage limits. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage)."
+    },
+    {
+      "source": "review-comment",
+      "kind": "review",
+      "ticket": "https://github.com/zakna/firstmate/pull/27",
+      "author": "copilot-pull-request-reviewer[bot]",
+      "author_type": "Bot",
+      "state": "COMMENTED",
+      "file": "",
+      "created": "2026-10-01T15:03:26Z",
+      "text": "<!-- ccr-overview-v2 -->\n\n## Copilot review overview\n\n### 🔵 Needs a closer look\n\nTicket scoping is incomplete, some valid retro data is missed, and unreadable inputs can abort collection.\n\n**Review effort:** Balanced  \n**Findings:** None\n\n<details>\n<summary><strong>What changed in this PR</strong></summary>\n\nCaptain, this PR adds a read-only cross-ticket feedback collector for periodic trend reviews.\n\n**Changes:**\n- Collects review feedback into Markdown and JSON.\n- Adds fixture-based tests.\n- Documents the collector and links it from the retro workflow.\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `bin/​fm-feedback-collect.sh` | Implements feedback collection and rendering. |\r\n| `tests/​fm-feedback-collect.test.sh` | Tests collection sources and error handling. |\r\n| `docs/​scripts.md` | Lists the new command. |\r\n| `.agents/​skills/​retro/​SKILL.md` | Directs multi-ticket reviews to the collector. |\n</details>\n\n---\n\n💡 <a href=\"/zakna/firstmate/new/main?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review?tool=webui#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>"
+    }
+  ]
+}

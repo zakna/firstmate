@@ -1,0 +1,118 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-09-20",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.u7QfTJ/state.sqlite: 1 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "absent",
+      "detail": "no landed GitHub pull request in the window"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.u7QfTJ/home/data/backlog.md: 2 held or declined retro rows"
+    },
+    {
+      "name": "steers",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.u7QfTJ/home/state/*.inbox, kept for tasks /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-feedback-live.u7QfTJ/home/data/backlog.md closes as merged in the window; tasks already cleaned up keep no steers"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/example/app.git fm/feedback",
+      "run": "landed",
+      "step": "review",
+      "text": "Selected after review: investigate recurring boundary issue"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "user",
+      "ticket": "https://github.com/example/app.git fm/feedback",
+      "run": "landed",
+      "step": "review",
+      "round": 1,
+      "selected": [
+        "F-SELECTED",
+        "U-SELECTED"
+      ],
+      "text": ""
+    },
+    {
+      "source": "finding",
+      "kind": "selected for repair, fix not verified",
+      "ticket": "https://github.com/example/app.git fm/feedback",
+      "run": "landed",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": "F-SELECTED",
+      "severity": "error",
+      "file": "bin/example.sh",
+      "line": 7,
+      "action": "ask-user",
+      "text": "Selected finding whose repair is not verified by this collector"
+    },
+    {
+      "source": "finding",
+      "kind": "not-selected",
+      "ticket": "https://github.com/example/app.git fm/feedback",
+      "run": "landed",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": "F-UNSELECTED",
+      "severity": "warning",
+      "file": "docs/example.md",
+      "line": 4,
+      "action": "no-op",
+      "text": "Unselected finding remains visible"
+    },
+    {
+      "source": "finding",
+      "kind": "selected for repair, fix not verified",
+      "ticket": "https://github.com/example/app.git fm/feedback",
+      "run": "landed",
+      "step": "review",
+      "round": 1,
+      "selection": "user",
+      "id": "U-SELECTED",
+      "severity": "warning",
+      "file": "ops/example.md",
+      "line": 2,
+      "action": "auto-fix",
+      "text": "Operator-added selected finding"
+    },
+    {
+      "source": "steer",
+      "kind": "steer",
+      "ticket": "task-landed",
+      "task": "task-landed",
+      "at": "2026-09-21T08:00:00Z",
+      "message": "001",
+      "text": "Please investigate the recurring boundary issue."
+    },
+    {
+      "source": "retro-proposal",
+      "kind": "held",
+      "ticket": "retro-held",
+      "task": "retro-held",
+      "text": "- [ ] retro-held - Held retro proposal (repo: example) (kind: captain) (hold-kind: captain)\nCaptain hold set: 2026-09-20T00:00:00Z"
+    },
+    {
+      "source": "retro-proposal",
+      "kind": "declined",
+      "decision": "Declined: keep this proposal for the trend review",
+      "ticket": "retro-declined",
+      "task": "retro-declined",
+      "text": "- [x] retro-declined - Declined retro proposal (repo: example) (kind: captain) (done 2026-09-21)\nResolution recorded by fm-captain-hold.\nResolution mode: answered\n\nCaptain decision:\nDeclined: keep this proposal for the trend review"
+    }
+  ]
+}
