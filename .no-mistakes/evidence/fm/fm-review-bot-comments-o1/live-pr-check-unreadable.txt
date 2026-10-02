@@ -1,0 +1,4 @@
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+review comments: unknown inline on head b7a8e1d502562265279975648facb89341254215
+armed: state/t15c.check.sh
