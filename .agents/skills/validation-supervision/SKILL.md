@@ -1,6 +1,6 @@
 ---
 name: validation-supervision
-description: Load when a ship starts or already has an active no-mistakes validation run, including a mid-run requirement change or finding, when review remedies are approved after a run ended or a PR exists, and before deciding or answering any ask-user finding.
+description: Load when a ship starts or already has an active no-mistakes validation run, including a mid-run requirement change or finding, when approved review remedies must be covered by a later validation run, whether or not a PR exists, and before deciding or answering any ask-user finding.
 user-invocable: false
 metadata:
   internal: true
