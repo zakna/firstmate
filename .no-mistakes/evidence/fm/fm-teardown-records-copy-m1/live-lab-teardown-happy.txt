@@ -1,0 +1,30 @@
+=== Scenario A (live lab, stubbed treehouse/tmux only): fm-teardown.sh lab-a1 --force ===
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Vb2KsL
+p: already current
+teardown lab-a1 complete (window firstmate:fm-lab-a1, worktree /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Vb2KsL/wt)
+Backlog: lab-a1 just finished (this home keeps no markdown backlog at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.Vb2KsL/data/backlog.md). Update /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.Vb2KsL/data/backlog.md - move lab-a1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+rc=
+state entries left for lab-a1:
+(none)
+worktree exists? no
+archive data/lab-a1:
+--- ./meta.txt
+window=firstmate:fm-lab-a1
+endpoint_task_id=lab-a1
+worktree=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Vb2KsL/wt
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Vb2KsL/projects/p
+kind=ship
+mode=no-mistakes
+spawn_gen=lab
+worktree_returned=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Vb2KsL/wt
+--- ./status-log.txt
+working [at=1]: started
+done [at=2]: fix committed
+--- ./steering/002.msg
+schema=fm-task-inbox.v1
+--
+pending steer
+--- ./steering/handled/001.msg
+schema=fm-task-inbox.v1
+--
+handled steer

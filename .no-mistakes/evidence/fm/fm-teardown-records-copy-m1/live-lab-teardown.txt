@@ -1,0 +1,65 @@
+=== Scenario A: happy path (lab-a1) ===
+$ fm-teardown.sh lab-a1
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+A new version of treehouse is available: v2.3.0 → v3.1.2
+Run "treehouse update" to update
+
+worktree /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.Sjm1vT/wt-lab-a1 is not managed by treehouse
+error: treehouse return failed for worktree /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/wt-lab-a1; teardown aborted
+rc=1
+state left:
+lab-a1.inbox
+lab-a1.meta
+lab-a1.status
+archive:
+--- ./meta.txt
+window=firstmate:fm-lab-a1
+endpoint_task_id=lab-a1
+worktree=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/wt-lab-a1
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/projects/lab-a1
+kind=ship
+mode=no-mistakes
+spawn_gen=lab-lab-a1
+--- ./status-log.txt
+working [at=1]: started
+done [at=2]: fix committed
+--- ./steering/002.msg
+schema=fm-task-inbox.v1
+--
+pending steer
+--- ./steering/handled/001.msg
+schema=fm-task-inbox.v1
+--
+handled steer
+
+=== Scenario B: unwritable data dir refuses (lab-b1) ===
+$ fm-teardown.sh lab-b1 --force
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: could not copy /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/state/lab-b1.status to /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/data/lab-b1 (copy failed; check that the directory is writable and has space)
+error: teardown refused: lab-b1's status log could not be kept; nothing was removed
+rc=1
+state left:
+lab-b1.inbox
+lab-b1.meta
+lab-b1.status
+worktree still present:
+/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/wt-lab-b1
+
+=== Scenario C: symlinked archive refuses (lab-c1) ===
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+error: record archive path /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/data/lab-c1 is a symlink or not a directory
+error: teardown refused: could not prepare /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Sjm1vT/data/lab-c1 to keep lab-c1's records; nothing was removed
+rc=1
+elsewhere contents:
+lab-c1.inbox
+lab-c1.meta
+lab-c1.status
