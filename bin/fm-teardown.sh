@@ -3513,6 +3513,7 @@ if [ "$KIND" = secondmate ]; then
 fi
 
 if [ "$KIND" = secondmate ] && [ "$FORCE" = "--force" ]; then
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
   cleanup_firstmate_home_children "$HOME_PATH" || exit $?
 fi
 
