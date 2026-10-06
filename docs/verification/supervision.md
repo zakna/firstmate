@@ -255,6 +255,20 @@ tests/fm-busy-adapter-wiring.test.sh
 tests/fm-crew-state.test.sh
 ```
 
+## Claude compaction refocus
+
+On 2026-10-06 with Claude Code 2.1.291, a `SessionStart` hook with the `compact` matcher, shaped as `fm-spawn` writes it, re-injected [`bin/fm-claude-refocus.sh`](../../bin/fm-claude-refocus.sh) output into the model's context after a manual `/compact`.
+The fixture brief's intent, definition of done, and one unhandled steer each carried a unique word that never appeared before compaction.
+The transcript recorded the block as a `hook_success` attachment for `SessionStart` after the compact boundary, and the model then answered all three words without reading a file or running a tool.
+An automatic compaction was not reproduced; Claude documents the same `SessionStart` source for both triggers.
+
+Deterministic entry points:
+
+```sh
+tests/fm-claude-refocus.test.sh
+tests/fm-busy-adapter-wiring.test.sh
+```
+
 ## Turn-end guard
 
 The blocking and bounded-follow-up mechanisms were validated across seven harnesses on 2026-07-08 through 2026-09-21, with Claude's replacement Stop-owned path revalidated on 2026-09-21, Cursor's stop-hook park validated on 2026-08-13, and omp's blocking `session_stop` hook validated on 2026-09-05.

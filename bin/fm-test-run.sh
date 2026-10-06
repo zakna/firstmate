@@ -1579,6 +1579,10 @@ families_for_changed_path() {
       printf '%s\n' backend-dispatch
       printf '%s\n' pure-contract-unit
       ;;
+    bin/fm-claude-refocus.sh)
+      printf '%s\n' "__script__:fm-claude-refocus.test.sh"
+      printf '%s\n' "__script__:fm-busy-adapter-wiring.test.sh"
+      ;;
     bin/fm-task-inbox-lib.sh)
       # The steering-inbox record/doorbell/ladder owner: fm-send's data plane
       # (backend-dispatch), the watcher's re-ring check (watcher-wake-lock),

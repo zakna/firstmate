@@ -60,6 +60,15 @@ Styled capture stays internal to the boolean detector; `fm-peek` and model-facin
 The spawn disables Claude's `/bug` and `/feedback` model-drafted feedback flow for every Claude worker and secondmate, preventing a fleet-launched agent from queuing or submitting a bug report on the captain's behalf.
 The controls are scoped to the launched process and never modify the captain's global Claude settings; `launch_template()` in `../../../../../bin/fm-spawn.sh` owns their exact mechanics and defense-in-depth rationale.
 
+## Compaction refocus
+
+A ship or scout Claude worker gets its `## Captain's intent`, its `# Definition of done`, and its newest unhandled steering message back in context after every context compaction, or one line saying no steer is waiting.
+The spawn registers `../../../../../bin/fm-claude-refocus.sh` as a `SessionStart` hook with the `compact` matcher in the worktree's `.claude/settings.local.json`, bound to that task's own launch brief and steering inbox.
+`PostCompact` cannot carry this: Claude documents it as side-effect only, while plain stdout from a `SessionStart` hook with source `compact` is added to the model's context.
+A secondmate gets no refocus, because its spawn writes no worker hooks and its charter has neither anchor section.
+The script header owns the block's contents and missing-section behavior.
+[`../../../../../docs/verification/supervision.md`](../../../../../docs/verification/supervision.md#claude-compaction-refocus) records the live evidence.
+
 ## Task control channel
 
 A Claude task worker's launch brief and Firstmate steering-inbox messages arrive as file-shaped content that is otherwise indistinguishable from indirect prompt injection.
@@ -69,7 +78,7 @@ A `--secondmate` launch omits the statement because a secondmate operates under 
 ## Primary integration
 
 [`../../../../../docs/verification/supervision.md`](../../../../../docs/verification/supervision.md#turn-end-guard) records the current primary and Stop auto-arm live evidence.
-This differs from the worker hook, which only touches a task marker through `.claude/settings.local.json`.
+This differs from the worker hooks in `.claude/settings.local.json`, which only record busy state, touch a task marker, and re-inject the brief's anchors after compaction.
 
 Primary `.claude/settings.json` registers `../../../bin/fm-turnend-guard.sh --claude` and `../../../bin/fm-claude-stop-autoarm.sh` with `asyncRewake: true` and `timeout: 28800`.
 Guard exit 2 plus stderr forces continuation.
