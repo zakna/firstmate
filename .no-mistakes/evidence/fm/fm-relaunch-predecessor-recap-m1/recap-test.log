@@ -7,6 +7,9 @@ ok - recap: other harnesses fall back to the terminal capture, or say why there 
 ok - recap: only the previous worker's recorded account root is read
 ok - recap: no transcript is read when the previous worker's start is unknown
 ok - recap: a byte bound under the minimum is raised and terminates
+ok - recap: a transcript written in the start second is not read
+ok - recap: no transcript is read without a recorded Claude root
+ok - recap: only a bounded tail of a large transcript is read
 ok - recap: usage errors exit 2
 all fm-predecessor-recap tests passed
-rc=0
+EXIT=0
