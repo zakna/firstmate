@@ -1,0 +1,12 @@
+ok - recap: a present transcript renders its newest messages oldest first
+ok - recap: the newest transcript for the worktree is the one read
+ok - recap: an absent, stale, foreign, or empty transcript gives one reason line
+ok - recap: long items are cut and the recap is bounded by count and bytes
+ok - recap: credential-shaped strings are redacted and .env contents omitted
+ok - recap: other harnesses fall back to the terminal capture, or say why there is none
+ok - recap: only the previous worker's recorded account root is read
+ok - recap: no transcript is read when the previous worker's start is unknown
+ok - recap: a byte bound under the minimum is raised and terminates
+ok - recap: usage errors exit 2
+all fm-predecessor-recap tests passed
+rc=0
