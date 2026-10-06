@@ -9,16 +9,20 @@
 #   --harness      the PREVIOUS worker's recorded harness (state/<id>.meta
 #                  harness=), never one guessed from a model name
 #   --worktree     the task's recorded worktree, where that worker ran
-#   --since        the previous incarnation's start epoch; a transcript last
-#                  written before it belongs to an earlier task in a reused
-#                  worktree and is never read. Without it no transcript is
-#                  read at all, because none can be proven to be that worker's
+#   --since        the previous incarnation's start epoch; only a transcript
+#                  last written strictly after that second is read, because one
+#                  written before it, or within the same second, may belong to
+#                  an earlier task in a reused worktree. Without it no
+#                  transcript is read at all, because none can be proven to be
+#                  that worker's
 #   --claude-account
 #                  the previous worker's recorded account pin (state/<id>.meta
 #                  account=): `ordinary` is $HOME/.claude and a path is that
 #                  root; it wins over --claude-root
-#   --claude-root  the Claude configuration root an unpinned previous worker
-#                  used, whose projects/ directory may hold the transcript
+#   --claude-root  the Claude configuration root the previous worker's record
+#                  names (state/<id>.meta claude_root=), whose projects/
+#                  directory may hold the transcript. With neither this nor
+#                  --claude-account no transcript is read
 #   --scrollback   a file holding the previous worker's terminal capture, the
 #                  fallback for any harness
 #   --count        how many transcript messages to keep, newest last
@@ -26,6 +30,9 @@
 #   --max-bytes    byte bound for the recap body, item prefixes included
 #                  (default FM_PREDECESSOR_RECAP_MAX_BYTES, else 6000); a
 #                  value under 64 is raised to 64
+# FM_PREDECESSOR_RECAP_TAIL_BYTES (default 4194304) bounds how much of the end
+# of a transcript is read, so a large session never loads whole; a tool result
+# whose call lies before that window is omitted rather than judged blind.
 # Prints one `# Predecessor recap` markdown section on stdout and exits 0, so a
 # recap can never stop a relaunch. Only a usage error exits 2.
 #
@@ -39,8 +46,8 @@
 # Sources, in order:
 #   1. harness=claude: the newest session transcript
 #      <claude-root>/projects/<encoded worktree>/*.jsonl, in the one root the
-#      previous worker used, last written at or after --since and recording the worktree as its cwd. Claude encodes the
-#      cwd by replacing every non-alphanumeric character with `-`; both the
+#      previous worker used, last written after --since, and recording the
+#      worktree as its cwd. Claude encodes the cwd by replacing every non-alphanumeric character with `-`; both the
 #      given and the physical worktree path are tried. One message is one
 #      user prompt, assistant reply, tool call, or tool result; thinking,
 #      sidechain, meta, and compaction-summary entries are skipped.
@@ -50,10 +57,11 @@
 # Every item is collapsed to one line, cut to a fixed length (tool output
 # shorter than prose), and scrubbed: terminal control sequences are removed,
 # credential-shaped strings (API keys, GitHub and Slack tokens, AWS key ids,
-# JWTs, bearer tokens, private-key blocks, URL passwords, and the whole value of
-# any key/token/secret/password/credential assignment, quoted or not) become
-# [redacted], and a
-# tool call that touches a `.env` file has its input and its result omitted.
+# JWTs, bearer tokens, private-key blocks, URL passwords, the whole value of any
+# key/token/secret/password/credential assignment, quoted or not, and the value
+# after a space-separated credential flag such as --password, --token, or -p)
+# become [redacted], and a tool call that touches a `.env` file has its input
+# and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
 set -u
@@ -68,6 +76,7 @@ SINCE=
 SCROLLBACK=
 COUNT=${FM_PREDECESSOR_RECAP_COUNT:-10}
 MAX_BYTES=${FM_PREDECESSOR_RECAP_MAX_BYTES:-6000}
+TAIL_BYTES=${FM_PREDECESSOR_RECAP_TAIL_BYTES:-4194304}
 CLAUDE_ROOT=
 CLAUDE_ACCOUNT=
 
@@ -88,11 +97,12 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$HARNESS" ] && [ -n "$WT" ] || { echo "error: --harness and --worktree are required" >&2; exit 2; }
-for n in "${SINCE:-0}" "$COUNT" "$MAX_BYTES"; do
+for n in "${SINCE:-0}" "$COUNT" "$MAX_BYTES" "$TAIL_BYTES"; do
   case "$n" in ''|*[!0-9]*) echo "error: --since, --count, and --max-bytes take whole numbers" >&2; exit 2 ;; esac
 done
 [ "$COUNT" -gt 0 ] || COUNT=10
 [ "$MAX_BYTES" -ge 64 ] || MAX_BYTES=64
+[ "$TAIL_BYTES" -gt 0 ] || TAIL_BYTES=4194304
 case "$CLAUDE_ACCOUNT" in
   '') ;;
   ordinary) CLAUDE_ROOT=${HOME:+$HOME/.claude} ;;
@@ -121,7 +131,9 @@ def scrub:
   | gsub("eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}"; "[redacted]")
   | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]{12,}=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
-  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i");
+  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
+  | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]"; "i")
+  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]");
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
@@ -142,7 +154,14 @@ def fit($max):
 # Render the newest messages of one Claude transcript as recap items, one JSON
 # string per line. Prints nothing when the file holds no renderable message.
 claude_items() {  # <jsonl>
-  jq -nR -r --argjson count "$COUNT" --argjson max "$MAX_BYTES" "$JQ_DEFS"'
+  local size
+  size=$(wc -c <"$1" | tr -d ' ') || return 0
+  # Read only the end of the file; when it was cut, its first line is partial.
+  if [ "$size" -gt "$TAIL_BYTES" ]; then
+    tail -c "$TAIL_BYTES" "$1" | sed '1d'
+  else
+    cat "$1"
+  fi | jq -nR -r --argjson count "$COUNT" --argjson max "$MAX_BYTES" "$JQ_DEFS"'
     def dotenv: test("(^|[^A-Za-z0-9_])\\.env($|[^A-Za-z0-9_])");
     def textof: if type == "string" then .
       elif type == "array" then map(select(.type? == "text") | .text) | join(" ")
@@ -153,32 +172,40 @@ claude_items() {  # <jsonl>
       elif .input.command? then .input.command
       elif .input.file_path? then .input.file_path
       else (.input | tojson) end;
-    [inputs | fromjson? // empty
+    # A rolling window: only the newest $count rendered items are ever held,
+    # with each call id mapped to whether it touches a .env file.
+    reduce (inputs | fromjson? // empty
       | select(type == "object")
       | select(.type == "user" or .type == "assistant")
-      | select(.isSidechain != true and .isMeta != true and .isCompactSummary != true)] as $entries
-    | ([$entries[] | select(.type == "assistant") | .message.content | arrays | .[]
-        | select(.type? == "tool_use") | select(.input | tojson | dotenv) | .id]) as $hidden
-    | [$entries[] as $e
-        | ($e.message.content) as $c
-        | if $e.type == "user" and ($c | type) == "string" then
-            ($c | select((brief | not) and (test("^\\s*<") | not)) | "user: " + (clip | scrub | oneline | cut(600)))
-          elif ($c | type) == "array" then
-            $c[]
-            | if .type? == "text" and $e.type == "assistant" then "assistant: " + (.text | clip | scrub | oneline | cut(600))
-              elif .type? == "text" then (.text | select((brief | not) and (test("^\\s*<") | not)) | "user: " + (clip | scrub | oneline | cut(600)))
-              elif .type? == "tool_use" then "tool call " + (.name // "?") + ": " + (callsummary | clip | scrub | oneline | cut(300))
-              elif .type? == "tool_result" then
-                (if .is_error == true then "tool error: " else "tool result: " end) as $label
-                | if (.tool_use_id as $id | any($hidden[]; . == $id)) then $label + "[omitted: output of a call that touches a .env file]"
-                  elif (.content | textof | brief) then $label + "[omitted: the launch instructions, which are above]"
-                  else $label + (.content | textof | clip | scrub | oneline | cut(300)) end
-              else empty end
-          else empty end
-        | select(length > 0)]
-    | .[-$count:]
+      | select(.isSidechain != true and .isMeta != true and .isCompactSummary != true)) as $e
+      ({items: [], calls: {}};
+        ($e.message.content) as $c
+        | .calls += (if $e.type == "assistant" and ($c | type) == "array" then
+            [$c[] | select(.type? == "tool_use") | {key: (.id // "" | tostring), value: (.input | tojson | dotenv)}] | from_entries
+          else {} end)
+        | .calls as $calls
+        | .items += [
+            if $e.type == "user" and ($c | type) == "string" then
+              ($c | select((brief | not) and (test("^\\s*<") | not)) | "user: " + (clip | scrub | oneline | cut(600)))
+            elif ($c | type) == "array" then
+              $c[]
+              | if .type? == "text" and $e.type == "assistant" then "assistant: " + (.text | clip | scrub | oneline | cut(600))
+                elif .type? == "text" then (.text | select((brief | not) and (test("^\\s*<") | not)) | "user: " + (clip | scrub | oneline | cut(600)))
+                elif .type? == "tool_use" then "tool call " + (.name // "?") + ": " + (callsummary | clip | scrub | oneline | cut(300))
+                elif .type? == "tool_result" then
+                  (if .is_error == true then "tool error: " else "tool result: " end) as $label
+                  | (.tool_use_id // "" | tostring) as $id
+                  | if ($calls | has($id) | not) then $label + "[omitted: its call is outside the part of the transcript read]"
+                    elif $calls[$id] then $label + "[omitted: output of a call that touches a .env file]"
+                    elif (.content | textof | brief) then $label + "[omitted: the launch instructions, which are above]"
+                    else $label + (.content | textof | clip | scrub | oneline | cut(300)) end
+                else empty end
+            else empty end
+            | select(length > 0)]
+        | .items |= .[-$count:])
+    | .items
     | fit($max)
-    | .[]' <"$1" 2>/dev/null
+    | .[]' 2>/dev/null
 }
 
 scrollback_items() {  # <file>
@@ -199,7 +226,7 @@ claude_transcript() {
     for f in "$dir"/*.jsonl; do
       [ -f "$f" ] || continue
       m=$(file_mtime "$f") || continue
-      [ "$m" -ge "$SINCE" ] && [ "$m" -gt "$best_m" ] || continue
+      [ "$m" -gt "$SINCE" ] && [ "$m" -gt "$best_m" ] || continue
       jq -nR -e --arg a "$WT" --arg b "$wtp" \
         'first(inputs | fromjson? // empty | select(type == "object") | .cwd? | select(. == $a or . == $b)) // false' \
         <"$f" >/dev/null 2>&1 || continue
@@ -222,6 +249,8 @@ transcript_reason=
 if [ "$HARNESS" = claude ]; then
   if [ -z "$SINCE" ]; then
     transcript_reason="the previous worker's start time is not recorded, so no Claude transcript can be proven to be its own"
+  elif [ -z "$CLAUDE_ROOT" ]; then
+    transcript_reason="the previous worker's Claude configuration folder is not recorded, so its transcript cannot be found"
   elif ! command -v jq >/dev/null 2>&1; then
     transcript_reason="jq is not installed, so the previous worker's Claude transcript could not be read"
   elif transcript=$(claude_transcript) && [ -n "$transcript" ]; then

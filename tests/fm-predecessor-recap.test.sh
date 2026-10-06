@@ -15,6 +15,8 @@
 #   6. Provenance: only the root of the previous worker's recorded account is
 #      read, and no transcript is read when its start time is unknown.
 #   7. A byte bound below the safe minimum still terminates.
+#   8. Only a bounded tail of a large transcript is read, and a result whose
+#      call lies before that tail is omitted.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -155,14 +157,17 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   {
     entry assistant "$dir/wt" '[{"type":"text","text":"key sk-ant-abcdefghijklmnopqrstuvwx and ghp_abcdefghijklmnopqrstuvwxyz0123 and API_TOKEN=hunter2secret and https://bob:pa55word@example.com/x"}]'
     entry assistant "$dir/wt" '[{"type":"text","text":"PASSWORD=\"correct horse battery staple\" then client_secret: '"'"'two quoted words'"'"' done"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"f1","name":"Bash","input":{"command":"deploy --password flagpass1 --token flagtok22 --api-key \"flag key words\" && mysql -u root -p dbpass333"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"f1","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"e1","name":"Bash","input":{"command":"cat .env"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"e1","content":"DATABASE_URL=dotenv-value-here"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"e2","name":"Read","input":{"file_path":"/repo/.env.local"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"e2","content":[{"type":"text","text":"SECOND_DOTENV_VALUE"}]}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE* | *horse* | *battery* | *staple* | *quoted\ words*) fail "a secret reached the recap: $out" ;; esac
+  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE* | *horse* | *battery* | *staple* | *quoted\ words* | *flagpass1* | *flagtok22* | *flag\ key\ words* | *dbpass333*) fail "a secret reached the recap: $out" ;; esac
   assert_contains "$out" "PASSWORD=[redacted] then client_secret: [redacted] done" "a quoted value with spaces should be redacted whole"
+  assert_contains "$out" "deploy --password [redacted] --token [redacted] --api-key [redacted] && mysql -u root -p [redacted]" "a space-separated credential flag's value should be redacted"
   assert_contains "$out" "API_TOKEN=[redacted]" "an assignment value should be redacted"
   assert_contains "$out" "- tool call Bash: [omitted: touches a .env file]" "a .env call's input should be omitted"
   assert_contains "$out" "- tool result: [omitted: output of a call that touches a .env file]" "a .env call's result should be omitted"
@@ -226,6 +231,53 @@ test_unknown_start_reads_no_transcript() {
   pass "recap: no transcript is read when the previous worker's start is unknown"
 }
 
+test_same_second_transcript_is_not_read() {
+  local dir t out m
+  dir=$(new_case same-second)
+  t=$(transcript_path "$dir" s1)
+  entry user "$dir/wt" '"WRITTEN IN THE START SECOND"' >"$t"
+  if [ "$(uname)" = Darwin ]; then m=$(/usr/bin/stat -f %m "$t"); else m=$(stat -c %Y "$t"); fi
+  out=$(run_recap "$dir" --since "$m")
+  assert_contains "$out" "No recap: no Claude session transcript" "a transcript from the start second itself is ambiguous"
+  case "$out" in *"WRITTEN IN THE START SECOND"*) fail "a same-second transcript was read: $out" ;; esac
+  out=$(run_recap "$dir" --since "$((m - 1))")
+  assert_contains "$out" "WRITTEN IN THE START SECOND" "a transcript written after the start second should be read"
+  pass "recap: a transcript written in the start second is not read"
+}
+
+test_no_recorded_root_reads_no_transcript() {
+  local dir t out
+  dir=$(new_case no-root)
+  t=$(transcript_path "$dir" s1)
+  entry user "$dir/wt" '"SOME ROOT TRANSCRIPT"' >"$t"
+  out=$(HOME="$dir" "$RECAP" --harness claude --worktree "$dir/wt" --since 1 </dev/null)
+  assert_contains "$out" "No recap: the previous worker's Claude configuration folder is not recorded" "no recorded root should skip the transcript"
+  case "$out" in *"SOME ROOT TRANSCRIPT"*) fail "a transcript was read without a recorded root: $out" ;; esac
+  pass "recap: no transcript is read without a recorded Claude root"
+}
+
+test_large_transcript_reads_only_a_bounded_tail() {
+  local dir t out i
+  dir=$(new_case tail)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"text","text":"EARLY MARKER BEFORE THE TAIL"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"cut","name":"Bash","input":{"command":"cat secrets.txt"}}]'
+    for i in $(seq 1 40); do
+      entry assistant "$dir/wt" "[{\"type\":\"text\",\"text\":\"padding $i padding padding padding padding\"}]"
+    done
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"cut","content":"OUTPUT OF A CUT CALL"}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"NEWEST REPLY"}]'
+  } >"$t"
+  out=$(FM_PREDECESSOR_RECAP_TAIL_BYTES=2000 run_recap "$dir" --count 3)
+  assert_contains "$out" "- assistant: NEWEST REPLY" "the newest message should be in the tail"
+  assert_contains "$out" "- tool result: [omitted: its call is outside the part of the transcript read]" "a result whose call was cut should be omitted"
+  case "$out" in *"EARLY MARKER"* | *"OUTPUT OF A CUT CALL"*) fail "content before the tail, or a blind result, reached the recap: $out" ;; esac
+  out=$(run_recap "$dir" --count 3)
+  assert_contains "$out" "- tool result: OUTPUT OF A CUT CALL" "with the whole file read the call is known"
+  pass "recap: only a bounded tail of a large transcript is read"
+}
+
 test_tiny_byte_bound_terminates() {
   local dir t out rc n body
   dir=$(new_case tiny)
@@ -257,6 +309,9 @@ test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
 test_tiny_byte_bound_terminates
+test_same_second_transcript_is_not_read
+test_no_recorded_root_reads_no_transcript
+test_large_transcript_reads_only_a_bounded_tail
 test_usage_errors_exit_2
 
 echo "all fm-predecessor-recap tests passed"

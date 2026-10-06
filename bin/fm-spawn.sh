@@ -452,6 +452,8 @@
 # success line and state/<id>.meta omit them.
 # Every fresh spawn or relaunch records a new spawn_gen= incarnation token so durable
 # consumers can distinguish a replacement worker that reuses the same task id.
+# A claude launch also records claude_root=, the configuration root it runs
+# under, which a later relaunch's predecessor recap reads its transcript from.
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -2361,9 +2363,6 @@ fi
 if [ "$HARNESS" = agy ]; then
   agy_model_validate "$AGY_BIN" "$MODEL" || exit 1
 fi
-# The ambient Claude root before any pin is exported: an unpinned predecessor
-# ran under it, which the relaunch's predecessor recap needs.
-SPAWN_AMBIENT_CLAUDE_CONFIG_DIR=${CLAUDE_CONFIG_DIR:-}
 # Worker account pin (header above): resolved before any endpoint, worktree, or
 # record exists. An absent pin selects nothing and leaves every later launch
 # step exactly as it was. A pinned Claude root is exported here as well, so the
@@ -2989,9 +2988,10 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   # saying why there is none (bin/fm-predecessor-recap.sh owns the sources,
   # bounds, and scrubbing). It sits before the intent overlay, which must stay
   # last in the overlay. The transcript is looked up only in the Claude root
-  # the predecessor's own record names, and only when its spawn_gen proves when
-  # it started; otherwise an earlier task's transcript in a reused worktree
-  # could pass for it.
+  # the predecessor's own record names (claude_root=, or a legacy record's
+  # account= pin), and only when its spawn_gen proves when it started;
+  # otherwise an earlier task's transcript in a reused worktree, or one from
+  # another root, could pass for it.
   PREDECESSOR_RECAP=
   if [ "$RELAUNCH" -eq 1 ]; then
     recap_args=(--harness "$RELAUNCH_PRIOR_HARNESS" --worktree "$RELAUNCH_WT")
@@ -3003,11 +3003,12 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
         case "$recap_since" in *[!0-9]*) ;; *) recap_args+=(--since "$recap_since") ;; esac
         ;;
     esac
+    recap_root=$(fm_meta_get "$RELAUNCH_META" claude_root) || recap_root=
     recap_account=$(fm_meta_get "$RELAUNCH_META" account) || recap_account=
-    if [ -n "$recap_account" ]; then
+    if [ -n "$recap_root" ]; then
+      recap_args+=(--claude-root "$recap_root")
+    elif [ -n "$recap_account" ]; then
       recap_args+=(--claude-account "$recap_account")
-    else
-      recap_args+=(--claude-root "${SPAWN_AMBIENT_CLAUDE_CONFIG_DIR:-${HOME:-}/.claude}")
     fi
     recap_scrollback=
     if [ "$RELAUNCH_STATE" = dead ] && recap_scrollback=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
@@ -4831,7 +4832,7 @@ SPAWN_META_PATH=$SPAWN_META_TMP
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
-      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp model effort account account_provider busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
+      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp model effort account account_provider claude_root busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
       for (i in keys) owned[keys[i]] = 1
     }
     !($1 in owned)
@@ -4854,6 +4855,17 @@ preserve_relaunch_meta() {
   # task record stays byte-identical.
   [ -z "$WORKER_ACCOUNT" ] || echo "account=$WORKER_ACCOUNT_DECLARED"
   [ -z "$WORKER_ACCOUNT_PROVIDER" ] || echo "account_provider=$WORKER_ACCOUNT_PROVIDER"
+  # The Claude configuration root this worker launches under (the pinned or
+  # ambient CLAUDE_CONFIG_DIR, else Claude's default under HOME), so a later
+  # relaunch's predecessor recap finds its transcript from the record rather
+  # than from whatever the relaunching process's environment says.
+  if [ "$HARNESS" = claude ]; then
+    if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+      echo "claude_root=$CLAUDE_CONFIG_DIR"
+    elif [ -n "${HOME:-}" ]; then
+      echo "claude_root=$HOME/.claude"
+    fi
+  fi
   [ -z "${BUSY_GEN:-}" ] || echo "busy_gen=$BUSY_GEN"
   echo "spawn_gen=$SPAWN_GEN"
   # Default-off writes no traceparent= line.

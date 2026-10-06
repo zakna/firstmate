@@ -394,8 +394,9 @@ test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint() {
 }
 
 # The recap reads the transcript from the root the PREDECESSOR's record names
-# (its account= pin), never the replacement's or another account's, and only
-# when its spawn_gen proves when it started.
+# (its claude_root=, or a legacy record's account= pin), never the
+# replacement's, the relaunching process's, or another account's, and only when
+# its spawn_gen proves when it started.
 test_relaunch_recap_reads_the_predecessor_account_root() {
   local dir out rc enc
   dir=$(new_case recap-account rl60)
@@ -406,12 +407,30 @@ test_relaunch_recap_reads_the_predecessor_account_root() {
     >"$dir/pinned/projects/$enc/s1.jsonl"
   printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE AMBIENT ACCOUNT"}}\n' "$dir/wt" \
     >"$dir/user-home/.claude/projects/$enc/s2.jsonl"
-  printf 'account=%s\nspawn_gen=s%s.1.1\n' "$dir/pinned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
+  printf 'claude_root=%s\nspawn_gen=s%s.1.1\n' "$dir/pinned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
   out=$(run_control "$dir" rl60 relaunch --note "recap account check"); rc=$?
   expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
-  assert_grep "FROM THE PREDECESSOR ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap should read the predecessor's recorded account root"
-  assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another account's transcript"
-  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded account root"
+  assert_grep "FROM THE PREDECESSOR ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap should read the predecessor's recorded root"
+  assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another root's transcript"
+  [ "$(meta_field "$dir" rl60 claude_root)" = "$dir/user-home/.claude" ] \
+    || fail "the replacement's record should carry the root it launched under, got '$(meta_field "$dir" rl60 claude_root)'"
+  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded root"
+}
+
+test_relaunch_recap_reads_no_transcript_without_a_recorded_root() {
+  local dir out rc enc
+  dir=$(new_case recap-noroot rl62)
+  add_ship_task "$dir" rl62 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE RELAUNCHING ENVIRONMENT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s1.jsonl"
+  printf 'spawn_gen=s%s.1.1\n' "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl62.meta"
+  out=$(run_control "$dir" rl62 relaunch --note "recap root check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "Claude configuration folder is not recorded" "$dir/home/data/rl62/launch-brief.md" "a record without a root should say why the transcript was skipped"
+  assert_no_grep "FROM THE RELAUNCHING ENVIRONMENT" "$dir/home/data/rl62/launch-brief.md" "the relaunching process's own root must not be read"
+  pass "fm-control relaunch: the predecessor recap reads no transcript without a recorded root"
 }
 
 test_relaunch_recap_skips_transcripts_without_a_proven_start() {
@@ -422,9 +441,10 @@ test_relaunch_recap_skips_transcripts_without_a_proven_start() {
   mkdir -p "$dir/user-home/.claude/projects/$enc"
   printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"AN EARLIER TASK IN THIS SLOT"}}\n' "$dir/wt" \
     >"$dir/user-home/.claude/projects/$enc/s1.jsonl"
+  printf 'claude_root=%s\n' "$dir/user-home/.claude" >> "$dir/home/state/rl61.meta"
   out=$(run_control "$dir" rl61 relaunch --note "recap start check"); rc=$?
   expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
-  assert_grep "# Predecessor recap" "$dir/home/data/rl61/launch-brief.md" "the replacement should still carry a recap section"
+  assert_grep "start time is not recorded" "$dir/home/data/rl61/launch-brief.md" "the recap should say the start time is unknown"
   assert_no_grep "AN EARLIER TASK IN THIS SLOT" "$dir/home/data/rl61/launch-brief.md" "a record without a proven start must not read any transcript"
   pass "fm-control relaunch: the predecessor recap reads no transcript without a proven start"
 }
@@ -2428,6 +2448,7 @@ test_relaunch_moves_a_drifted_item_back_in_flight() {
 test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint
 test_relaunch_recap_reads_the_predecessor_account_root
 test_relaunch_recap_skips_transcripts_without_a_proven_start
+test_relaunch_recap_reads_no_transcript_without_a_recorded_root
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text
 test_relaunch_refuses_before_exit_when_the_composer_state_is_unproven
 test_relaunch_from_linked_home_preserves_recorded_worktree
