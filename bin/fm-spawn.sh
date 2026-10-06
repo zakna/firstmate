@@ -4887,13 +4887,19 @@ preserve_relaunch_meta() {
   # own leading CLAUDE_CONFIG_DIR assignment, else the pinned or ambient
   # CLAUDE_CONFIG_DIR, else Claude's default under HOME), so a later relaunch's
   # predecessor recap finds its transcript from the record rather than from
-  # whatever the relaunching process's environment says. A raw assignment that
-  # is not a literal absolute path records no root, so no transcript is read.
+  # whatever the relaunching process's environment says. A raw assignment or
+  # ambient value that is not a literal absolute path records no root, so no
+  # transcript is read.
   if [ "$HARNESS" = claude ]; then
     if [ "$RAW_LAUNCH" = 1 ] && raw_claude_root=$(raw_claude_config_dir "$RAW_COMMAND"); then
       [ -z "$raw_claude_root" ] || echo "claude_root=$raw_claude_root"
     elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
-      echo "claude_root=$CLAUDE_CONFIG_DIR"
+      # A relative value names a store relative to the worker's cwd, not this
+      # record's reader's, so it records no root (fm-claude-trust.sh already
+      # refuses one before launch; this keeps the record correct regardless).
+      case "$CLAUDE_CONFIG_DIR" in
+      /*) echo "claude_root=$CLAUDE_CONFIG_DIR" ;;
+      esac
     elif [ -n "${HOME:-}" ]; then
       echo "claude_root=$HOME/.claude"
     fi
