@@ -117,6 +117,12 @@ case "${1:-}" in
     printf 'fakepane\n'; exit 0 ;;
   capture-pane)
     [ -z "${FM_FAKE_COMPOSER_READ_FAIL:-}" ] || exit 1
+    # The relaunch recap's scrollback read is the only 2000-line capture; this
+    # hook interrupts the spawn that issued it while that capture is open.
+    if [ -n "${FM_FAKE_RECAP_CAPTURE_SIGNAL:-}" ] && [ "${*: -1}" = -2000 ]; then
+      kill -"$FM_FAKE_RECAP_CAPTURE_SIGNAL" "$PPID"
+      /bin/sleep 0.2
+    fi
     if [ -s "$D/composer" ]; then
       printf '╭────╮\n│ %s  │\n╰────╯\n' "$(cat "$D/composer")"
     else
@@ -431,6 +437,23 @@ test_relaunch_recap_reads_no_transcript_without_a_recorded_root() {
   assert_grep "Claude configuration folder is not recorded" "$dir/home/data/rl62/launch-brief.md" "a record without a root should say why the transcript was skipped"
   assert_no_grep "FROM THE RELAUNCHING ENVIRONMENT" "$dir/home/data/rl62/launch-brief.md" "the relaunching process's own root must not be read"
   pass "fm-control relaunch: the predecessor recap reads no transcript without a recorded root"
+}
+
+test_relaunch_recap_capture_file_is_removed_when_interrupted() {
+  local dir out sig left
+  # A lone SIGINT is ignored by bash while it waits on a child that exits
+  # normally (a real Ctrl-C reaches the whole process group), so the signals
+  # that reach only the spawn are the ones exercised here.
+  for sig in TERM HUP; do
+    dir=$(new_case recap-signal-$sig rl63$sig)
+    add_ship_task "$dir" "rl63$sig" claude
+    mkdir -p "$dir/tmp"
+    out=$(TMPDIR="$dir/tmp" FM_FAKE_RECAP_CAPTURE_SIGNAL=$sig run_control "$dir" "rl63$sig" relaunch --note "recap signal check")
+    assert_contains "$out" "could not be launched" "an interrupted relaunch should report the launch failure"$'\n'"$out"
+    left=$(find "$dir/tmp" -name 'fm-recap.*' | head -1)
+    [ -z "$left" ] || fail "an interrupted relaunch left its terminal capture behind on $sig: $left"
+  done
+  pass "fm-spawn relaunch: the recap's terminal capture is removed when the relaunch is interrupted"
 }
 
 test_relaunch_recap_skips_transcripts_without_a_proven_start() {
@@ -2449,6 +2472,7 @@ test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint
 test_relaunch_recap_reads_the_predecessor_account_root
 test_relaunch_recap_skips_transcripts_without_a_proven_start
 test_relaunch_recap_reads_no_transcript_without_a_recorded_root
+test_relaunch_recap_capture_file_is_removed_when_interrupted
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text
 test_relaunch_refuses_before_exit_when_the_composer_state_is_unproven
 test_relaunch_from_linked_home_preserves_recorded_worktree

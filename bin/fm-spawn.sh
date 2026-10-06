@@ -1237,8 +1237,13 @@ parse_orca_worktree_result() {
   fi
 }
 
+# The relaunch recap's terminal-capture temp file, removed here as well as
+# inline so an abort or a signal between its creation and its removal never
+# leaves the previous worker's terminal text behind.
+RECAP_SCROLLBACK_TMP=
 spawn_abort_cleanup() {
   local status=$?
+  [ -z "$RECAP_SCROLLBACK_TMP" ] || rm -f -- "$RECAP_SCROLLBACK_TMP" 2>/dev/null || true
   if [ "$RELAUNCH_REPLACEMENT_PENDING" = 1 ] &&
     [ "$SPAWN_META_PUBLISH_STARTED" = 1 ] &&
     [ -n "$SPAWN_META_TMP" ] &&
@@ -3010,14 +3015,16 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     elif [ -n "$recap_account" ]; then
       recap_args+=(--claude-account "$recap_account")
     fi
-    recap_scrollback=
-    if [ "$RELAUNCH_STATE" = dead ] && recap_scrollback=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
-      fm_backend_capture "$BACKEND" "$RELAUNCH_TARGET" 2000 >"$recap_scrollback" 2>/dev/null || : >"$recap_scrollback"
+    if [ "$RELAUNCH_STATE" = dead ] && RECAP_SCROLLBACK_TMP=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
+      fm_backend_capture "$BACKEND" "$RELAUNCH_TARGET" 2000 >"$RECAP_SCROLLBACK_TMP" 2>/dev/null || : >"$RECAP_SCROLLBACK_TMP"
+    else
+      RECAP_SCROLLBACK_TMP=
     fi
-    [ -z "$recap_scrollback" ] || recap_args+=(--scrollback "$recap_scrollback")
+    [ -z "$RECAP_SCROLLBACK_TMP" ] || recap_args+=(--scrollback "$RECAP_SCROLLBACK_TMP")
     PREDECESSOR_RECAP=$("$FM_ROOT/bin/fm-predecessor-recap.sh" "${recap_args[@]}") ||
       PREDECESSOR_RECAP=$'# Predecessor recap\nNo recap: the recap could not be built.'
-    [ -z "$recap_scrollback" ] || rm -f -- "$recap_scrollback"
+    [ -z "$RECAP_SCROLLBACK_TMP" ] || rm -f -- "$RECAP_SCROLLBACK_TMP"
+    RECAP_SCROLLBACK_TMP=
   fi
   # Use the existing launch-brief overlay for every worker kind, including
   # pre-scope briefs and relaunches. Charters never enter this worker path.

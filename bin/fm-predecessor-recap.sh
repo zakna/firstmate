@@ -129,7 +129,7 @@ def scrub:
   | gsub("xox[abprs]-[A-Za-z0-9-]{10,}"; "[redacted]")
   | gsub("(AKIA|ASIA)[0-9A-Z]{16}"; "[redacted]")
   | gsub("eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}"; "[redacted]")
-  | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]{12,}=*"; "\(.b)[redacted]"; "i")
+  | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<b>authorization\\s*:\\s*basic\\s+)[A-Za-z0-9+/._~-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
   | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
