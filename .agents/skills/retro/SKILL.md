@@ -49,7 +49,7 @@ Open the pipeline database read-only.
 ### 1. Read the sources
 
 - The delivering task's records under `data/<task-id>/`: its instructions, any saved review findings, and any review-comment inventory.
-- The task's status log and steering messages, when cleanup has not yet removed them.
+- The task's status log and steering messages: under `state/` while the task runs, and after cleanup as `status-log.txt` and `steering/` under `data/<task-id>/`.
 - The backlog item and its notes.
 - The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
 - The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.

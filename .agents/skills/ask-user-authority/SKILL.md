@@ -40,7 +40,7 @@ No brief, spec, or steer may hand that decision back to the worker; spawn, promo
 ## File a declined finding's author note
 
 When a decision keeps the code as is or declines a finding and carries a note for the author, such as a simplification left as an author call, firstmate files that note durably before it sends the decision.
-The task's inbox and status log are removed at cleanup, so a note that lives only there is lost.
+Cleanup moves the task's inbox and status log into an archive under `data/<task-id>/` that nothing acts on, so a note that lives only there is lost.
 The worker never files it; firstmate does, at decision time.
 
 The durable home is exactly one of two:

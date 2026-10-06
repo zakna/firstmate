@@ -744,6 +744,101 @@ test_teardown_manual_backend_leaves_the_backlog_to_the_operator() {
   pass "teardown honors config/backlog-backend=manual and still finishes cleanly"
 }
 
+# Seed the records teardown archives: a status log, one pending and one handled
+# steering message.
+seed_task_records() {  # <case-dir>
+  local case_dir=$1
+  printf '%s\n' 'working [at=1]: setup done' 'done [at=2]: fix committed' \
+    > "$case_dir/state/task-x1.status"
+  mkdir -p "$case_dir/state/task-x1.inbox/handled"
+  printf '%s\n' 'schema=fm-task-inbox.v1' '--' 'pending steer' > "$case_dir/state/task-x1.inbox/002.msg"
+  printf '%s\n' 'schema=fm-task-inbox.v1' '--' 'handled steer' > "$case_dir/state/task-x1.inbox/handled/001.msg"
+}
+
+test_teardown_keeps_the_task_records_in_its_data_directory() {
+  local case_dir rc
+  case_dir=$(make_case records-kept)
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  seed_task_records "$case_dir"
+  cp "$case_dir/state/task-x1.meta" "$case_dir/meta.before"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+
+  expect_code 0 "$rc" "records-kept: teardown should succeed"
+  assert_absent "$case_dir/state/task-x1.status" "records-kept: status log was not removed"
+  assert_absent "$case_dir/state/task-x1.inbox" "records-kept: steering inbox was not removed"
+  assert_absent "$case_dir/state/task-x1.meta" "records-kept: task record was not removed"
+  assert_grep 'done [at=2]: fix committed' "$case_dir/data/task-x1/status-log.txt" \
+    "records-kept: status log copy is missing its lines"
+  assert_grep 'pending steer' "$case_dir/data/task-x1/steering/002.msg" \
+    "records-kept: pending steering message was not kept under its own name"
+  assert_grep 'handled steer' "$case_dir/data/task-x1/steering/handled/001.msg" \
+    "records-kept: handled steering message was not kept under its own name"
+  assert_grep "worktree=$case_dir/wt" "$case_dir/data/task-x1/meta.txt" \
+    "records-kept: task record copy is missing"
+  pass "teardown keeps the status log, steering messages, and task record in data/<id>/"
+}
+
+test_teardown_refuses_before_removal_when_the_records_cannot_be_kept() {
+  local case_dir rc head
+  if [ "$(id -u)" = 0 ]; then
+    pass "records-unwritable: skipped as root, where a read-only directory stays writable"
+    return 0
+  fi
+  case_dir=$(make_case records-unwritable)
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  head=$(git -C "$case_dir/wt" rev-parse HEAD)
+  seed_task_records "$case_dir"
+  mkdir -p "$case_dir/data/task-x1"
+  chmod 555 "$case_dir/data/task-x1"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  chmod 755 "$case_dir/data/task-x1"
+
+  expect_code 1 "$rc" "records-unwritable: teardown should refuse"
+  assert_grep "status log could not be kept; nothing was removed" "$case_dir/stderr" \
+    "records-unwritable: refusal did not name the concrete reason"
+  assert_refusal_retained_task_state "$case_dir" records-unwritable "$head"
+  assert_present "$case_dir/state/task-x1.status" "records-unwritable: refusal removed the status log"
+  assert_present "$case_dir/state/task-x1.inbox/handled/001.msg" \
+    "records-unwritable: refusal removed the steering inbox"
+  pass "teardown refuses before any removal when data/<id>/ cannot take the record copies"
+}
+
+test_teardown_never_truncates_an_existing_copy_with_an_empty_source() {
+  local case_dir rc
+  case_dir=$(make_case records-empty-source)
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  mkdir -p "$case_dir/data/task-x1"
+  printf '%s\n' 'done [at=2]: copied by hand' > "$case_dir/data/task-x1/status-log.txt"
+  : > "$case_dir/state/task-x1.status"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+
+  expect_code 0 "$rc" "records-empty-source: teardown should succeed"
+  assert_grep 'done [at=2]: copied by hand' "$case_dir/data/task-x1/status-log.txt" \
+    "records-empty-source: an empty status log truncated the existing copy"
+  pass "teardown keeps an existing record copy rather than truncating it with an empty source"
+}
+
 test_local_only_truly_unpushed_refuses() {
   local case_dir rc
   case_dir=$(make_case truly-unpushed)
@@ -4067,6 +4162,9 @@ test_retained_sources_still_reach_the_ordinary_refusal
 test_local_only_fork_remote_allows
 test_teardown_closes_the_backlog_item_itself
 test_teardown_manual_backend_leaves_the_backlog_to_the_operator
+test_teardown_keeps_the_task_records_in_its_data_directory
+test_teardown_refuses_before_removal_when_the_records_cannot_be_kept
+test_teardown_never_truncates_an_existing_copy_with_an_empty_source
 test_local_only_truly_unpushed_refuses
 test_local_only_merged_to_local_main_allows
 test_no_mistakes_origin_remote_allows
