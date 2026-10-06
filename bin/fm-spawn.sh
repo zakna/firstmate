@@ -4829,6 +4829,34 @@ else
   SPAWN_FRESH_COMMIT_PENDING=1
 fi
 SPAWN_META_PATH=$SPAWN_META_TMP
+# raw_claude_config_dir <raw-command>: the CLAUDE_CONFIG_DIR a raw Claude
+# command's own leading assignments set, the same leading words
+# fm_worker_account_select inspects. Returns 1 when none sets it; prints
+# nothing and returns 0 when one does but its value is not a literal absolute
+# path this process can name.
+raw_claude_config_dir() {
+  local word value found=1 out=
+  for word in $1; do
+    case "$word" in
+    CLAUDE_CONFIG_DIR=*)
+      found=0
+      value=${word#CLAUDE_CONFIG_DIR=}
+      case "$value" in
+      \"*\") value=${value#\"}; value=${value%\"} ;;
+      \'*\') value=${value#\'}; value=${value%\'} ;;
+      esac
+      case "$value" in
+      /*) case "$value" in *[\$\`\\\"\'*?~]*) out= ;; *) out=$value ;; esac ;;
+      *) out= ;;
+      esac
+      ;;
+    [A-Za-z_]*=*) ;;
+    *) break ;;
+    esac
+  done
+  [ "$found" = 0 ] || return 1
+  printf '%s' "$out"
+}
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
@@ -4855,12 +4883,16 @@ preserve_relaunch_meta() {
   # task record stays byte-identical.
   [ -z "$WORKER_ACCOUNT" ] || echo "account=$WORKER_ACCOUNT_DECLARED"
   [ -z "$WORKER_ACCOUNT_PROVIDER" ] || echo "account_provider=$WORKER_ACCOUNT_PROVIDER"
-  # The Claude configuration root this worker launches under (the pinned or
-  # ambient CLAUDE_CONFIG_DIR, else Claude's default under HOME), so a later
-  # relaunch's predecessor recap finds its transcript from the record rather
-  # than from whatever the relaunching process's environment says.
+  # The Claude configuration root this worker launches under (a raw command's
+  # own leading CLAUDE_CONFIG_DIR assignment, else the pinned or ambient
+  # CLAUDE_CONFIG_DIR, else Claude's default under HOME), so a later relaunch's
+  # predecessor recap finds its transcript from the record rather than from
+  # whatever the relaunching process's environment says. A raw assignment that
+  # is not a literal absolute path records no root, so no transcript is read.
   if [ "$HARNESS" = claude ]; then
-    if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+    if [ "$RAW_LAUNCH" = 1 ] && raw_claude_root=$(raw_claude_config_dir "$RAW_COMMAND"); then
+      [ -z "$raw_claude_root" ] || echo "claude_root=$raw_claude_root"
+    elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
       echo "claude_root=$CLAUDE_CONFIG_DIR"
     elif [ -n "${HOME:-}" ]; then
       echo "claude_root=$HOME/.claude"

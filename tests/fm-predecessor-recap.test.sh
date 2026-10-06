@@ -157,6 +157,7 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   {
     entry assistant "$dir/wt" '[{"type":"text","text":"key sk-ant-abcdefghijklmnopqrstuvwx and ghp_abcdefghijklmnopqrstuvwxyz0123 and API_TOKEN=hunter2secret and https://bob:pa55word@example.com/x"}]'
     entry assistant "$dir/wt" '[{"type":"text","text":"PASSWORD=\"correct horse battery staple\" then client_secret: '"'"'two quoted words'"'"' done"}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"curl -H \"Authorization: Basic dXNlcjpwYXNzd29yZA==\" -H \"Proxy-Authorization: basic cHJveHk6c2VjcmV0\" url"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"f1","name":"Bash","input":{"command":"deploy --password flagpass1 --token flagtok22 --api-key \"flag key words\" && mysql -u root -p dbpass333"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"f1","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"e1","name":"Bash","input":{"command":"cat .env"}}]'
@@ -165,8 +166,9 @@ test_secrets_are_redacted_and_dotenv_omitted() {
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"e2","content":[{"type":"text","text":"SECOND_DOTENV_VALUE"}]}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE* | *horse* | *battery* | *staple* | *quoted\ words* | *flagpass1* | *flagtok22* | *flag\ key\ words* | *dbpass333*) fail "a secret reached the recap: $out" ;; esac
+  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE* | *horse* | *battery* | *staple* | *quoted\ words* | *dXNlcjpwYXNzd29yZA* | *cHJveHk6c2VjcmV0* | *flagpass1* | *flagtok22* | *flag\ key\ words* | *dbpass333*) fail "a secret reached the recap: $out" ;; esac
   assert_contains "$out" "PASSWORD=[redacted] then client_secret: [redacted] done" "a quoted value with spaces should be redacted whole"
+  assert_contains "$out" "Authorization: Basic [redacted]\" -H \"Proxy-Authorization: basic [redacted]\"" "Basic authorization values should be redacted"
   assert_contains "$out" "deploy --password [redacted] --token [redacted] --api-key [redacted] && mysql -u root -p [redacted]" "a space-separated credential flag's value should be redacted"
   assert_contains "$out" "API_TOKEN=[redacted]" "an assignment value should be redacted"
   assert_contains "$out" "- tool call Bash: [omitted: touches a .env file]" "a .env call's input should be omitted"
