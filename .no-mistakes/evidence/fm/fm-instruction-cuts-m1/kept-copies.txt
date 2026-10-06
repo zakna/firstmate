@@ -1,0 +1,16 @@
+23:A secondmate is a crewmate with an isolated firstmate home and a charter, not a second architecture.
+38:4. **Crewmates never address the captain.**
+56:Each secondmate has a persistent isolated `FM_HOME`, including its own state, backlog, projects, and session lock.
+135:A secondmate is idle by default and acts only on work routed by the main firstmate.
+189:Treat file or subsystem overlap as a risk signal rather than an automatic reason to wait, and dispatch isolated work immediately with no concurrency cap whe
+197:The spawn must resolve a genuine isolated task worktree distinct from the primary checkout; a failed isolation assertion stops the task.
+221:- **no-mistakes** runs the full pipeline through a PR, then waits for the configured merge authority.
+222:- **direct-PR** has the worker push and open a PR without the no-mistakes pipeline, then waits for the configured merge authority.
+223:- **local-only** has the worker stop with a clean ready branch, then waits for the configured merge authority before firstmate uses the guarded fast-forward
+262:- A status line is a wake event, not current state; use `bin/fm-crew-state.sh` when current state matters, especially before re-escalating an old decision, 
+279:A secondmate's idle endpoint is healthy, and parent supervision relies on its routed status rather than treating a quiet pane as stale.
+305:- worktree, checkout, primary checkout, or local-main -> local copy, isolated copy, or local branch, only if the location matters.
+335:- Do not surface automatic fixes, retries, routine progress, or internal supervision mechanics.
+336:- Reply exactly `Captain, shipshape.` only for a true no-op that still needs an answer - an idle re-read, an empty heartbeat, or a pure acknowledgement with
+375:The generated Herdr contract must use a named non-`default` isolated lab and its guarded helper for every lifecycle action.
+378:Status appends are sparse supervisor-actionable events, not routine progress; `bin/fm-classify-lib.sh` owns keyed open and resolved semantics.
