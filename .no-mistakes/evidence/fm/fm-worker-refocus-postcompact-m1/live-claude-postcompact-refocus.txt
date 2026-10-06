@@ -1,0 +1,18 @@
+ ▐▛███▛█   Claude Code v2.1.291
+▝▜██████▀  Fable 5.1 with medium effort · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.K96BmE/wt
+❯ Say hello in three words.                                                                                                                                                                             
+⏺ Hello there, friend.
+✻ Brewed for 1s · done 4:52 PM
+❯ /compact                                                                                                                                                                                              
+  ⎿  Compacted (ctrl+o to see full summary)
+❯ Without using any tools, quote exactly the Captain's intent, definition of done, and newest steering message you were given after compaction.                                                         
+⏺ - Captain's intent: "Paint the shed ZEBRA-PURPLE-42 and nothing else."
+  - Definition of done: "The shed is purple and codeword MANGO-17 is reported."
+  - Newest steering message (from state/lt1.inbox/002.msg): "newest steer: use matte finish KIWI-99"
+✻ Cogitated for 3s · done 4:53 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯                                                                                                                                              
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-lab.K96BmE/wt (main) ctx 22548/1000000  Fable medium | 5h [█░░░░░] 24% →18:30 | 7d [█░░░░░] 24% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
