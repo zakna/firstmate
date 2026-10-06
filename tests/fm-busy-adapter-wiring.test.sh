@@ -285,7 +285,7 @@ test_claude_compact_refocus_hook() {
   bash -c '. "$1/bin/fm-task-inbox-lib.sh" && fm_task_inbox_write "$2" "$3" "steer after spawn" >/dev/null' _ "$ROOT" "$state" "$id"
   out=$(cd "$WT_DIR" && run_claude_hook "$settings" SessionStart </dev/null) || fail "SessionStart refocus hook command failed"
   case "$out" in *"brief for $id"*) ;; *) fail "refocus must carry the spawned brief's intent: $out" ;; esac
-  case "$out" in *"$HOME_DIR/data/$id/launch-brief.md"*) ;; *) fail "refocus must read the launch brief the worker received: $out" ;; esac
+  case "$out" in *"$HOME_DIR/data/$id/brief.md"*) ;; *) fail "refocus must read this task's own brief: $out" ;; esac
   case "$out" in *"steer after spawn"$'\n'"Handle every message"*) ;; *) fail "refocus must carry this task's newest steer on its own lines: $out" ;; esac
   pass "claude spawn arms a compact-only SessionStart refocus bound to its own brief and inbox"
 }

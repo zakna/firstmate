@@ -2,7 +2,8 @@
 # Re-inject a Claude task worker's anchors after a context compaction.
 #
 # Usage: fm-claude-refocus.sh <brief> <state-dir> <task-id>
-#   <brief>      the launch brief bin/fm-spawn.sh delivered to this worker
+#   <brief>      the task's mutable data/<task-id>/brief.md, read at hook time so
+#                captain words appended after spawn are re-injected too
 #   <state-dir>  the home state directory that holds <task-id>.inbox
 #   <task-id>    the task whose steering inbox is read
 # Prints one plain-text block on stdout and always exits 0.
@@ -17,7 +18,8 @@
 # SessionStart.
 #
 # The block carries, in order: the brief's `## Captain's intent` subsection of
-# `# Task` verbatim, its `# Definition of done` section verbatim, and the
+# `# Task` verbatim (or, for an accepted legacy brief without that subsection,
+# its whole `# Task` body), its `# Definition of done` section verbatim, and the
 # newest unhandled steering-inbox record's body (bin/fm-task-inbox-lib.sh owns
 # the inbox layout and record format), or one line saying none is waiting. A
 # missing brief or section is named in place of its body rather than failing,
@@ -39,7 +41,7 @@ state=$2
 id=$3
 
 printf '%s\n' "Firstmate refocus after context compaction for task $id."
-printf '%s\n' "Your launch brief at $brief stays authoritative; these are its anchors and your newest steering message."
+printf '%s\n' "Your task brief at $brief stays authoritative; these are its anchors and your newest steering message."
 printf '\n'
 
 section() {  # <title> <body-or-empty> <missing-line>
@@ -53,9 +55,16 @@ section() {  # <title> <body-or-empty> <missing-line>
 }
 
 if [ -f "$brief" ]; then
-  intent=$(fm_brief_task_heading_body "$brief" "## Captain's intent")
   dod=$(fm_brief_heading_body "$brief" "# Definition of done")
-  section "## Captain's intent" "$intent" "(The brief has no ## Captain's intent subsection.)"
+  if fm_brief_task_heading_present "$brief" "## Captain's intent"; then
+    intent=$(fm_brief_task_heading_body "$brief" "## Captain's intent")
+    section "## Captain's intent" "$intent" "(The brief's ## Captain's intent subsection is empty.)"
+  else
+    # A legacy brief carries its accepted task in a single # Task body
+    # (fm_brief_task_content_valid in bin/fm-dod-lib.sh).
+    task=$(fm_brief_heading_body "$brief" "# Task")
+    section "# Task" "$task" "(The brief has neither a ## Captain's intent subsection nor a # Task body.)"
+  fi
   section "# Definition of done" "$dod" "(The brief has no # Definition of done section.)"
 else
   printf '%s\n\n' "(The brief is not readable at $brief; reread it before you continue.)"

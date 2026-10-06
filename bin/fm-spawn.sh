@@ -4397,7 +4397,10 @@ if [ "$KIND" != secondmate ]; then
     j_stop=$(json_escape "touch $(shell_quote "$TURNEND"); $busy_cmd_prefix idle $busy_suffix --event stop 2>/dev/null || true")
     j_stopfail=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event stop-failure 2>/dev/null || true")
     j_sessionend=$(json_escape "$busy_cmd_prefix idle $busy_suffix --event session-end 2>/dev/null || true")
-    refocus_brief="$(cd "$(dirname "$BRIEF")" && pwd -P)/${BRIEF##*/}"
+    # The refocus reads the mutable task brief, not the launch snapshot, so
+    # captain words appended after spawn reach a later compaction too.
+    refocus_brief="${SOURCE_BRIEF:-$BRIEF}"
+    refocus_brief="$(cd "$(dirname "$refocus_brief")" && pwd -P)/${refocus_brief##*/}"
     j_refocus=$(json_escape "$(shell_quote "$FM_ROOT/bin/fm-claude-refocus.sh") $(shell_quote "$refocus_brief") $(shell_quote "$STATE_REAL") $(shell_quote "$ID") 2>/dev/null || true")
     cat >"$WT/.claude/settings.local.json" <<EOF
 {"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"$j_submit"}]}],"Stop":[{"hooks":[{"type":"command","command":"$j_stop"}]}],"StopFailure":[{"hooks":[{"type":"command","command":"$j_stopfail"}]}],"SessionEnd":[{"hooks":[{"type":"command","command":"$j_sessionend"}]}],"SessionStart":[{"matcher":"compact","hooks":[{"type":"command","command":"$j_refocus"}]}]}}
