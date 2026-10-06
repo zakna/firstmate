@@ -5,6 +5,12 @@
 # scout tasks before reporting success (a secondmate teardown transitions none,
 # since secondmates are not backlog items), then refresh/prune the project's
 # clone for PR-based ship tasks.
+# Before removing them, teardown keeps the task's records in data/<id>/:
+# state/<id>.status as status-log.txt, state/<id>.meta as meta.txt, and the
+# steering inbox's pending and handled/ messages under steering/ with their file
+# names. A copy that fails refuses with its concrete reason before any removal,
+# and --force does not lift that refusal; teardown_archive_task_records owns
+# when it runs and teardown_archive_record owns the rule for an existing copy.
 # An endpoint whose close could not do its job REFUSES before any record naming
 # it is removed: those records are the only thing that names what survived, so
 # reporting such a close as a completed cleanup strands the endpoint instead of
@@ -982,6 +988,117 @@ secondmate_unresolved_pending_replies_refuse() {
   return 0
 }
 
+# Copy one task record into its data/<id>/ archive. An existing copy is
+# replaced only when the source is newer or identical, or when this run wrote
+# it, and never by an empty source; a kept copy that differs from its source is
+# named on stderr. The copy lands through a temp file and rename, so a failure
+# never truncates the old copy. Returns non-zero with the concrete reason on stderr.
+TEARDOWN_ARCHIVED=
+teardown_archive_record() {  # <source> <dest>
+  local src=$1 dest=$2 tmp
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    [ -f "$dest" ] && [ ! -L "$dest" ] || {
+      echo "error: record archive target $dest is not a regular file" >&2
+      return 1
+    }
+    cmp -s -- "$src" "$dest" && return 0
+    if [ ! -s "$src" ] && [ -s "$dest" ]; then
+      echo "warning: kept existing copy $dest; its source $src is empty" >&2
+      return 0
+    fi
+    case "$TEARDOWN_ARCHIVED" in
+      *"
+$dest
+"*) ;;
+      *)
+        if ! [ "$src" -nt "$dest" ]; then
+          echo "warning: kept existing copy $dest; it is newer than its differing source $src" >&2
+          return 0
+        fi
+        ;;
+    esac
+  fi
+  tmp="$dest.teardown-tmp.$$"
+  if ! cp -p -- "$src" "$tmp" 2>/dev/null; then
+    rm -f -- "$tmp" 2>/dev/null || true
+    echo "error: could not copy $src to $(dirname "$dest") (copy failed; check that the directory is writable and has space)" >&2
+    return 1
+  fi
+  mv -f -- "$tmp" "$dest" || {
+    rm -f -- "$tmp" 2>/dev/null || true
+    echo "error: could not move the copy of $src into place at $dest" >&2
+    return 1
+  }
+  TEARDOWN_ARCHIVED="${TEARDOWN_ARCHIVED:-
+}$dest
+"
+}
+
+# Keep the task's records before cleanup removes them: state/<id>.status as
+# data/<id>/status-log.txt, state/<id>.meta as data/<id>/meta.txt, and every
+# steering message (pending and handled/, see bin/fm-task-inbox-lib.sh) under
+# data/<id>/steering/ with its file name and handled/ placement preserved.
+# Teardown runs this once before its first destructive step, so an unwritable
+# archive refuses while everything is intact, and again just before the records
+# are removed, so lines appended in between are kept. A task with none of these
+# records creates nothing. --force does not lift a refusal here: it authorizes
+# discarding unlanded work, never the task's records.
+# Create one archive directory, refusing a symlink or non-directory at its path
+# so a copy can never land outside data/<id>/.
+teardown_archive_dir() {  # <dir>
+  if [ -L "$1" ] || { [ -e "$1" ] && [ ! -d "$1" ]; }; then
+    echo "error: record archive path $1 is a symlink or not a directory" >&2
+    return 1
+  fi
+  mkdir -p -- "$1" 2>/dev/null || {
+    echo "error: could not create $1" >&2
+    return 1
+  }
+  # A racing replacement between the test and mkdir is caught here.
+  [ -d "$1" ] && [ ! -L "$1" ] || {
+    echo "error: record archive path $1 is a symlink or not a directory" >&2
+    return 1
+  }
+}
+
+teardown_archive_task_records() {  # <state> <data> <task-id>
+  local state=$1 data=$2 id=$3 dir src sub name have=0
+  for src in "$state/$id.status" "$state/$id.meta"; do
+    [ ! -f "$src" ] || have=1
+  done
+  [ ! -d "$state/$id.inbox" ] || have=1
+  [ "$have" = 1 ] || return 0
+  dir="$data/$id"
+  teardown_archive_dir "$dir" || {
+    echo "error: teardown refused: could not prepare $dir to keep $id's records; nothing was removed" >&2
+    return 1
+  }
+  if [ -f "$state/$id.status" ]; then
+    teardown_archive_record "$state/$id.status" "$dir/status-log.txt" \
+      || { echo "error: teardown refused: $id's status log could not be kept; nothing was removed" >&2; return 1; }
+  fi
+  if [ -f "$state/$id.meta" ]; then
+    teardown_archive_record "$state/$id.meta" "$dir/meta.txt" \
+      || { echo "error: teardown refused: $id's task record could not be kept; nothing was removed" >&2; return 1; }
+  fi
+  [ -d "$state/$id.inbox" ] || return 0
+  # A message acknowledged between passes moves to handled/, so its earlier
+  # pending copy is dropped and the message stays archived once, as handled.
+  for sub in "" handled/; do
+    for src in "$state/$id.inbox/$sub"*.msg; do
+      [ -f "$src" ] || continue
+      name=$(basename "$src")
+      if ! teardown_archive_dir "$dir/steering" \
+        || ! teardown_archive_dir "$dir/steering/$sub" \
+        || ! teardown_archive_record "$src" "$dir/steering/$sub$name" \
+        || { [ -n "$sub" ] && ! rm -f -- "$dir/steering/$name"; }; then
+        echo "error: teardown refused: $id's steering message $src could not be kept in $dir/steering/$sub; nothing was removed" >&2
+        return 1
+      fi
+    done
+  done
+}
+
 remote_outbox_cleanup() {
   [ "$REMOTE_OUTBOX_PRESENT" -eq 1 ] || return 0
   (
@@ -1022,6 +1139,7 @@ remote_secondmate_teardown() {
     return 1
   }
   "$FM_ROOT/bin/fm-guard.sh" || true
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
   if [ "$FORCE" = --force ]; then
     if out=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh retire "$ID" --force < /dev/null 2>&1); then rc=0; else rc=$?; fi
   else
@@ -1055,6 +1173,7 @@ remote_secondmate_teardown() {
   grep -vE "^- $ID( |$)" "$SECONDMATE_REG" > "$tmp" || true
   mv -f -- "$tmp" "$SECONDMATE_REG"
   [ ! -e "$CONFIG/fleet-ledger" ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG "$SCRIPT_DIR/fm-fleet-ledger.sh" cleaned_up "$ID" || true
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
   status_retire_presentation_task "$STATE" "$ID" || return 1
   fm_backlog_atomic_transition remove "$STATE/$ID.meta" "task record" "$STATE" || return 1
   rm -f -- "$STATE/$ID.turn-ended" "$STATE/$ID.progress" \
@@ -3224,6 +3343,7 @@ cleanup_firstmate_home_children() {
   for child_meta in "$sub_state"/*.meta; do
     [ -e "$child_meta" ] || continue
     child_id=$(basename "$child_meta" .meta)
+    teardown_archive_task_records "$sub_state" "$DATA" "$child_id" || return 1
     child_wt=$(meta_value "$child_meta" worktree)
     child_proj=$(meta_value "$child_meta" project)
     child_kind=$(meta_value "$child_meta" kind)
@@ -3317,6 +3437,7 @@ cleanup_firstmate_home_children() {
       child_busy_gen=$(cat "$sub_state/$child_id.busy-gen" 2>/dev/null || true)
     fi
     retire_busy_state "$sub_state" "$child_id" "$child_busy_gen" || return 1
+    teardown_archive_task_records "$sub_state" "$DATA" "$child_id" || return 1
     status_retire_presentation_task "$sub_state" "$child_id" || return 1
     fm_wake_queue_prune_task "$sub_state" "$child_id" "$child_t" 2>/dev/null || true
     fm_backlog_atomic_transition remove "$sub_state/$child_id.meta" "task record" "$sub_state" || return 1
@@ -3392,6 +3513,7 @@ if [ "$KIND" = secondmate ]; then
 fi
 
 if [ "$KIND" = secondmate ] && [ "$FORCE" = "--force" ]; then
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
   cleanup_firstmate_home_children "$HOME_PATH" || exit $?
 fi
 
@@ -3487,6 +3609,11 @@ if [ "$BACKEND" = herdr ]; then
   TEARDOWN_HERDR_SESSION=$FM_BACKEND_HERDR_SESSION
   TEARDOWN_HERDR_PANE=$FM_BACKEND_HERDR_PANE
 fi
+
+# Keep the task's records before any destructive step and before the
+# backlog-close record below, whose replay removes the task record: an
+# unwritable archive must refuse while everything is still intact.
+teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 
 BACKLOG_CLOSED=0
 BACKLOG_TRANSITION=$TEARDOWN_BACKLOG_TRANSITION
@@ -3775,6 +3902,8 @@ retire_busy_state "$STATE" "$ID" "$BUSY_GEN" || exit 1
 # Opt-in fleet activity ledger (docs/fleet-ledger.md), before the status log is
 # retired so its last lines are captured; off costs one file test.
 [ ! -e "$CONFIG/fleet-ledger" ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG "$SCRIPT_DIR/fm-fleet-ledger.sh" cleaned_up "$ID" || true
+# Refresh the record copies so lines appended since the first copy are kept.
+teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 status_retire_presentation_task "$STATE" "$ID" || exit 1
 fm_wake_queue_prune_task "$STATE" "$ID" "$T" 2>/dev/null || true
 rm -f "$STATE/$ID.turn-ended" "$STATE/$ID.progress" \
