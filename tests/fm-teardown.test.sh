@@ -839,6 +839,92 @@ test_teardown_never_truncates_an_existing_copy_with_an_empty_source() {
   pass "teardown keeps an existing record copy rather than truncating it with an empty source"
 }
 
+test_records_refusal_leaves_no_pending_backlog_close() {
+  local case_dir rc
+  if [ "$(id -u)" = 0 ]; then
+    pass "records-unwritable-backlog: skipped as root, where a read-only directory stays writable"
+    return 0
+  fi
+  case_dir=$(make_case records-unwritable-backlog)
+  write_meta "$case_dir" no-mistakes ship
+  printf '%s\n' 'pr=https://github.com/example/repo/pull/7' >> "$case_dir/state/task-x1.meta"
+  seed_backlog_in_flight "$case_dir"
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  seed_task_records "$case_dir"
+  mkdir -p "$case_dir/data/task-x1"
+  chmod 555 "$case_dir/data/task-x1"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  chmod 755 "$case_dir/data/task-x1"
+
+  expect_code 1 "$rc" "records-unwritable-backlog: teardown should refuse"
+  assert_absent "$case_dir/state/task-x1.backlog-close" \
+    "records-unwritable-backlog: refusal left a pending close whose replay would remove the task record"
+  assert_present "$case_dir/state/task-x1.meta" "records-unwritable-backlog: refusal removed the task record"
+  [ "$(backlog_row_state "$case_dir")" = in_flight ] \
+    || fail "records-unwritable-backlog: refusal moved the backlog item: $(backlog_row_state "$case_dir")"
+  pass "a refused record copy leaves no pending backlog close behind"
+}
+
+test_teardown_refuses_a_symlinked_record_archive() {
+  local case_dir rc head
+  case_dir=$(make_case records-symlink)
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  head=$(git -C "$case_dir/wt" rev-parse HEAD)
+  seed_task_records "$case_dir"
+  mkdir -p "$case_dir/outside"
+  ln -s "$case_dir/outside" "$case_dir/data/task-x1"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+
+  expect_code 1 "$rc" "records-symlink: teardown should refuse"
+  assert_grep "is a symlink or not a directory" "$case_dir/stderr" \
+    "records-symlink: refusal did not name the symlinked archive path"
+  [ -z "$(ls -A "$case_dir/outside")" ] || fail "records-symlink: teardown wrote through the symlink"
+  assert_refusal_retained_task_state "$case_dir" records-symlink "$head"
+  assert_present "$case_dir/state/task-x1.status" "records-symlink: refusal removed the status log"
+  pass "teardown refuses a symlinked record archive before writing or removing anything"
+}
+
+test_teardown_archives_an_acknowledged_steer_once_under_handled() {
+  local case_dir rc
+  case_dir=$(make_case records-acked)
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit "$case_dir" "shippable work"
+  git -C "$case_dir/wt" push -q origin fm/task-x1
+  git -C "$case_dir/project" fetch -q origin
+  seed_task_records "$case_dir"
+  # An earlier pass archived 001.msg while it was still pending; the worker
+  # has since acknowledged it into handled/.
+  mkdir -p "$case_dir/data/task-x1/steering"
+  cp "$case_dir/state/task-x1.inbox/handled/001.msg" "$case_dir/data/task-x1/steering/001.msg"
+
+  set +e
+  run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+
+  expect_code 0 "$rc" "records-acked: teardown should succeed"
+  assert_absent "$case_dir/data/task-x1/steering/001.msg" \
+    "records-acked: the acknowledged steer is still archived as pending"
+  assert_grep 'handled steer' "$case_dir/data/task-x1/steering/handled/001.msg" \
+    "records-acked: the acknowledged steer is not archived as handled"
+  assert_grep 'pending steer' "$case_dir/data/task-x1/steering/002.msg" \
+    "records-acked: a still-pending steer lost its archive copy"
+  pass "teardown archives a steer acknowledged between passes once, under handled/"
+}
+
 test_local_only_truly_unpushed_refuses() {
   local case_dir rc
   case_dir=$(make_case truly-unpushed)
@@ -4171,6 +4257,9 @@ test_teardown_manual_backend_leaves_the_backlog_to_the_operator
 test_teardown_keeps_the_task_records_in_its_data_directory
 test_teardown_refuses_before_removal_when_the_records_cannot_be_kept
 test_teardown_never_truncates_an_existing_copy_with_an_empty_source
+test_records_refusal_leaves_no_pending_backlog_close
+test_teardown_refuses_a_symlinked_record_archive
+test_teardown_archives_an_acknowledged_steer_once_under_handled
 test_local_only_truly_unpushed_refuses
 test_local_only_merged_to_local_main_allows
 test_no_mistakes_origin_remote_allows

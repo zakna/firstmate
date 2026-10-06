@@ -1043,16 +1043,34 @@ $dest
 # are removed, so lines appended in between are kept. A task with none of these
 # records creates nothing. --force does not lift a refusal here: it authorizes
 # discarding unlanded work, never the task's records.
+# Create one archive directory, refusing a symlink or non-directory at its path
+# so a copy can never land outside data/<id>/.
+teardown_archive_dir() {  # <dir>
+  if [ -L "$1" ] || { [ -e "$1" ] && [ ! -d "$1" ]; }; then
+    echo "error: record archive path $1 is a symlink or not a directory" >&2
+    return 1
+  fi
+  mkdir -p -- "$1" 2>/dev/null || {
+    echo "error: could not create $1" >&2
+    return 1
+  }
+  # A racing replacement between the test and mkdir is caught here.
+  [ -d "$1" ] && [ ! -L "$1" ] || {
+    echo "error: record archive path $1 is a symlink or not a directory" >&2
+    return 1
+  }
+}
+
 teardown_archive_task_records() {  # <state> <data> <task-id>
-  local state=$1 data=$2 id=$3 dir src sub have=0
+  local state=$1 data=$2 id=$3 dir src sub name have=0
   for src in "$state/$id.status" "$state/$id.meta"; do
     [ ! -f "$src" ] || have=1
   done
   [ ! -d "$state/$id.inbox" ] || have=1
   [ "$have" = 1 ] || return 0
   dir="$data/$id"
-  mkdir -p -- "$dir" 2>/dev/null || {
-    echo "error: teardown refused: could not create $dir to keep $id's records; nothing was removed" >&2
+  teardown_archive_dir "$dir" || {
+    echo "error: teardown refused: could not prepare $dir to keep $id's records; nothing was removed" >&2
     return 1
   }
   if [ -f "$state/$id.status" ]; then
@@ -1064,11 +1082,16 @@ teardown_archive_task_records() {  # <state> <data> <task-id>
       || { echo "error: teardown refused: $id's task record could not be kept; nothing was removed" >&2; return 1; }
   fi
   [ -d "$state/$id.inbox" ] || return 0
+  # A message acknowledged between passes moves to handled/, so its earlier
+  # pending copy is dropped and the message stays archived once, as handled.
   for sub in "" handled/; do
     for src in "$state/$id.inbox/$sub"*.msg; do
       [ -f "$src" ] || continue
-      if ! mkdir -p -- "$dir/steering/$sub" 2>/dev/null \
-        || ! teardown_archive_record "$src" "$dir/steering/$sub$(basename "$src")"; then
+      name=$(basename "$src")
+      if ! teardown_archive_dir "$dir/steering" \
+        || ! teardown_archive_dir "$dir/steering/$sub" \
+        || ! teardown_archive_record "$src" "$dir/steering/$sub$name" \
+        || { [ -n "$sub" ] && ! rm -f -- "$dir/steering/$name"; }; then
         echo "error: teardown refused: $id's steering message $src could not be kept in $dir/steering/$sub; nothing was removed" >&2
         return 1
       fi
@@ -3586,6 +3609,11 @@ if [ "$BACKEND" = herdr ]; then
   TEARDOWN_HERDR_PANE=$FM_BACKEND_HERDR_PANE
 fi
 
+# Keep the task's records before any destructive step and before the
+# backlog-close record below, whose replay removes the task record: an
+# unwritable archive must refuse while everything is still intact.
+teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
+
 BACKLOG_CLOSED=0
 BACKLOG_TRANSITION=$TEARDOWN_BACKLOG_TRANSITION
 BACKLOG_TRANSITION_FLAGS=()
@@ -3663,10 +3691,6 @@ else
     BACKLOG_SKIP_REASON=$TEARDOWN_BACKLOG_SKIP_REASON
   fi
 fi
-
-# Keep the task's records before any destructive step, so an unwritable
-# archive refuses while everything is still intact.
-teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 
 # Every landed/discard-work refusal above has now passed (or --force skipped
 # them). Fix 1 and Fix 2 (see script header) run here, unconditionally on
