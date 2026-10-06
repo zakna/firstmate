@@ -1,0 +1,25 @@
+ ▐▛███▛█   Claude Code v2.1.291
+▝▜██████▀  Fable 5.1 with medium effort · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.QV2T6m/wt
+❯ Say hello in 3 words.
+⏺ Hello there, Olivier.
+✻ Cooked for 2s · done 4:16 PM
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+❯ Without using any tools, quote verbatim any codewords, captain's intent, definition of done, and newest steering message that appear in your context.
+⏺ Verbatim from the compaction hook output in my context:
+  Captain's intent
+  ▎ The codeword is ZEBRA-PLUM-42. Never forget it.
+  Definition of done
+  ▎ Reply with the codeword MANGO-77 when done.
+  Newest unhandled steering message (from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.QV2T6m/state/t1.inbox/002.msg):
+  ▎ NEWEST steer: the color is TEAL-9
+  The hook also says: "Handle every message in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.QV2T6m/state/t1.inbox in numeric order and acknowledge each one as your brief says." Message 001
+  and the brief itself are not in my context, so I can't quote them.
+  Codewords present: ZEBRA-PLUM-42, MANGO-77, TEAL-9.
+✻ Churned for 6s · done 4:17 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-lab.QV2T6m/wt (main) ctx 22535/1000000  Fable medium | 5h [█░░░░░] 17% →18:30 | 7d [█░░░░░] 22% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
