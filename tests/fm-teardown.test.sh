@@ -2585,7 +2585,7 @@ configure_secondmate_with_tmux_children() {  # <case-dir>
       "project=$case_dir/project" \
       "kind=ship" \
       "mode=local-only"
-    : > "$home/state/$child.status"
+    printf '%s\n' "done [at=1]: $child finished" > "$home/state/$child.status"
   done
 }
 
@@ -2660,6 +2660,12 @@ SH
     || fail "descendant-locks: uncontended retry retained retired task state"
   [ -s "$case_dir/kill.log" ] && [ -s "$case_dir/treehouse.log" ] \
     || fail "descendant-locks: uncontended retry did not perform endpoint and worktree cleanup"
+  for child in child-a child-b; do
+    assert_grep "done [at=1]: $child finished" "$case_dir/data/$child/status-log.txt" \
+      "descendant-locks: teardown did not keep $child's status log"
+    assert_grep "worktree=$case_dir/$child-wt" "$case_dir/data/$child/meta.txt" \
+      "descendant-locks: teardown did not keep $child's task record"
+  done
   pass "forced secondmate teardown holds every descendant lifecycle and metadata lock"
 }
 
