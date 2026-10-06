@@ -386,6 +386,10 @@ test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint() {
     || fail "the transaction journal should end complete"
   assert_grep "/exit" "$dir/fake/literal" "the previous agent should have been exited"
   assert_grep "Firstmate operational input waiting: read" "$dir/fake/literal" "the replacement should have been launched"
+  assert_grep "# Predecessor recap" "$dir/home/data/rl1/launch-brief.md" "the replacement's instructions should carry a predecessor recap"
+  awk '/^# Predecessor recap$/ { r = NR } /^# Current no-mistakes intent contract$/ { i = NR } END { exit !(r && i && r < i) }' \
+    "$dir/home/data/rl1/launch-brief.md" \
+    || fail "the predecessor recap must precede the intent overlay, which stays last"
   pass "fm-control relaunch: a same-harness relaunch replaces the agent in the same endpoint and worktree"
 }
 

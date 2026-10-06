@@ -72,6 +72,8 @@
 #   rebind is a recovery, never a teardown. Only a crewmate or scout rebinds: a
 #   secondmate whose endpoint is gone is respawned by its own owner
 #   (`--secondmate`, driven by the session-start liveness sweep).
+#   A ship or scout relaunch also renders a one-time predecessor recap of the
+#   previous worker into launch-brief.md (bin/fm-predecessor-recap.sh).
 #   The replacement still never starts outside the copy
 #   holding the work: a Herdr shell that has drifted out of the recorded
 #   worktree is told once to return, and only a shell that will not go refuses.
@@ -2978,6 +2980,29 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
       fi
     fi
   fi
+  # A relaunch adds a one-time predecessor recap, read before the replacement
+  # reuses the endpoint: the previous worker's transcript from its recorded
+  # harness, its terminal scrollback when the endpoint survived, or one line
+  # saying why there is none (bin/fm-predecessor-recap.sh owns the sources,
+  # bounds, and scrubbing). It sits before the intent overlay, which must stay
+  # last in the overlay.
+  PREDECESSOR_RECAP=
+  if [ "$RELAUNCH" -eq 1 ]; then
+    recap_since=$(fm_meta_get "$RELAUNCH_META" spawn_gen) || recap_since=
+    recap_since=${recap_since#s}
+    recap_since=${recap_since%%.*}
+    case "$recap_since" in '' | *[!0-9]*) recap_since=0 ;; esac
+    recap_scrollback=
+    if [ "$RELAUNCH_STATE" = dead ] && recap_scrollback=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
+      fm_backend_capture "$BACKEND" "$RELAUNCH_TARGET" 2000 >"$recap_scrollback" 2>/dev/null || : >"$recap_scrollback"
+    fi
+    PREDECESSOR_RECAP=$("$FM_ROOT/bin/fm-predecessor-recap.sh" \
+      --harness "$RELAUNCH_PRIOR_HARNESS" --worktree "$RELAUNCH_WT" --since "$recap_since" \
+      --claude-root "${CLAUDE_CONFIG_DIR:-}" --claude-root "${HOME:-}/.claude" \
+      ${recap_scrollback:+--scrollback "$recap_scrollback"}) ||
+      PREDECESSOR_RECAP=$'# Predecessor recap\nNo recap: the recap could not be built.'
+    [ -z "$recap_scrollback" ] || rm -f -- "$recap_scrollback"
+  fi
   # Use the existing launch-brief overlay for every worker kind, including
   # pre-scope briefs and relaunches. Charters never enter this worker path.
   SOURCE_BRIEF=$BRIEF
@@ -2987,6 +3012,9 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     fm_brief_worker_role "$STATE" "$ID" &&
       printf '\n' &&
       cat "$SOURCE_BRIEF" &&
+      if [ -n "$PREDECESSOR_RECAP" ]; then
+        printf '\n%s\n' "$PREDECESSOR_RECAP"
+      fi &&
       if [ "$KIND" = ship ] && [ "$MODE" = no-mistakes ]; then
         fm_brief_intent_overlay "$CAPTAIN_INTENT"
       fi
