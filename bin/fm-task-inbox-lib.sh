@@ -361,6 +361,23 @@ fm_task_inbox_oldest_unhandled() {  # <state-dir> <task-id>
   printf '%s' "$best"
 }
 
+# Newest unhandled record of any delivery mode, or fail when the inbox holds
+# none. Read by the Claude post-compaction refocus (bin/fm-claude-refocus.sh).
+fm_task_inbox_newest_unhandled() {  # <state-dir> <task-id>
+  local dir best='' best_n=0 f n
+  dir=$(fm_task_inbox_dir "$1" "$2")
+  for f in "$dir"/*.msg; do
+    [ -e "$f" ] || continue
+    n=$(fm_task_inbox_seq_of "${f##*/}") || continue
+    if [ -z "$best" ] || [ "$n" -gt "$best_n" ]; then
+      best=$f
+      best_n=$n
+    fi
+  done
+  [ -n "$best" ] || return 1
+  printf '%s' "$best"
+}
+
 # The re-ring ladder decision for one task. Prints exactly one of:
 #   quiet                     nothing due (healthy, within grace or spacing,
 #                             or already escalated for the current oldest)

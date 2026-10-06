@@ -9,14 +9,15 @@
 # consumer sees the same section bodies.
 
 # Parse an exact ATX heading outside fenced blocks. Body mode prints through
-# the next unfenced heading at the same or a higher level; present mode reports
-# whether the heading exists.
-fm_brief_heading_parse() {  # <file|-> <heading> <body|present>
+# the next unfenced heading at the same or a higher level; last-body mode does
+# the same for the heading's last occurrence; present mode reports whether the
+# heading exists.
+fm_brief_heading_parse() {  # <file|-> <heading> <body|last-body|present>
   local file=$1 heading=$2 mode=$3 input=$1
   if [ "$file" = - ]; then
     input=/dev/stdin
   else
-    [ -f "$file" ] || { [ "$mode" = body ]; return; }
+    [ -f "$file" ] || { [ "$mode" != present ]; return; }
   fi
   awk -v heading="$heading" -v mode="$mode" '
     BEGIN {
@@ -50,31 +51,47 @@ fm_brief_heading_parse() {  # <file|-> <heading> <body|present>
         }
       }
 
-      if (!found && !was_fenced && line == heading) {
+      if ((!found || mode == "last-body") && !was_fenced && line == heading) {
         found = 1
         if (mode == "present") next
         grab = 1
+        buf = ""
         next
       }
       if (mode == "present" || !grab) next
       if (is_fence || was_fenced) {
-        print line
+        emit(line)
         next
       }
 
       level = 0
       while (substr(scan, level + 1, 1) == "#") level++
-      if (level > 0 && level <= target_level && substr(scan, level + 1, 1) ~ /^[[:space:]]?$/) exit
-      print line
+      if (level > 0 && level <= target_level && substr(scan, level + 1, 1) ~ /^[[:space:]]?$/) {
+        if (mode != "last-body") exit
+        grab = 0
+        next
+      }
+      emit(line)
+    }
+    function emit(text) {
+      if (mode == "last-body") buf = buf text "\n"
+      else print text
     }
     END {
       if (mode == "present" && !found) exit 1
+      if (mode == "last-body") printf "%s", buf
     }
   ' "$input"
 }
 
 fm_brief_heading_body() {  # <file> <heading>
   fm_brief_heading_parse "$1" "$2" body
+}
+
+# A promoted brief (bin/fm-promote.sh) appends a superseding contract, so its
+# current section is the heading's last occurrence.
+fm_brief_heading_last_body() {  # <file> <heading>
+  fm_brief_heading_parse "$1" "$2" last-body
 }
 
 fm_brief_heading_present() {  # <file> <heading>
