@@ -114,9 +114,29 @@ test_reads_only_its_own_task() {
   pass "refocus reads only its own task's inbox"
 }
 
+test_legacy_task_body_is_injected() {
+  local dir=$TMP_ROOT/legacy out
+  mkdir -p "$dir/state"
+  cat >"$dir/brief.md" <<'EOF2'
+# Task
+Legacy task body the worker was dispatched with.
+[captain] Keep the legacy flag.
+
+# Definition of done
+Legacy done criteria.
+EOF2
+  out=$("$REFOCUS" "$dir/brief.md" "$dir/state" t5 </dev/null)
+  expect_code 0 $? "refocus on a legacy brief must exit 0"
+  case "$out" in *"Legacy task body the worker was dispatched with."*"Keep the legacy flag."*) ;; *) fail "legacy # Task body missing: $out" ;; esac
+  case "$out" in *"has no ## Captain's intent subsection"*) fail "an accepted legacy brief must not read as missing its intent: $out" ;; esac
+  case "$out" in *"Legacy done criteria."*) ;; *) fail "legacy definition of done missing: $out" ;; esac
+  pass "refocus injects an accepted legacy brief's # Task body"
+}
+
 test_block_carries_anchors_and_newest_steer
 test_no_unhandled_steer
 test_missing_brief_is_named
 test_reads_only_its_own_task
+test_legacy_task_body_is_injected
 
 echo "all fm-claude-refocus tests passed"

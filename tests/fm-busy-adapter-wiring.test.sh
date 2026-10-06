@@ -290,6 +290,19 @@ test_claude_compact_refocus_hook() {
   pass "claude spawn arms a compact-only SessionStart refocus bound to its own brief and inbox"
 }
 
+test_claude_refocus_reads_brief_updated_after_spawn() {
+  local rec id=busy-cl-4 out settings
+  rec=$(make_spawn_case claude-refocus-live-brief claude "$id")
+  read_case_record "$rec"
+  out=$(run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$id" "$PROJ_DIR")
+  expect_code 0 $? "claude spawn should succeed: $out"
+  settings="$WT_DIR/.claude/settings.local.json"
+  fm_test_spawn_brief "$HOME_DIR" "$id" "revised intent appended after spawn"
+  out=$(cd "$WT_DIR" && run_claude_hook "$settings" SessionStart </dev/null) || fail "SessionStart refocus hook command failed"
+  case "$out" in *"revised intent appended after spawn"*) ;; *) fail "refocus must read the task brief as it is now, not the spawn-time snapshot: $out" ;; esac
+  pass "claude refocus reads the task brief as updated after spawn"
+}
+
 test_claude_hooks_stale_incarnation_harmless() {
   local rec id=busy-cl-2 out state settings
   rec=$(make_spawn_case claude-stale claude "$id")
@@ -448,6 +461,7 @@ test_opencode_plugin_semantic_lifecycle
 test_claude_hooks_semantic_lifecycle
 test_claude_hooks_stale_incarnation_harmless
 test_claude_compact_refocus_hook
+test_claude_refocus_reads_brief_updated_after_spawn
 test_gemini_hooks_semantic_lifecycle
 test_gemini_hooks_stale_incarnation_harmless
 test_raw_gemini_launch_has_no_semantic_wiring
