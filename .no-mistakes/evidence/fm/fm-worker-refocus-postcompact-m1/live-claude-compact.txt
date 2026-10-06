@@ -1,0 +1,19 @@
+ ▐▛███▛█   Claude Code v2.1.291
+▝▜██████▀  Fable 5.1 with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M48VYWSYH4ZX9MRX4629QKG8/.fmrf-proj
+❯ Reply only: ready
+⏺ ready
+✻ Cogitated for 2s · done 5:07 PM
+❯ /compact
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read ../CLAUDE.md (3 lines)
+❯ Without using any tools, quote verbatim from your current context: the captain intent, the definition of done, and the newest steering message.
+⏺ Captain's intent: "Ship the ZEBRA-4471 widget."
+  Definition of done: "All PURPLE-889 checks green."
+  Newest steering message (from /tmp/fmrf.zbge/state/t1.inbox/002.msg): "Use the ORANGE-3131 port."
+✻ Brewed for 4s · done 5:09 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  0b1ab7dd6182/01M48VYWSYH4ZX9MRX4629QKG8/.fmrf-proj ctx 23699/1000000  Fable medium | 5h [██░░░░] 27% →18:30 | 7d [█░░░░░] 24% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

@@ -1,5 +1,3 @@
-all fm-claude-refocus tests passed
-ok - pi extension reports agent_start busy, settles idle only via ctx.isIdle(), and keeps turn_end a notification
 ok - pi extension awaits agent_settled before the next agent_start without a test delay
 ok - pi extension events from a superseded incarnation are rejected as stale
 ok - kimi and grok install no unverified semantic wiring and classify through their own gates
@@ -7,9 +5,11 @@ ok - opencode plugin classifies from session.status, scoped to the latched worke
 ok - claude hooks open on UserPromptSubmit and close on Stop, StopFailure, and SessionEnd
 ok - claude hook events from a superseded incarnation are rejected without breaking the hook
 ok - claude spawn arms a compact-only SessionStart refocus bound to its own brief and inbox
+ok - claude refocus reads the task brief as updated after spawn
 ok - gemini hooks open on BeforeAgent and close on AfterAgent and a repeated SessionEnd
 ok - gemini hook events from a superseded incarnation are rejected without breaking the hook
 ok - raw gemini launch remains unwired and classifies unknown
 ok - gemini is refused as a secondmate because it has no primary supervision protocol
 ok - codex classifies unknown until a semantic source is verified, never idle or footer-matched
 all fm-busy-adapter-wiring tests passed
+rc=0
