@@ -133,10 +133,39 @@ EOF2
   pass "refocus injects an accepted legacy brief's # Task body"
 }
 
+test_promoted_brief_uses_current_definition_of_done() {
+  local dir=$TMP_ROOT/promoted out
+  mkdir -p "$dir/state"
+  cat >"$dir/brief.md" <<'EOF2'
+# Task
+## Captain's intent
+Investigate, then build the fix.
+
+# Definition of done
+Stale scout criteria: write the report and never push.
+
+# Task
+## Captain's intent
+Investigate, then build the fix.
+
+## Firstmate spec
+Promoted ship spec.
+
+# Definition of done
+Current ship criteria: open the PR through the pipeline.
+EOF2
+  out=$("$REFOCUS" "$dir/brief.md" "$dir/state" t6 </dev/null)
+  expect_code 0 $? "refocus on a promoted brief must exit 0"
+  case "$out" in *"Current ship criteria: open the PR through the pipeline."*) ;; *) fail "promoted definition of done missing: $out" ;; esac
+  case "$out" in *"Stale scout criteria"*) fail "refocus re-injected the superseded scout definition of done: $out" ;; esac
+  pass "refocus injects a promoted brief's current definition of done"
+}
+
 test_block_carries_anchors_and_newest_steer
 test_no_unhandled_steer
 test_missing_brief_is_named
 test_reads_only_its_own_task
 test_legacy_task_body_is_injected
+test_promoted_brief_uses_current_definition_of_done
 
 echo "all fm-claude-refocus tests passed"
