@@ -2,7 +2,8 @@
 # fm-predecessor-recap.sh - the predecessor recap a relaunched worker reads.
 #
 # Usage: fm-predecessor-recap.sh --harness <name> --worktree <path>
-#                                [--since <epoch>] [--claude-root <dir>]...
+#                                [--since <epoch>]
+#                                [--claude-account <ordinary|path> | --claude-root <dir>]
 #                                [--scrollback <file>] [--count <n>]
 #                                [--max-bytes <n>]
 #   --harness      the PREVIOUS worker's recorded harness (state/<id>.meta
@@ -10,15 +11,21 @@
 #   --worktree     the task's recorded worktree, where that worker ran
 #   --since        the previous incarnation's start epoch; a transcript last
 #                  written before it belongs to an earlier task in a reused
-#                  worktree and is never read (default 0)
-#   --claude-root  a Claude configuration root whose projects/ directory may
-#                  hold the transcript; repeatable, searched in order
+#                  worktree and is never read. Without it no transcript is
+#                  read at all, because none can be proven to be that worker's
+#   --claude-account
+#                  the previous worker's recorded account pin (state/<id>.meta
+#                  account=): `ordinary` is $HOME/.claude and a path is that
+#                  root; it wins over --claude-root
+#   --claude-root  the Claude configuration root an unpinned previous worker
+#                  used, whose projects/ directory may hold the transcript
 #   --scrollback   a file holding the previous worker's terminal capture, the
 #                  fallback for any harness
 #   --count        how many transcript messages to keep, newest last
 #                  (default FM_PREDECESSOR_RECAP_COUNT, else 10)
 #   --max-bytes    byte bound for the recap body, item prefixes included
-#                  (default FM_PREDECESSOR_RECAP_MAX_BYTES, else 6000)
+#                  (default FM_PREDECESSOR_RECAP_MAX_BYTES, else 6000); a
+#                  value under 64 is raised to 64
 # Prints one `# Predecessor recap` markdown section on stdout and exits 0, so a
 # recap can never stop a relaunch. Only a usage error exits 2.
 #
@@ -31,8 +38,8 @@
 #
 # Sources, in order:
 #   1. harness=claude: the newest session transcript
-#      <claude-root>/projects/<encoded worktree>/*.jsonl last written at or
-#      after --since and recording the worktree as its cwd. Claude encodes the
+#      <claude-root>/projects/<encoded worktree>/*.jsonl, in the one root the
+#      previous worker used, last written at or after --since and recording the worktree as its cwd. Claude encodes the
 #      cwd by replacing every non-alphanumeric character with `-`; both the
 #      given and the physical worktree path are tried. One message is one
 #      user prompt, assistant reply, tool call, or tool result; thinking,
@@ -43,8 +50,9 @@
 # Every item is collapsed to one line, cut to a fixed length (tool output
 # shorter than prose), and scrubbed: terminal control sequences are removed,
 # credential-shaped strings (API keys, GitHub and Slack tokens, AWS key ids,
-# JWTs, bearer tokens, private-key blocks, URL passwords, and the value of any
-# key/token/secret/password/credential assignment) become [redacted], and a
+# JWTs, bearer tokens, private-key blocks, URL passwords, and the whole value of
+# any key/token/secret/password/credential assignment, quoted or not) become
+# [redacted], and a
 # tool call that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
@@ -56,18 +64,20 @@ usage() {
 
 HARNESS=
 WT=
-SINCE=0
+SINCE=
 SCROLLBACK=
 COUNT=${FM_PREDECESSOR_RECAP_COUNT:-10}
 MAX_BYTES=${FM_PREDECESSOR_RECAP_MAX_BYTES:-6000}
-CLAUDE_ROOTS=()
+CLAUDE_ROOT=
+CLAUDE_ACCOUNT=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --harness) HARNESS=${2-}; shift ;;
     --worktree) WT=${2-}; shift ;;
     --since) SINCE=${2-}; shift ;;
-    --claude-root) CLAUDE_ROOTS+=("${2-}"); shift ;;
+    --claude-account) CLAUDE_ACCOUNT=${2-}; shift ;;
+    --claude-root) CLAUDE_ROOT=${2-}; shift ;;
     --scrollback) SCROLLBACK=${2-}; shift ;;
     --count) COUNT=${2-}; shift ;;
     --max-bytes) MAX_BYTES=${2-}; shift ;;
@@ -78,11 +88,17 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$HARNESS" ] && [ -n "$WT" ] || { echo "error: --harness and --worktree are required" >&2; exit 2; }
-for n in "$SINCE" "$COUNT" "$MAX_BYTES"; do
+for n in "${SINCE:-0}" "$COUNT" "$MAX_BYTES"; do
   case "$n" in ''|*[!0-9]*) echo "error: --since, --count, and --max-bytes take whole numbers" >&2; exit 2 ;; esac
 done
 [ "$COUNT" -gt 0 ] || COUNT=10
-[ "$MAX_BYTES" -gt 0 ] || MAX_BYTES=6000
+[ "$MAX_BYTES" -ge 64 ] || MAX_BYTES=64
+case "$CLAUDE_ACCOUNT" in
+  '') ;;
+  ordinary) CLAUDE_ROOT=${HOME:+$HOME/.claude} ;;
+  /*) CLAUDE_ROOT=$CLAUDE_ACCOUNT ;;
+  *) echo "error: --claude-account takes ordinary or an absolute path" >&2; exit 2 ;;
+esac
 
 if [ "$(uname)" = Darwin ]; then
   file_mtime() { /usr/bin/stat -f %m "$1" 2>/dev/null; }
@@ -105,12 +121,13 @@ def scrub:
   | gsub("eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}"; "[redacted]")
   | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]{12,}=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
-  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*[\"\u0027]?)[^\\s\"\u0027,;}]+"; "\(.k)[redacted]"; "i");
+  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i");
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
 def bytecut($n):
-  if utf8bytelength <= $n then .
+  if $n <= 0 then ""
+  elif utf8bytelength <= $n then .
   else .[0:(length - ([((utf8bytelength - $n) / 4 | ceil), 1] | max))] | bytecut($n) end;
 def fit($max):
   reverse
@@ -170,26 +187,24 @@ scrollback_items() {  # <file>
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
-# The newest transcript for this worktree written since the previous worker
-# started, or nothing.
+# The newest transcript for this worktree in the previous worker's root,
+# written since that worker started, or nothing.
 claude_transcript() {
-  local root dir enc wtp best='' best_m=-1 f m
+  local dir enc wtp best='' best_m=-1 f m
+  [ -n "$CLAUDE_ROOT" ] || return 1
   wtp=$(cd "$WT" 2>/dev/null && pwd -P) || wtp=$WT
-  for root in "${CLAUDE_ROOTS[@]+"${CLAUDE_ROOTS[@]}"}"; do
-    [ -n "$root" ] || continue
-    for enc in "$WT" "$wtp"; do
-      dir="$root/projects/$(printf '%s' "$enc" | sed 's/[^A-Za-z0-9]/-/g')"
-      [ -d "$dir" ] || continue
-      for f in "$dir"/*.jsonl; do
-        [ -f "$f" ] || continue
-        m=$(file_mtime "$f") || continue
-        [ "$m" -ge "$SINCE" ] && [ "$m" -gt "$best_m" ] || continue
-        jq -nR -e --arg a "$WT" --arg b "$wtp" \
-          'first(inputs | fromjson? // empty | select(type == "object") | .cwd? | select(. == $a or . == $b)) // false' \
-          <"$f" >/dev/null 2>&1 || continue
-        best=$f
-        best_m=$m
-      done
+  for enc in "$WT" "$wtp"; do
+    dir="$CLAUDE_ROOT/projects/$(printf '%s' "$enc" | sed 's/[^A-Za-z0-9]/-/g')"
+    [ -d "$dir" ] || continue
+    for f in "$dir"/*.jsonl; do
+      [ -f "$f" ] || continue
+      m=$(file_mtime "$f") || continue
+      [ "$m" -ge "$SINCE" ] && [ "$m" -gt "$best_m" ] || continue
+      jq -nR -e --arg a "$WT" --arg b "$wtp" \
+        'first(inputs | fromjson? // empty | select(type == "object") | .cwd? | select(. == $a or . == $b)) // false' \
+        <"$f" >/dev/null 2>&1 || continue
+      best=$f
+      best_m=$m
     done
   done
   [ -n "$best" ] && printf '%s\n' "$best"
@@ -205,7 +220,9 @@ emit_items() {  # <prefix>; reads items on stdin
 printf '%s\n' "# Predecessor recap"
 transcript_reason=
 if [ "$HARNESS" = claude ]; then
-  if ! command -v jq >/dev/null 2>&1; then
+  if [ -z "$SINCE" ]; then
+    transcript_reason="the previous worker's start time is not recorded, so no Claude transcript can be proven to be its own"
+  elif ! command -v jq >/dev/null 2>&1; then
     transcript_reason="jq is not installed, so the previous worker's Claude transcript could not be read"
   elif transcript=$(claude_transcript) && [ -n "$transcript" ]; then
     items=$(claude_items "$transcript")

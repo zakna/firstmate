@@ -88,5 +88,5 @@ Escalate in order:
    A low context reading is not wedging; modern harnesses auto-compact and keep going.
    The worktree and commits persist, so relaunch is cheap.
    The replacement's instructions also carry a one-time predecessor recap: the last messages of the old worker's Claude transcript, or the end of its terminal for other runtimes, redacted and size-bounded.
-   When no transcript was written since that worker started and its terminal is gone or empty, the recap says why it is absent, so keep the `--note` complete on its own ([`bin/fm-predecessor-recap.sh`](../../../bin/fm-predecessor-recap.sh) owns the sources and bounds).
+   When no transcript can be proven to be that worker's and its terminal is gone or empty, the recap says why it is absent, so keep the `--note` complete on its own ([`bin/fm-predecessor-recap.sh`](../../../bin/fm-predecessor-recap.sh) owns the sources and bounds).
 5. If a second relaunch fails too, write `failed` to the backlog and tell the captain the plain failure, preserved work, and consequence using `AGENTS.md` section 9; do not mention metadata, harness, window, or worktree unless the path itself is needed for action.

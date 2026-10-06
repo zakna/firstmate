@@ -12,10 +12,15 @@
 #      .env file has its input and result omitted.
 #   5. Scrollback: a harness without a read transcript falls back to the
 #      terminal capture with control sequences stripped.
+#   6. Provenance: only the root of the previous worker's recorded account is
+#      read, and no transcript is read when its start time is unknown.
+#   7. A byte bound below the safe minimum still terminates.
 set -u
 
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# shellcheck source=/dev/null
+. "$ROOT/bin/fm-timeout-lib.sh"
 
 RECAP="$ROOT/bin/fm-predecessor-recap.sh"
 TMP_ROOT=$(fm_test_tmproot fm-predecessor-recap)
@@ -39,10 +44,12 @@ entry() {  # <type> <cwd> <content> [extra-json-fields]
     "$1" "$2" "${4:+,$4}" "$1" "$3"
 }
 
+# Every fixture transcript is written after epoch 1, so --since 1 proves it is
+# the previous worker's unless a case passes its own --since.
 run_recap() {  # <dir> [extra args...]
   local dir=$1
   shift
-  "$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" "$@" </dev/null
+  "$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" --since 1 "$@" </dev/null
 }
 
 test_transcript_present_renders_newest_messages() {
@@ -147,13 +154,15 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   t=$(transcript_path "$dir" s1)
   {
     entry assistant "$dir/wt" '[{"type":"text","text":"key sk-ant-abcdefghijklmnopqrstuvwx and ghp_abcdefghijklmnopqrstuvwxyz0123 and API_TOKEN=hunter2secret and https://bob:pa55word@example.com/x"}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"PASSWORD=\"correct horse battery staple\" then client_secret: '"'"'two quoted words'"'"' done"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"e1","name":"Bash","input":{"command":"cat .env"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"e1","content":"DATABASE_URL=dotenv-value-here"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"e2","name":"Read","input":{"file_path":"/repo/.env.local"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"e2","content":[{"type":"text","text":"SECOND_DOTENV_VALUE"}]}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE*) fail "a secret reached the recap: $out" ;; esac
+  case "$out" in *sk-ant-abc* | *ghp_abc* | *hunter2secret* | *pa55word* | *dotenv-value-here* | *SECOND_DOTENV_VALUE* | *horse* | *battery* | *staple* | *quoted\ words*) fail "a secret reached the recap: $out" ;; esac
+  assert_contains "$out" "PASSWORD=[redacted] then client_secret: [redacted] done" "a quoted value with spaces should be redacted whole"
   assert_contains "$out" "API_TOKEN=[redacted]" "an assignment value should be redacted"
   assert_contains "$out" "- tool call Bash: [omitted: touches a .env file]" "a .env call's input should be omitted"
   assert_contains "$out" "- tool result: [omitted: output of a call that touches a .env file]" "a .env call's result should be omitted"
@@ -180,6 +189,57 @@ test_scrollback_fallback_for_other_harnesses() {
   pass "recap: other harnesses fall back to the terminal capture, or say why there is none"
 }
 
+test_only_the_predecessor_account_root_is_read() {
+  local dir t decoy out
+  dir=$(new_case account)
+  mkdir -p "$dir/pinned/projects" "$dir/home/.claude/projects"
+  mv "$dir/claude/projects/"* "$dir/pinned/projects/"
+  t="$dir/pinned/projects/$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')/s1.jsonl"
+  entry user "$dir/wt" '"FROM THE PINNED ROOT"' >"$t"
+  decoy="$dir/claude/projects/$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')"
+  mkdir -p "$decoy"
+  entry user "$dir/wt" '"FROM ANOTHER ACCOUNT"' >"$decoy/s2.jsonl"
+  out=$(run_recap "$dir" --claude-account "$dir/pinned")
+  assert_contains "$out" "FROM THE PINNED ROOT" "the recorded account root should be read"
+  case "$out" in *"FROM ANOTHER ACCOUNT"*) fail "another account's transcript leaked: $out" ;; esac
+
+  mkdir -p "$dir/home/.claude/projects/$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')"
+  entry user "$dir/wt" '"FROM THE ORDINARY ROOT"' >"$dir/home/.claude/projects/$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')/s3.jsonl"
+  out=$(HOME="$dir/home" run_recap "$dir" --claude-account ordinary)
+  assert_contains "$out" "FROM THE ORDINARY ROOT" "an ordinary account should read \$HOME/.claude"
+  case "$out" in *"FROM ANOTHER ACCOUNT"* | *"FROM THE PINNED ROOT"*) fail "a non-ordinary root leaked: $out" ;; esac
+  pass "recap: only the previous worker's recorded account root is read"
+}
+
+test_unknown_start_reads_no_transcript() {
+  local dir t out
+  dir=$(new_case unknown-start)
+  t=$(transcript_path "$dir" s1)
+  entry user "$dir/wt" '"POSSIBLY AN EARLIER TASK"' >"$t"
+  out=$("$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" </dev/null)
+  assert_contains "$out" "No recap: the previous worker's start time is not recorded" "an unknown start should skip the transcript"
+  case "$out" in *"POSSIBLY AN EARLIER TASK"*) fail "a transcript was read without a proven start: $out" ;; esac
+  printf 'last terminal line\n' >"$dir/capture"
+  out=$("$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" --scrollback "$dir/capture" </dev/null)
+  assert_contains "$out" "> last terminal line" "an unknown start should fall back to the terminal"
+  case "$out" in *"POSSIBLY AN EARLIER TASK"*) fail "a transcript was read without a proven start: $out" ;; esac
+  pass "recap: no transcript is read when the previous worker's start is unknown"
+}
+
+test_tiny_byte_bound_terminates() {
+  local dir t out rc n body
+  dir=$(new_case tiny)
+  t=$(transcript_path "$dir" s1)
+  entry assistant "$dir/wt" '[{"type":"text","text":"a reply long enough to need cutting under any tiny bound at all, well past sixty-four bytes"}]' >"$t"
+  for n in 1 2 3; do
+    out=$(fm_run_timed 20 "$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" --since 1 --max-bytes "$n" </dev/null); rc=$?
+    expect_code 0 "$rc" "--max-bytes $n must terminate"
+    body=$(printf '%s\n' "$out" | grep '^- ')
+    [ -n "$body" ] && [ "$(printf '%s\n' "$body" | wc -c | tr -d ' ')" -le 64 ] || fail "--max-bytes $n should be raised to the 64-byte minimum: $body"
+  done
+  pass "recap: a byte bound under the minimum is raised and terminates"
+}
+
 test_usage_errors_exit_2() {
   "$RECAP" --harness claude </dev/null >/dev/null 2>&1
   expect_code 2 $? "a missing --worktree is a usage error"
@@ -194,6 +254,9 @@ test_transcript_absent_gives_one_reason_line
 test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
 test_scrollback_fallback_for_other_harnesses
+test_only_the_predecessor_account_root_is_read
+test_unknown_start_reads_no_transcript
+test_tiny_byte_bound_terminates
 test_usage_errors_exit_2
 
 echo "all fm-predecessor-recap tests passed"

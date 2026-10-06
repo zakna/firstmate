@@ -393,6 +393,42 @@ test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint() {
   pass "fm-control relaunch: a same-harness relaunch replaces the agent in the same endpoint and worktree"
 }
 
+# The recap reads the transcript from the root the PREDECESSOR's record names
+# (its account= pin), never the replacement's or another account's, and only
+# when its spawn_gen proves when it started.
+test_relaunch_recap_reads_the_predecessor_account_root() {
+  local dir out rc enc
+  dir=$(new_case recap-account rl60)
+  add_ship_task "$dir" rl60 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/pinned/projects/$enc" "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE PREDECESSOR ACCOUNT"}}\n' "$dir/wt" \
+    >"$dir/pinned/projects/$enc/s1.jsonl"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE AMBIENT ACCOUNT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s2.jsonl"
+  printf 'account=%s\nspawn_gen=s%s.1.1\n' "$dir/pinned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
+  out=$(run_control "$dir" rl60 relaunch --note "recap account check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "FROM THE PREDECESSOR ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap should read the predecessor's recorded account root"
+  assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another account's transcript"
+  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded account root"
+}
+
+test_relaunch_recap_skips_transcripts_without_a_proven_start() {
+  local dir out rc enc
+  dir=$(new_case recap-nostart rl61)
+  add_ship_task "$dir" rl61 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"AN EARLIER TASK IN THIS SLOT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s1.jsonl"
+  out=$(run_control "$dir" rl61 relaunch --note "recap start check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "# Predecessor recap" "$dir/home/data/rl61/launch-brief.md" "the replacement should still carry a recap section"
+  assert_no_grep "AN EARLIER TASK IN THIS SLOT" "$dir/home/data/rl61/launch-brief.md" "a record without a proven start must not read any transcript"
+  pass "fm-control relaunch: the predecessor recap reads no transcript without a proven start"
+}
+
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text() {
   local dir out rc
   dir=$(new_case pending-exit rl43)
@@ -2390,6 +2426,8 @@ test_relaunch_moves_a_drifted_item_back_in_flight() {
 }
 
 test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint
+test_relaunch_recap_reads_the_predecessor_account_root
+test_relaunch_recap_skips_transcripts_without_a_proven_start
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text
 test_relaunch_refuses_before_exit_when_the_composer_state_is_unproven
 test_relaunch_from_linked_home_preserves_recorded_worktree

@@ -2361,6 +2361,9 @@ fi
 if [ "$HARNESS" = agy ]; then
   agy_model_validate "$AGY_BIN" "$MODEL" || exit 1
 fi
+# The ambient Claude root before any pin is exported: an unpinned predecessor
+# ran under it, which the relaunch's predecessor recap needs.
+SPAWN_AMBIENT_CLAUDE_CONFIG_DIR=${CLAUDE_CONFIG_DIR:-}
 # Worker account pin (header above): resolved before any endpoint, worktree, or
 # record exists. An absent pin selects nothing and leaves every later launch
 # step exactly as it was. A pinned Claude root is exported here as well, so the
@@ -2985,21 +2988,33 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   # harness, its terminal scrollback when the endpoint survived, or one line
   # saying why there is none (bin/fm-predecessor-recap.sh owns the sources,
   # bounds, and scrubbing). It sits before the intent overlay, which must stay
-  # last in the overlay.
+  # last in the overlay. The transcript is looked up only in the Claude root
+  # the predecessor's own record names, and only when its spawn_gen proves when
+  # it started; otherwise an earlier task's transcript in a reused worktree
+  # could pass for it.
   PREDECESSOR_RECAP=
   if [ "$RELAUNCH" -eq 1 ]; then
+    recap_args=(--harness "$RELAUNCH_PRIOR_HARNESS" --worktree "$RELAUNCH_WT")
     recap_since=$(fm_meta_get "$RELAUNCH_META" spawn_gen) || recap_since=
-    recap_since=${recap_since#s}
-    recap_since=${recap_since%%.*}
-    case "$recap_since" in '' | *[!0-9]*) recap_since=0 ;; esac
+    case "$recap_since" in
+      s[0-9]*.*)
+        recap_since=${recap_since#s}
+        recap_since=${recap_since%%.*}
+        case "$recap_since" in *[!0-9]*) ;; *) recap_args+=(--since "$recap_since") ;; esac
+        ;;
+    esac
+    recap_account=$(fm_meta_get "$RELAUNCH_META" account) || recap_account=
+    if [ -n "$recap_account" ]; then
+      recap_args+=(--claude-account "$recap_account")
+    else
+      recap_args+=(--claude-root "${SPAWN_AMBIENT_CLAUDE_CONFIG_DIR:-${HOME:-}/.claude}")
+    fi
     recap_scrollback=
     if [ "$RELAUNCH_STATE" = dead ] && recap_scrollback=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
       fm_backend_capture "$BACKEND" "$RELAUNCH_TARGET" 2000 >"$recap_scrollback" 2>/dev/null || : >"$recap_scrollback"
     fi
-    PREDECESSOR_RECAP=$("$FM_ROOT/bin/fm-predecessor-recap.sh" \
-      --harness "$RELAUNCH_PRIOR_HARNESS" --worktree "$RELAUNCH_WT" --since "$recap_since" \
-      --claude-root "${CLAUDE_CONFIG_DIR:-}" --claude-root "${HOME:-}/.claude" \
-      ${recap_scrollback:+--scrollback "$recap_scrollback"}) ||
+    [ -z "$recap_scrollback" ] || recap_args+=(--scrollback "$recap_scrollback")
+    PREDECESSOR_RECAP=$("$FM_ROOT/bin/fm-predecessor-recap.sh" "${recap_args[@]}") ||
       PREDECESSOR_RECAP=$'# Predecessor recap\nNo recap: the recap could not be built.'
     [ -z "$recap_scrollback" ] || rm -f -- "$recap_scrollback"
   fi
