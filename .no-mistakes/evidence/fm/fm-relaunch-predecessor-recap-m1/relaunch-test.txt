@@ -1,0 +1,3 @@
+ok - fm-control relaunch: the predecessor recap reads the predecessor's recorded root
+ok - fm-control relaunch: the predecessor recap reads no transcript without a proven start
+ok - fm-control relaunch: the predecessor recap reads no transcript without a recorded root

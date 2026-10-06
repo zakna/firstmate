@@ -1,0 +1,5 @@
+ok - recap: no transcript is read without a recorded Claude root
+ok - recap: only a bounded tail of a large transcript is read
+ok - recap: usage errors exit 2
+all fm-predecessor-recap tests passed
+exit=0
