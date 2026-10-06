@@ -62,7 +62,7 @@ The controls are scoped to the launched process and never modify the captain's g
 
 ## Compaction refocus
 
-A ship or scout Claude worker gets its `## Captain's intent` (or a legacy brief's whole `# Task` body), its `# Definition of done`, and its newest unhandled steering message back in context after every context compaction, or one line saying no steer is waiting.
+A ship or scout Claude worker gets its `## Captain's intent` (or a legacy brief's whole `# Task` body), its current `# Definition of done` (the last one, so a promoted brief yields its ship contract), and its newest unhandled steering message back in context after every context compaction, or one line saying no steer is waiting.
 The spawn registers `../../../../../bin/fm-claude-refocus.sh` as a `SessionStart` hook with the `compact` matcher in the worktree's `.claude/settings.local.json`, bound to that task's own steering inbox and its `data/<id>/brief.md`, read at hook time so captain words appended after spawn are included.
 `PostCompact` cannot carry this: Claude documents it as side-effect only, while plain stdout from a `SessionStart` hook with source `compact` is added to the model's context.
 A secondmate gets no refocus, because its spawn writes no worker hooks and its charter has neither anchor section.
