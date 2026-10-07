@@ -72,6 +72,8 @@
 #   rebind is a recovery, never a teardown. Only a crewmate or scout rebinds: a
 #   secondmate whose endpoint is gone is respawned by its own owner
 #   (`--secondmate`, driven by the session-start liveness sweep).
+#   A ship or scout relaunch also renders a one-time predecessor recap of the
+#   previous worker into launch-brief.md (bin/fm-predecessor-recap.sh).
 #   The replacement still never starts outside the copy
 #   holding the work: a Herdr shell that has drifted out of the recorded
 #   worktree is told once to return, and only a shell that will not go refuses.
@@ -450,6 +452,8 @@
 # success line and state/<id>.meta omit them.
 # Every fresh spawn or relaunch records a new spawn_gen= incarnation token so durable
 # consumers can distinguish a replacement worker that reuses the same task id.
+# A claude launch also records claude_root=, the configuration root it runs
+# under, which a later relaunch's predecessor recap reads its transcript from.
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -1233,8 +1237,13 @@ parse_orca_worktree_result() {
   fi
 }
 
+# The relaunch recap's terminal-capture temp file, removed here as well as
+# inline so an abort or a signal between its creation and its removal never
+# leaves the previous worker's terminal text behind.
+RECAP_SCROLLBACK_TMP=
 spawn_abort_cleanup() {
   local status=$?
+  [ -z "$RECAP_SCROLLBACK_TMP" ] || rm -f -- "$RECAP_SCROLLBACK_TMP" 2>/dev/null || true
   if [ "$RELAUNCH_REPLACEMENT_PENDING" = 1 ] &&
     [ "$SPAWN_META_PUBLISH_STARTED" = 1 ] &&
     [ -n "$SPAWN_META_TMP" ] &&
@@ -2978,6 +2987,45 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
       fi
     fi
   fi
+  # A relaunch adds a one-time predecessor recap, read before the replacement
+  # reuses the endpoint: the previous worker's transcript from its recorded
+  # harness, its terminal scrollback when the endpoint survived, or one line
+  # saying why there is none (bin/fm-predecessor-recap.sh owns the sources,
+  # bounds, and scrubbing). It sits before the intent overlay, which must stay
+  # last in the overlay. The transcript is looked up only in the Claude root
+  # the predecessor's own record names (claude_root=, or a legacy record's
+  # account= pin), and only when its spawn_gen proves when it started;
+  # otherwise an earlier task's transcript in a reused worktree, or one from
+  # another root, could pass for it.
+  PREDECESSOR_RECAP=
+  if [ "$RELAUNCH" -eq 1 ]; then
+    recap_args=(--harness "$RELAUNCH_PRIOR_HARNESS" --worktree "$RELAUNCH_WT")
+    recap_since=$(fm_meta_get "$RELAUNCH_META" spawn_gen) || recap_since=
+    case "$recap_since" in
+      s[0-9]*.*)
+        recap_since=${recap_since#s}
+        recap_since=${recap_since%%.*}
+        case "$recap_since" in *[!0-9]*) ;; *) recap_args+=(--since "$recap_since") ;; esac
+        ;;
+    esac
+    recap_root=$(fm_meta_get "$RELAUNCH_META" claude_root) || recap_root=
+    recap_account=$(fm_meta_get "$RELAUNCH_META" account) || recap_account=
+    if [ -n "$recap_root" ]; then
+      recap_args+=(--claude-root "$recap_root")
+    elif [ -n "$recap_account" ]; then
+      recap_args+=(--claude-account "$recap_account")
+    fi
+    if [ "$RELAUNCH_STATE" = dead ] && RECAP_SCROLLBACK_TMP=$(mktemp "${TMPDIR:-/tmp}/fm-recap.XXXXXX"); then
+      fm_backend_capture "$BACKEND" "$RELAUNCH_TARGET" 2000 >"$RECAP_SCROLLBACK_TMP" 2>/dev/null || : >"$RECAP_SCROLLBACK_TMP"
+    else
+      RECAP_SCROLLBACK_TMP=
+    fi
+    [ -z "$RECAP_SCROLLBACK_TMP" ] || recap_args+=(--scrollback "$RECAP_SCROLLBACK_TMP")
+    PREDECESSOR_RECAP=$("$FM_ROOT/bin/fm-predecessor-recap.sh" "${recap_args[@]}") ||
+      PREDECESSOR_RECAP=$'# Predecessor recap\nNo recap: the recap could not be built.'
+    [ -z "$RECAP_SCROLLBACK_TMP" ] || rm -f -- "$RECAP_SCROLLBACK_TMP"
+    RECAP_SCROLLBACK_TMP=
+  fi
   # Use the existing launch-brief overlay for every worker kind, including
   # pre-scope briefs and relaunches. Charters never enter this worker path.
   SOURCE_BRIEF=$BRIEF
@@ -2987,6 +3035,9 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     fm_brief_worker_role "$STATE" "$ID" &&
       printf '\n' &&
       cat "$SOURCE_BRIEF" &&
+      if [ -n "$PREDECESSOR_RECAP" ]; then
+        printf '\n%s\n' "$PREDECESSOR_RECAP"
+      fi &&
       if [ "$KIND" = ship ] && [ "$MODE" = no-mistakes ]; then
         fm_brief_intent_overlay "$CAPTAIN_INTENT"
       fi
@@ -4785,10 +4836,38 @@ else
   SPAWN_FRESH_COMMIT_PENDING=1
 fi
 SPAWN_META_PATH=$SPAWN_META_TMP
+# raw_claude_config_dir <raw-command>: the CLAUDE_CONFIG_DIR a raw Claude
+# command's own leading assignments set, the same leading words
+# fm_worker_account_select inspects. Returns 1 when none sets it; prints
+# nothing and returns 0 when one does but its value is not a literal absolute
+# path this process can name.
+raw_claude_config_dir() {
+  local word value found=1 out=
+  for word in $1; do
+    case "$word" in
+    CLAUDE_CONFIG_DIR=*)
+      found=0
+      value=${word#CLAUDE_CONFIG_DIR=}
+      case "$value" in
+      \"*\") value=${value#\"}; value=${value%\"} ;;
+      \'*\') value=${value#\'}; value=${value%\'} ;;
+      esac
+      case "$value" in
+      /*) case "$value" in *[\$\`\\\"\'*?~]*) out= ;; *) out=$value ;; esac ;;
+      *) out= ;;
+      esac
+      ;;
+    [A-Za-z_]*=*) ;;
+    *) break ;;
+    esac
+  done
+  [ "$found" = 0 ] || return 1
+  printf '%s' "$out"
+}
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
-      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp model effort account account_provider busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
+      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp model effort account account_provider claude_root busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
       for (i in keys) owned[keys[i]] = 1
     }
     !($1 in owned)
@@ -4811,6 +4890,27 @@ preserve_relaunch_meta() {
   # task record stays byte-identical.
   [ -z "$WORKER_ACCOUNT" ] || echo "account=$WORKER_ACCOUNT_DECLARED"
   [ -z "$WORKER_ACCOUNT_PROVIDER" ] || echo "account_provider=$WORKER_ACCOUNT_PROVIDER"
+  # The Claude configuration root this worker launches under (a raw command's
+  # own leading CLAUDE_CONFIG_DIR assignment, else the pinned or ambient
+  # CLAUDE_CONFIG_DIR, else Claude's default under HOME), so a later relaunch's
+  # predecessor recap finds its transcript from the record rather than from
+  # whatever the relaunching process's environment says. A raw assignment or
+  # ambient value that is not a literal absolute path records no root, so no
+  # transcript is read.
+  if [ "$HARNESS" = claude ]; then
+    if [ "$RAW_LAUNCH" = 1 ] && raw_claude_root=$(raw_claude_config_dir "$RAW_COMMAND"); then
+      [ -z "$raw_claude_root" ] || echo "claude_root=$raw_claude_root"
+    elif [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+      # A relative value names a store relative to the worker's cwd, not this
+      # record's reader's, so it records no root (fm-claude-trust.sh already
+      # refuses one before launch; this keeps the record correct regardless).
+      case "$CLAUDE_CONFIG_DIR" in
+      /*) echo "claude_root=$CLAUDE_CONFIG_DIR" ;;
+      esac
+    elif [ -n "${HOME:-}" ]; then
+      echo "claude_root=$HOME/.claude"
+    fi
+  fi
   [ -z "${BUSY_GEN:-}" ] || echo "busy_gen=$BUSY_GEN"
   echo "spawn_gen=$SPAWN_GEN"
   # Default-off writes no traceparent= line.

@@ -134,6 +134,8 @@ test_absent_pin_keeps_the_launch_unchanged() {
   run_pane
   assert_grep "CLAUDE_CONFIG_DIR=$CASE/ambient-claude" "$CASE/claude-worker" \
     "an unpinned launch must keep forwarding the invoking process's own Claude root"
+  assert_grep "claude_root=$CASE/ambient-claude" "$HOME_DIR/state/$id.meta" \
+    "an unpinned task record should carry the root the worker launched under"
   assert_grep "ANTHROPIC_API_KEY=ambient-pane-key" "$CASE/claude-worker" \
     "an unpinned launch must leave the pane's environment credentials alone"
 
@@ -356,7 +358,35 @@ test_raw_claude_account_override_is_kept_without_a_pin() {
   run_pane
   assert_grep "CLAUDE_CONFIG_DIR=$CASE/other" "$CASE/claude-worker" "an unpinned raw override should keep its own root"
   assert_grep "ANTHROPIC_API_KEY=override-key" "$CASE/claude-worker" "an unpinned raw override should keep its own key"
-  pass "an unpinned home keeps a raw Claude account override"
+  assert_grep "claude_root=$CASE/other" "$HOME_DIR/state/$id.meta" \
+    "the task record should carry the root the raw command selected, not the ambient one"
+  assert_no_grep "claude_root=$CASE/ambient-claude" "$HOME_DIR/state/$id.meta" \
+    "the task record must not carry the spawning process's ambient root"
+
+  out=$(spawn_ship "$id-unprovable" --harness "CLAUDE_CONFIG_DIR=\$HOME/x claude --print raw"); rc=$?
+  expect_code 0 "$rc" "an unpinned home should accept a raw Claude root it cannot name: $out"
+  assert_no_grep "claude_root=" "$HOME_DIR/state/$id-unprovable.meta" \
+    "a raw root that is not a literal absolute path must record no root"
+  pass "an unpinned home keeps a raw Claude account override and records its root"
+}
+
+# A relative ambient Claude root names a store relative to the worker's cwd,
+# so it must never be recorded as the task's claude_root for a later relaunch
+# to search from somewhere else.
+test_relative_ambient_claude_root_is_never_recorded() {
+  local out id=acct-relative
+  new_case relative-root claude
+  fm_test_spawn_brief "$HOME_DIR" "$id"
+  : > "$CASE/launch.log"
+  out=$(FM_FAKE_LAUNCH_LOG="$CASE/launch.log" FM_TEST_CLAUDE_CONFIG_DIR=".claude-profile" \
+    fm_test_run_spawn "$HOME_DIR" "$WT" "$FAKEBIN" "$id" "$PROJ" --mode no-mistakes --yolo off)
+  if [ -e "$HOME_DIR/state/$id.meta" ]; then
+    assert_no_grep "claude_root=.claude-profile" "$HOME_DIR/state/$id.meta" "a relative ambient root must not be recorded verbatim"
+    assert_no_grep "claude_root=$HOME_DIR/user-home/.claude" "$HOME_DIR/state/$id.meta" "a relative ambient root must not fall back to the default root"
+  else
+    assert_contains "$out" "is a relative path" "a refused spawn should name the relative root"
+  fi
+  pass "a relative ambient Claude root is never recorded as the task's root"
 }
 
 test_local_secondmate_reads_the_launching_home_pin() {
@@ -396,6 +426,7 @@ test_a_pin_governs_only_its_own_runner
 test_raw_claude_command_receives_the_pin
 test_raw_claude_account_override_refuses_under_a_pin
 test_raw_claude_account_override_is_kept_without_a_pin
+test_relative_ambient_claude_root_is_never_recorded
 test_local_secondmate_reads_the_launching_home_pin
 
 echo "# all fm-worker-account tests passed"

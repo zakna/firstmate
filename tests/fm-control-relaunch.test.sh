@@ -117,6 +117,12 @@ case "${1:-}" in
     printf 'fakepane\n'; exit 0 ;;
   capture-pane)
     [ -z "${FM_FAKE_COMPOSER_READ_FAIL:-}" ] || exit 1
+    # The relaunch recap's scrollback read is the only 2000-line capture; this
+    # hook interrupts the spawn that issued it while that capture is open.
+    if [ -n "${FM_FAKE_RECAP_CAPTURE_SIGNAL:-}" ] && [ "${*: -1}" = -2000 ]; then
+      kill -"$FM_FAKE_RECAP_CAPTURE_SIGNAL" "$PPID"
+      /bin/sleep 0.2
+    fi
     if [ -s "$D/composer" ]; then
       printf '╭────╮\n│ %s  │\n╰────╯\n' "$(cat "$D/composer")"
     else
@@ -386,7 +392,84 @@ test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint() {
     || fail "the transaction journal should end complete"
   assert_grep "/exit" "$dir/fake/literal" "the previous agent should have been exited"
   assert_grep "Firstmate operational input waiting: read" "$dir/fake/literal" "the replacement should have been launched"
+  assert_grep "# Predecessor recap" "$dir/home/data/rl1/launch-brief.md" "the replacement's instructions should carry a predecessor recap"
+  awk '/^# Predecessor recap$/ { r = NR } /^# Current no-mistakes intent contract$/ { i = NR } END { exit !(r && i && r < i) }' \
+    "$dir/home/data/rl1/launch-brief.md" \
+    || fail "the predecessor recap must precede the intent overlay, which stays last"
   pass "fm-control relaunch: a same-harness relaunch replaces the agent in the same endpoint and worktree"
+}
+
+# The recap reads the transcript from the root the PREDECESSOR's record names
+# (its claude_root=, or a legacy record's account= pin), never the
+# replacement's, the relaunching process's, or another account's, and only when
+# its spawn_gen proves when it started.
+test_relaunch_recap_reads_the_predecessor_account_root() {
+  local dir out rc enc
+  dir=$(new_case recap-account rl60)
+  add_ship_task "$dir" rl60 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/pinned/projects/$enc" "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE PREDECESSOR ACCOUNT"}}\n' "$dir/wt" \
+    >"$dir/pinned/projects/$enc/s1.jsonl"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE AMBIENT ACCOUNT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s2.jsonl"
+  printf 'claude_root=%s\nspawn_gen=s%s.1.1\n' "$dir/pinned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
+  out=$(run_control "$dir" rl60 relaunch --note "recap account check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "FROM THE PREDECESSOR ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap should read the predecessor's recorded root"
+  assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another root's transcript"
+  [ "$(meta_field "$dir" rl60 claude_root)" = "$dir/user-home/.claude" ] \
+    || fail "the replacement's record should carry the root it launched under, got '$(meta_field "$dir" rl60 claude_root)'"
+  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded root"
+}
+
+test_relaunch_recap_reads_no_transcript_without_a_recorded_root() {
+  local dir out rc enc
+  dir=$(new_case recap-noroot rl62)
+  add_ship_task "$dir" rl62 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE RELAUNCHING ENVIRONMENT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s1.jsonl"
+  printf 'spawn_gen=s%s.1.1\n' "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl62.meta"
+  out=$(run_control "$dir" rl62 relaunch --note "recap root check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "Claude configuration folder is not recorded" "$dir/home/data/rl62/launch-brief.md" "a record without a root should say why the transcript was skipped"
+  assert_no_grep "FROM THE RELAUNCHING ENVIRONMENT" "$dir/home/data/rl62/launch-brief.md" "the relaunching process's own root must not be read"
+  pass "fm-control relaunch: the predecessor recap reads no transcript without a recorded root"
+}
+
+test_relaunch_recap_capture_file_is_removed_when_interrupted() {
+  local dir out sig left
+  # A lone SIGINT is ignored by bash while it waits on a child that exits
+  # normally (a real Ctrl-C reaches the whole process group), so the signals
+  # that reach only the spawn are the ones exercised here.
+  for sig in TERM HUP; do
+    dir=$(new_case recap-signal-$sig rl63$sig)
+    add_ship_task "$dir" "rl63$sig" claude
+    mkdir -p "$dir/tmp"
+    out=$(TMPDIR="$dir/tmp" FM_FAKE_RECAP_CAPTURE_SIGNAL=$sig run_control "$dir" "rl63$sig" relaunch --note "recap signal check")
+    assert_contains "$out" "could not be launched" "an interrupted relaunch should report the launch failure"$'\n'"$out"
+    left=$(find "$dir/tmp" -name 'fm-recap.*' | head -1)
+    [ -z "$left" ] || fail "an interrupted relaunch left its terminal capture behind on $sig: $left"
+  done
+  pass "fm-spawn relaunch: the recap's terminal capture is removed when the relaunch is interrupted"
+}
+
+test_relaunch_recap_skips_transcripts_without_a_proven_start() {
+  local dir out rc enc
+  dir=$(new_case recap-nostart rl61)
+  add_ship_task "$dir" rl61 claude
+  enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
+  mkdir -p "$dir/user-home/.claude/projects/$enc"
+  printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"AN EARLIER TASK IN THIS SLOT"}}\n' "$dir/wt" \
+    >"$dir/user-home/.claude/projects/$enc/s1.jsonl"
+  printf 'claude_root=%s\n' "$dir/user-home/.claude" >> "$dir/home/state/rl61.meta"
+  out=$(run_control "$dir" rl61 relaunch --note "recap start check"); rc=$?
+  expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
+  assert_grep "start time is not recorded" "$dir/home/data/rl61/launch-brief.md" "the recap should say the start time is unknown"
+  assert_no_grep "AN EARLIER TASK IN THIS SLOT" "$dir/home/data/rl61/launch-brief.md" "a record without a proven start must not read any transcript"
+  pass "fm-control relaunch: the predecessor recap reads no transcript without a proven start"
 }
 
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text() {
@@ -2386,6 +2469,10 @@ test_relaunch_moves_a_drifted_item_back_in_flight() {
 }
 
 test_same_harness_relaunch_keeps_identity_and_reuses_the_endpoint
+test_relaunch_recap_reads_the_predecessor_account_root
+test_relaunch_recap_skips_transcripts_without_a_proven_start
+test_relaunch_recap_reads_no_transcript_without_a_recorded_root
+test_relaunch_recap_capture_file_is_removed_when_interrupted
 test_relaunch_refuses_before_exit_when_the_composer_holds_pending_text
 test_relaunch_refuses_before_exit_when_the_composer_state_is_unproven
 test_relaunch_from_linked_home_preserves_recorded_worktree
