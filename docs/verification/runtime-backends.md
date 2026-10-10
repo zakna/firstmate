@@ -1769,6 +1769,22 @@ poll 8: {"agent_status":"working","session":".../2026-09-21T14-10-08-776Z_01a0c4
 
 The read that supplies the reference is `bin/backends/herdr.sh`'s `fm_backend_herdr_pane_agent_session_ref`, the per-harness rule is `bin/fm-control-lib.sh`'s `fm_control_relaunch_resume_flag`, and the launch argument is composed by `relaunch_resume_args` in `bin/fm-spawn.sh`; `docs/herdr-backend.md` "Agent status authority and relaunch" owns the contract. Nothing here changes `resume` as a control verb, and only a relaunch asks for it.
 
+### Worker resume directory after a server restart
+
+Measured 2026-10-10 on herdr 0.9.3 and Claude Code 2.1.296.
+
+- `bin/fm-spawn.sh` creates a ship or scout Herdr pane with its cwd set to the project's primary checkout (`fm_backend_herdr_create_task` ... `tab create --cwd`).
+- `treehouse get` then opens a NESTED subshell in the task worktree, and the agent is launched in that nested shell.
+- Live process chain of a running worker pane: herdr server -> pane top shell `-zsh` (cwd = primary checkout, `/Users/<user>/projects/firstmate`) -> `treehouse` -> `zsh` (cwd = worktree) -> `claude` (cwd = worktree).
+- `herdr pane get <pane>` reports that pane's `cwd` as the primary checkout.
+- Herdr's saved `session.json` records every `fm-*` worker pane with the primary checkout as `cwd` plus an `agent_session` reference (`source: herdr:claude`, `kind: id`).
+- Herdr's session-state documentation (v0.9.3): after a server restart it restores panes in their saved directory, preferring the live shell's directory.
+- With `session.resume_agents_on_restore` (default true) it relaunches supported agents with their native resume command, `claude --resume <id>` for Claude Code.
+- That is why workers come back resumed in the primary checkout instead of the recorded worktree.
+- Options, none implemented here:
+- Set `[session] resume_agents_on_restore = false` in the operator's Herdr config so restored worker panes come back as plain shells and are recovered with `bin/fm-control.sh <id> relaunch`, which launches in the recorded worktree.
+- Or start the pane's top shell in the worktree, e.g. `cd "$(treehouse get --lease)"`, which changes pool return to an explicit `treehouse return` at cleanup and is a spawn/teardown design change.
+
 ### Away-mode transport
 
 The away daemon is no longer launched on Pi; the away posture there is the record `bin/fm-afk-contract.sh` owns.
