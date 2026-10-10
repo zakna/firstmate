@@ -762,6 +762,27 @@ FM_COMPOSER_MATRIX_LIVE=1 tests/fm-composer-matrix-live-e2e.test.sh
 On 2026-09-20 that guard could not reach its new arm for either installed harness, and the same failures reproduce on the unmodified library: bare `claude` 2.1.236 opens the session picker rather than a session, and the guard's mid-budget Escape then quits it, while codex-cli 0.147.0 parks on a hooks-trust modal the guard correctly refuses to confirm.
 The Herdr captures above are therefore this entry's live evidence, and the guard's claude arm owes a separate repair before it can refresh it.
 
+### 2026-10-10 claude session-titled composer rule through Herdr
+
+Verified on 2026-10-10 on macOS arm64 (Darwin 25.6.0) against a Claude Code primary pane in Herdr 0.9.3, read through Herdr's full-viewport ANSI capture with its capability descriptor (`styled=1`, `cursor=0`, `identity=1`).
+The installed Claude Code was 2.1.296, but the pane showed an installed update waiting for a restart, so the version of the running process is not proven.
+A named Claude session draws its name inside the composer's top rule, `──── <name> ─`, and leaves the closing rule solid.
+Before the fix, only the solid closing rule matched the separator rule, so it read as an unpaired separator below the `❯` row, and every cursorless read returned `unknown`.
+`bin/fm-supervise-daemon.sh` defers away-mode injection on any verdict other than `empty`, so every escalation waited for the return.
+
+The capture is a read-only viewport read, fed to the shared classifier with the pane's real `claude<TAB>idle` identity:
+
+```sh
+herdr pane read w17:p1 --source visible --format ansi --session default > claude-titled-herdr.ansi
+bash -c '. bin/fm-composer-lib.sh
+  caps=$(printf "styled=1\ncursor=0\nidentity=1")
+  fm_composer_classify_screen "$caps" "$(cat claude-titled-herdr.ansi)" "" "$(printf "claude\tidle")"'
+```
+
+Observed output: `unknown` before the fix, and `empty` after it.
+Replacing only the titled row with a solid rule gave `empty` before the fix too, which isolates the title as the cause.
+`test_matrix_claude_titled_rule_composer` in `tests/fm-composer-lib.test.sh` pins the scrubbed capture, and also checks that typed text under the titled rule still reads `pending` and that a prompt glyph inside a rule never proves a composer.
+
 ### 2026-09-15 codex-cli 0.154.0 idle starfield and status footer through Herdr
 
 Verified on 2026-09-15 on macOS arm64 (Darwin 25.5.0) against codex-cli 0.154.0 (model gpt-6-astra, fast mode) running as a Codex second mate inside a Herdr pane, read through Herdr's ANSI capture with its exact capability descriptor (`styled=1`, `cursor=0`, `identity=1`, `rows=20`).
