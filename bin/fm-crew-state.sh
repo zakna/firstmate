@@ -1164,6 +1164,14 @@ if [ "$HAVE_RUN" = 1 ]; then
               # the worker never reported it and no pr= was recorded.
               ci_pr_url=$(strip_quotes "$(nm_field pr)")
               [ -z "$ci_pr_url" ] || RUN_DETAIL="$RUN_DETAIL: $ci_pr_url"
+              # A worker's `done: ...; held: <why>` disclosure must stay visible
+              # beside the green reading, or the merge authority can miss it.
+              if [ "$LOG_VERB" = "done" ]; then
+                ci_held=$(status_line_note "$LOG_LINE")
+                case "$ci_held" in
+                  *"; held:"*) RUN_DETAIL="$RUN_DETAIL${SEP}held:${ci_held#*"; held:"}" ;;
+                esac
+              fi
             fi
             ;;
           fixing)
