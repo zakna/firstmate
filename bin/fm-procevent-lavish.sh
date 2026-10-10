@@ -551,6 +551,7 @@ cmd_silent() {
 # continues it, and anything indented deeper (a nested `target:` block) belongs
 # to the item but is not a prompt field; its items are returned as decoded
 # field hashes.
+# shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
 PROMPT_ITEMS_PL='
   sub read_prompt_items {
     my ($fh, $sections) = @_;
