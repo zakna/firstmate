@@ -345,6 +345,34 @@ test_claude_busy_signature_uses_real_capture_shapes() {
 test_busy_pane_pending_returns_empty
 test_idle_pane_pending_returns_pending
 test_wrapped_continuation_retries_swallowed_enter
+test_cursor_reclassify_never_leaks_need_identity() {
+  # Cursor parks tmux's cursor below its footer, so the adapter reclassifies
+  # the pane cursorless. A titled rule on that screen asks for identity again;
+  # the sentinel must resolve inside the adapter, never escape it.
+  local rule='' screen out
+  while [ "${#rule}" -lt 24 ]; do rule="$rule─"; done
+  screen=$'tool output\n'"$rule"$' build output ─\n→ \n'"$rule"$'\n\n'
+  out=$(
+    fm_tmux_composer_cursor_row() { printf '6'; }
+    fm_tmux_composer_capture() { printf '%s' "$screen"; }
+    fm_tmux_composer_identity() { printf 'cursor\tidle'; }
+    fm_tmux_pane_is_cursor() { return 0; }
+    fm_tmux_composer_state fake:0
+  )
+  [ "$out" = "$(fm_composer_classify_screen "$(fm_tmux_composer_caps)" "$screen" '' "$(printf 'cursor\tidle')")" ] \
+    || fail "cursor reclassify must classify with the pane identity, got '$out'"
+  [ "$out" != need-identity ] || fail "need-identity leaked out of the tmux adapter"
+  out=$(
+    fm_tmux_composer_cursor_row() { printf '6'; }
+    fm_tmux_composer_capture() { printf '%s' "$screen"; }
+    fm_tmux_composer_identity() { return 1; }
+    fm_tmux_pane_is_cursor() { return 0; }
+    fm_tmux_composer_state fake:0
+  )
+  [ "$out" = unknown ] || fail "an absent identity probe must fail safe to unknown, got '$out'"
+  pass "tmux cursor reclassify resolves need-identity inside the adapter"
+}
+
 test_placeholder_like_bare_input_retries_swallowed_enter
 test_busy_pane_composer_clears_first_try
 test_idle_pane_composer_clears_first_try
@@ -353,3 +381,4 @@ test_failed_baseline_capture_keeps_busy_unknown_unconfirmed
 test_busy_pane_ambiguous_pending_retries_without_conversion
 test_unrecognized_state_skips_busy_conversion
 test_claude_busy_signature_uses_real_capture_shapes
+test_cursor_reclassify_never_leaks_need_identity
