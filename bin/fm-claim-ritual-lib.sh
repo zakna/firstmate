@@ -14,9 +14,10 @@
 # AGENTS.md or CLAUDE.md that describes a contributor-ownership claim (an
 # owner, reviewer, ticket, issue, task, session, agent, worker, contributor,
 # assignee, work, pr, or handoff claim) as abandoned, stale, superseded, or
-# recovered, across line breaks, or that names a superseding claim. Product
-# wording such as recovering stale lease claims is not a ritual. It fails when
-# the project declares none.
+# recovered, across line breaks, or that names a superseding claim, or that
+# puts the word claim in the same sentence as a contributor action (comment,
+# take over, abandon, supersede). Product wording such as recovering stale
+# lease claims is not a ritual. It fails when the project declares none.
 #
 # fm_claim_ritual_brief_missing prints the lines the given brief text still
 # lacks and fails when it carries both: a `Claim recovery:` line naming the
@@ -41,6 +42,12 @@ fm_claim_ritual_detect() {  # <project-dir>
     [ -f "$f" ] || continue
     if tr -s '[:space:]' ' ' < "$f" \
       | grep -Ei '(supersed[a-z]* claim|(abandon|stale|supersed|recover)[a-z]*( [^ .]+){0,2} ([a-z]+-)?(owner|reviewer|review|ticket|issue|task|session|agent|worker|contributor|assignee|work|pr|handoff) claim)' >/dev/null; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+    if tr -s '[:space:]' ' ' < "$f" | tr '[:upper:]' '[:lower:]' \
+      | awk '{ gsub(/[.!?] /, "&\n"); print }' \
+      | awk '/(^|[^a-z])claims?([^a-z]|$)/ && /(^|[^a-z])(comment(s|ed|ing)?|(take|takes|taken|taking|took) over|abandon(s|ed|ing)?|supersed(e|es|ed|ing))([^a-z]|$)/ { found = 1 } END { exit !found }'; then
       printf '%s\n' "$f"
       return 0
     fi

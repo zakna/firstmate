@@ -974,7 +974,7 @@ EOF
 # and the required model carried in the brief, or the ship is not dispatched
 # (bin/fm-claim-ritual-lib.sh).
 test_spawn_refuses_claim_ritual_project_without_recovery_and_model() {
-  local rec home proj fakebin id out
+  local rec home proj fakebin id out n sentence
   rec=$(make_home claim-ritual)
   IFS='|' read -r home proj fakebin <<EOF
 $rec
@@ -1024,6 +1024,22 @@ Claim model: gpt-5.6-sol, exactly.'
   out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
   assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "a hard-wrapped AGENTS.md ritual was not detected"
 
+  n=0
+  for sentence in \
+    'Recover an abandoned claim by commenting.' \
+    'A stale claim may be taken over after 7 days.' \
+    'Claims older than 14 days are abandoned; take over with a new claim comment.' \
+    'To take over an abandoned claim, comment /claim and request review from gpt-5.6-sol.'; do
+    n=$((n + 1))
+    printf '%s\n' "$sentence" > "$proj/AGENTS.md"
+    id="ritual-action-$n"
+    FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "action-ritual brief should scaffold"
+    fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+    out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+    assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "AGENTS.md ritual was not detected: $sentence"
+    assert_absent "$home/data/$id/launch-brief.md" "an action-ritual brief rendered a launch brief: $sentence"
+  done
+
   printf '%s\n' 'Do not claim the fix is verified without running tests.' 'Never claim success early; recover from errors by retrying.' > "$proj/AGENTS.md"
   id='ritual-harmless'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "harmless brief should scaffold"
@@ -1032,7 +1048,7 @@ Claim model: gpt-5.6-sol, exactly.'
   assert_not_contains "$out" "claim ritual" "harmless uses of claim were taken for a ritual"
   assert_present "$home/data/$id/launch-brief.md" "a harmless-claim project did not launch"
 
-  printf '%s\n' 'The queue worker should recover stale lease claims after timeout.' > "$proj/AGENTS.md"
+  printf '%s\n' 'The queue worker should recover stale lease claims after timeout.' 'The queue should recover stale lease claims after timeout.' > "$proj/AGENTS.md"
   id='ritual-product-claims'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "product-claims brief should scaffold"
   fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
