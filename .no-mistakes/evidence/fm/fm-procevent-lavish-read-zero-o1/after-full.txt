@@ -1,0 +1,72 @@
+CAPTAIN MESSAGE
+| uopdatet dashboarsd
+END CAPTAIN MESSAGE
+
+declared_items: 8
+presented_items: 8
+malformed_items: 0
+complete: yes
+lifecycle: feedback
+session_ended: (unset)
+annotation_count: 7
+session_ending_message_count: 1
+
+ANNOTATIONS
+ANNOTATION 1 of 7
+element_uid: 1
+element_selector: main > div:nth-of-type(2) > ol > li:nth-of-type(1) > b
+tag: b
+text:
+| What are your age and your weight today?
+prompt:
+| 19/11/1981 84,25 i have a whittings can you connect to my apple health ?  103 cm waist
+ANNOTATION 2 of 7
+element_uid: 3
+element_selector: body > main > div:nth-of-type(2) > ol > li:nth-of-type(2)
+tag: li
+text:
+| Do you have pain or an old injury in the back, knees or shoulders, or a medical condition? This changes the exercise choice.
+prompt:
+| righ knee i hacve an injury some tearing on the outside tendon that has healed but was injured 3 times in a row , i have also a lower trapezius chronic pain seem te muscle is constantly spasmed i have a slight scoliosis c shape my face is slightly bent right when i look in the mirror
+ANNOTATION 3 of 7
+element_uid: 4
+element_selector: body > main > div:nth-of-type(2) > ol > li:nth-of-type(3)
+tag: li
+text:
+| How many days per week and how many minutes per visit can you train? The default is 3 days, 50 to 60 minutes.
+prompt:
+| i can train tuesday , thursday , saturday  lenght is as much as needed
+ANNOTATION 4 of 7
+element_uid: 5
+element_selector: main > div:nth-of-type(2) > ol > li:nth-of-type(4) > b
+tag: b
+text:
+| Do you wear an Apple Watch or another wearable, and is your phone an iPhone?
+prompt:
+| aspple watch an iphone
+ANNOTATION 5 of 7
+element_uid: 6
+element_selector: main > div:nth-of-type(2) > ol > li:nth-of-type(5) > b
+tag: b
+text:
+| Do you prefer to follow this plan yourself, or to let the gym load it into the app
+prompt:
+| plan myself
+ANNOTATION 6 of 7
+element_uid: 7
+element_selector: div:nth-of-type(3) > div:nth-of-type(2) > ul > li:nth-of-type(3) > b
+tag: b
+text:
+| MyWellness Band
+prompt:
+| what is this ?
+ANNOTATION 7 of 7
+element_uid: 8
+element_selector: main > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(5)
+tag: td
+text:
+| Learn the machines, find starting weights, no heavy soreness
+prompt:
+| im already familiar with some routine and some machiones but i beleive i need to lower the load
+END ANNOTATIONS
+END LAVISH RESULT (8 of 8)
