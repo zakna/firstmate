@@ -1,0 +1,11 @@
+--- relaunch (no flag) rc=1 ---
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG20744x27132. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg relaunch' directly with the same options plus --stop-background; otherwise let it finish first
+error: relaunch of xdlg failed while stopping the old agent, which is still running; its original instructions were restored
+AGENT-ALIVE-AFTER-RELAUNCH-REFUSAL
+BG-ALIVE-AFTER-RELAUNCH-REFUSAL
+--- exit (no flag) ---
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG20744x27132. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg exit' directly with the same options plus --stop-background; otherwise let it finish first
+ok - live control exit: Claude Code (2.1.296 (Claude Code)) on herdr 0.9.3 refuses at the background-work dialog and keeps the agent and its work
+--- exit --stop-background ---
+stopped xdlg harness=claude backend=herdr endpoint=fm-lab-control-exit-dialog-20744:w1:p2 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.xvmBBG/wt background-stopped=shell · sleep 1801 # FMEXITDIALOG20744x27132
+ok - live control exit --stop-background: Claude Code (2.1.296 (Claude Code)) on herdr 0.9.3 confirms 'Exit and stop tasks' and stops
