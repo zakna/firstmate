@@ -38,6 +38,7 @@ The shared no-mistakes gate lifecycle boundary is summarized in [architecture.md
 | `fm-intent-check.sh`     | Check the `--intent` string a no-mistakes worker passes before its run starts, since that string becomes the pull request body; `scrub` prints the authorized words with any required `Refs` line, refusing rather than removing a line |
 | `fm-brief-heading-lib.sh` | Single owner of reading a brief's sections, shared by the `--intent` contract, spawn and promotion validation, and `fm-dispatch-resolve.sh` |
 | `fm-gate-delegation-lib.sh` | Single owner of the wording spawn, promotion, and task-worker steers warn on when it hands the worker its own ask-user gate responses |
+| `fm-claim-ritual-lib.sh` | Single owner of project claim-ritual detection and the `Claim recovery:` / `Claim model:` brief lines a first ship spawn requires |
 | `fm-herdr-lab.sh`        | Provision and guardedly operate an isolated, never-default Herdr lab session         |
 | `fm-herdr-lab-viewer.py` | The pty engine behind `fm-herdr-lab.sh viewer`: one real foreground Herdr client on a non-zero window grid |
 | `fm-lab-home.sh`         | Mint disposable lab homes and manage their isolated tmux socket directories       |
