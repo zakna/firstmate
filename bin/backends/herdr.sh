@@ -1705,7 +1705,9 @@ fm_backend_herdr_workspace_find_all() {  # <session>
 # NOT the spawn-time resolver: placing a new worker by first label match is
 # exactly the defect fm_backend_herdr_workspace_ensure now refuses.
 fm_backend_herdr_workspace_find() {  # <session>
-  fm_backend_herdr_workspace_find_all "$1" | head -1
+  local all
+  all=$(fm_backend_herdr_workspace_find_all "$1")
+  printf '%s\n' "${all%%$'\n'*}"
 }
 
 # fm_backend_herdr_launcher_identity: the EXACT herdr workspace that the
@@ -3727,7 +3729,7 @@ fm_backend_herdr_pane_for_tab() {  # <session> <workspace_id> <tab_id>
   local session=$1 wsid=$2 tab_id=$3 panes
   panes=$(fm_backend_herdr_cli "$session" pane list --workspace "$wsid" 2>/dev/null) || return 1
   printf '%s' "$panes" | jq -r --arg tab "$tab_id" \
-    '.result.panes[]? | select(.tab_id == $tab) | .pane_id' 2>/dev/null | head -1
+    'first(.result.panes[]? | select(.tab_id == $tab) | .pane_id) // empty' 2>/dev/null
 }
 
 # fm_backend_herdr_resolve_bare_selector: the live-tab-listing fallback for an
@@ -3743,9 +3745,9 @@ fm_backend_herdr_resolve_bare_selector() {  # <name>
     [ -n "$session" ] || continue
     tabs=$(fm_backend_herdr_cli "$session" tab list 2>/dev/null) || continue
     tab_id=$(printf '%s' "$tabs" | jq -r --arg want "$name" \
-      '.result.tabs[]? | select(.label == $want) | .tab_id' 2>/dev/null | head -1)
+      'first(.result.tabs[]? | select(.label == $want) | .tab_id) // empty' 2>/dev/null)
     [ -n "$tab_id" ] || continue
-    wsid=$(printf '%s' "$tabs" | jq -r --arg tab "$tab_id" '.result.tabs[]? | select(.tab_id == $tab) | .workspace_id' 2>/dev/null | head -1)
+    wsid=$(printf '%s' "$tabs" | jq -r --arg tab "$tab_id" 'first(.result.tabs[]? | select(.tab_id == $tab) | .workspace_id) // empty' 2>/dev/null)
     [ -n "$wsid" ] || continue
     pane_id=$(fm_backend_herdr_pane_for_tab "$session" "$wsid" "$tab_id") || continue
     [ -n "$pane_id" ] || continue
@@ -3803,8 +3805,7 @@ fm_backend_herdr_list_live() {  # <session>
 fm_backend_herdr_socket_path() {  # <session>
   local session=$1
   herdr session list --json 2>/dev/null \
-    | jq -r --arg name "$session" '.sessions[]? | select(.name == $name) | .socket_path // empty' 2>/dev/null \
-    | head -1
+    | jq -r --arg name "$session" 'first(.sessions[]? | select(.name == $name) | .socket_path // empty) // empty' 2>/dev/null
 }
 
 # fm_backend_herdr_events_capable: the version/capability gate for the event

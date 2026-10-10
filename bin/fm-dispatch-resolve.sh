@@ -200,15 +200,21 @@ rules_err=$(jq -r --argjson verified_harnesses "$VERIFIED_HARNESSES" --arg provi
 ' "$RULES" 2>/dev/null) || die "malformed rules file: $RULES_PATH (not JSON)"
 [ -z "$rules_err" ] || die "malformed rules file: $RULES_PATH - $rules_err"
 
-missing_provider=$(jq -r '
+# The jq output is read whole before the loop so no writer is left on a closed
+# pipe, which prints a second diagnostic line where SIGPIPE is ignored (CI).
+provider_gaps=$(jq -r '
   def profiles($v): if ($v | type) == "array" then $v elif ($v | type) == "object" then [$v] else [] end;
   ((.rules // [])[] | profiles(.use)[] | select(has("provider") | not) | "use\t\(.harness)"),
   (profiles(.default // null)[] | select(has("provider") | not) | "default\t\(.harness)")
-' "$RULES" | while IFS=$'\t' read -r location harness; do
-  if ! fm_quota_single_provider_for_harness "$harness" >/dev/null; then
-    printf '%s\t%s\n' "$location" "$harness"
-  fi
-done)
+' "$RULES")
+missing_provider=$(
+  while IFS=$'\t' read -r location harness; do
+    [ -n "$location" ] || continue
+    if ! fm_quota_single_provider_for_harness "$harness" >/dev/null; then
+      printf '%s\t%s\n' "$location" "$harness"
+    fi
+  done <<<"$provider_gaps"
+)
 if [ -n "$missing_provider" ]; then
   missing_provider_detail=''
   while IFS=$'\t' read -r location harness; do

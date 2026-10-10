@@ -778,8 +778,12 @@ cmd_consume() {
       rc=$?
     fi
     if [ "$rc" -ne 0 ]; then
+      # The filter output is read whole before the first line is taken: a
+      # reader that stops early leaves the writer on a closed pipe, which
+      # prints a broken-pipe error where SIGPIPE is ignored (CI).
       reason=$( { cat "$stderr_file" 2>/dev/null; printf '%s\n' "$out"; } \
-        | grep -v '^[[:space:]]*$' | head -1)
+        | grep -v '^[[:space:]]*$')
+      reason=${reason%%$'\n'*}
       reason=${reason:-tasks-axi refused the event}
       detail=$(event_rejection_detail "$payload")
       [ -z "$detail" ] || reason="$detail (tasks-axi: $reason)"
