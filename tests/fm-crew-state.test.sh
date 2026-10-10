@@ -1165,6 +1165,50 @@ test_ci_ready_done_log_beats_monitoring_run() {
   pass "ci-ready status log beats monitoring run"
 }
 
+test_ci_green_keeps_status_log_held_disclosure() {
+  reset_fakes
+  local d; d=$(new_case ci-green-held)
+  make_repo_on_branch "$d/wt" fm/feat-cigreenheld
+  make_fakebin "$d" >/dev/null
+  fm_write_meta "$d/state/feat-cigreenheld.meta" "window=fm:fm-feat-cigreenheld" "worktree=$d/wt" "kind=ship"
+  printf 'working [at=1]: validating\ndone [at=2]: PR https://github.com/o/r/pull/2 checks green; held: review pending on head abc\n' > "$d/state/feat-cigreenheld.status"
+  FM_FAKE_AXI_STATUS="$(run_ci_monitoring fm/feat-cigreenheld)"
+  FM_FAKE_CI_LOGS='all CI checks passed - still monitoring until merged or closed'
+  local out; out=$(run_crew_state "$d" feat-cigreenheld)
+  assert_contains "$out" "source: run-step" "green reading is still the run-step"
+  assert_contains "$out" "held: review pending on head abc" "held disclosure stays visible"
+  pass "green ci reading keeps the status-log held disclosure"
+}
+
+test_terminal_green_keeps_status_log_held_disclosure() {
+  local scenario failures=0
+  for scenario in checks-passed failed cancelled; do
+    (
+      reset_fakes
+      local d out
+      d=$(new_case "terminal-held-$scenario")
+      make_repo_on_branch "$d/wt" fm/termheld
+      make_fakebin "$d" >/dev/null
+      fm_write_meta "$d/state/termheld.meta" "window=fm:fm-termheld" "worktree=$d/wt" "kind=ship"
+      printf 'done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc\n' > "$d/state/termheld.status"
+      FM_FAKE_AXI_STATUS="$(run_failed_ci_orphan fm/termheld)"
+      case "$scenario" in
+        checks-passed) FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS/outcome: failed/outcome: checks-passed} ;;
+        cancelled) FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS//failed/cancelled} ;;
+      esac
+      FM_FAKE_PR_STATE=OPEN
+      FM_FAKE_PR_MERGED=false
+      FM_FAKE_PR_STATE_AXI=open
+      FM_FAKE_CI_LOGS="all CI checks passed - still monitoring until merged or closed"
+      out=$(FM_HOME="$d" run_crew_state "$d" termheld)
+      assert_contains "$out" "checks green" "$scenario: green run-step reading: $out"
+      assert_contains "$out" "held: review pending on head abc" "$scenario: held disclosure stays visible: $out"
+      pass "$scenario: terminal green reading keeps the status-log held disclosure"
+    ) || failures=$((failures + 1))
+  done
+  [ "$failures" = 0 ]
+}
+
 # Regression for the PR #252 incident: the crew's own status log never got a
 # "done: ... checks green" line (log_reports_ci_ready above does not apply),
 # but the ci step's log shows CI is actually green and only waiting on
@@ -5702,6 +5746,8 @@ test_scalar_gate_parked_not_superseded
 test_gate_block_parked_not_superseded
 test_ci_ready_done_log_beats_monitoring_run
 test_ci_monitoring_checks_green_surfaces_done
+test_ci_green_keeps_status_log_held_disclosure
+test_terminal_green_keeps_status_log_held_disclosure
 test_top_level_ci_checks_green_surfaces_done
 test_ci_monitoring_no_checks_terminal_surfaces_done
 test_ci_monitoring_declared_no_ci_surfaces_done
