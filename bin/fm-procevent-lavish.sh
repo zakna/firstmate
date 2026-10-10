@@ -498,8 +498,10 @@ cmd_terminal() {
 # `feedback[N]{...}:` header whose rows are INDENTED, so this anchors on column
 # zero: an indented payload line is captain-supplied text and must never be able
 # to forge - or, here, to hide behind - a content header. Any recognized block
-# is content regardless of its declared count, while a malformed top-level
-# prompts or feedback header makes the result indeterminate.
+# is content regardless of its declared count, while any other top-level
+# prompts or feedback header makes the result indeterminate. That includes the
+# expanded `prompts[N]:` list form, which is deliberately left indeterminate:
+# the check fails closed, so such a result is still announced.
 #
 # 0 = content present, 1 = provably no content, anything else = the check did
 # not complete. The caller must distinguish those three, because "the check
@@ -591,11 +593,12 @@ PROMPT_ITEMS_PL='
 
 # Print `key<TAB>answer<TAB>label[<TAB>mode]` for each non-reconcile structured choice the
 # captain submitted in a captured result; the optional mode column relays the
-# card's declared close mode (`done` or `release`) to the keyed-answer intake. The published response frames queued feedback as
+# card's declared close mode (`done` or `release`) to the keyed-answer intake. The published response frames queued feedback either as
 # a `prompts[N]{field,...}:` header followed by exactly N indented CSV rows whose
-# quoted fields carry JSON-style escapes, so this reads the declared field ORDER
-# rather than assuming a fixed column, and takes only rows whose `tag` field is
-# `choice`. A freeform `message` row is captain prose and is deliberately never a
+# quoted fields carry JSON-style escapes, or as the expanded `prompts[N]:` list
+# form of `- key: value` items; read_prompt_items parses both, so this reads
+# fields by name rather than assuming a fixed column, and takes only items whose
+# `tag` field is `choice`. A freeform `message` row is captain prose and is deliberately never a
 # source of decision keys. A row that does not carry both a slug-shaped `question`
 # and the versioned `selection` and `note` fields inside its `Context data:` block
 # is skipped. A time-limited rollout branch accepts the old question/answer
