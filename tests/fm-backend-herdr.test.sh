@@ -4830,6 +4830,31 @@ test_send_text_submit_long_literal_submits_when_composer_holds_every_byte() {
   pass "fm_backend_herdr_send_text_submit: a 1500-character payload a Claude composer still holds is submitted whole"
 }
 
+# A NAMED claude session titles its composer's top rule (`──── <name> ─`).
+# The pre-send and post-send payload proof must pair that titled rule exactly
+# as the composer guard does, or every away-mode escalation the guard lets
+# through is still refused as send-failed before a byte is typed.
+test_send_text_submit_claude_titled_rule_composer_is_proven_and_submitted() {
+  local dir log resp fb out enter_count text rule='' top
+  dir="$TMP_ROOT/submit-claude-titled"; mkdir -p "$dir/responses"; log="$dir/log"; resp="$dir/responses"; : > "$log"
+  text="escalation: ci gate needs an answer"
+  while [ "${#rule}" -lt 60 ]; do rule="$rule─"; done
+  top="$rule"' away-esc-lab ─'
+  printf '{"result":{"agent":{"agent_status":"idle"}}}\n' > "$resp/2.out"
+  printf '{"result":{"agent":{"agent_status":"working"}}}\n' > "$resp/4.out"
+  herdr_submit_claude_prefix "$resp" "$text"
+  printf 'transcript line\n%s\n\xe2\x9d\xaf\n%s\n' "$top" "$rule" > "$resp/2.out"
+  printf 'transcript line\n%s\n\xe2\x9d\xaf %s\n%s\n' "$top" "$text" "$rule" > "$resp/4.out"
+  fb=$(make_herdr_fakebin "$dir")
+  out=$( PATH="$fb:$PATH" FM_HERDR_LOG="$log" FM_HERDR_RESPONSES="$resp" FM_BACKEND_HERDR_SUBMIT_POLLS=1 \
+    bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_send_text_submit default:w1:p2 "$1" 3 0.01 0.01' "$ROOT" "$text" )
+  [ "$out" = empty ] || fail "a named claude composer under a titled rule should be proven and submitted, got '$out'"
+  assert_contains "$(cat "$log")" $'\x1f'"$text" "send_text_submit did not type the payload into the named claude composer"
+  enter_count=$(grep -c $'\x1f''pane'$'\x1f''send-keys'$'\x1f''w1:p2'$'\x1f''enter' "$log")
+  [ "$enter_count" -eq 1 ] || fail "a proven payload under a titled rule should be submitted once, sent $enter_count Enter(s)"
+  pass "fm_backend_herdr_send_text_submit: a named claude session's titled-rule composer passes the payload proof and is submitted"
+}
+
 test_send_text_submit_refuses_enter_when_composer_holds_only_the_suffix() {
   local dir log resp fb out enter_count text suffix
   dir="$TMP_ROOT/submit-long-suffix"; mkdir -p "$dir/responses"; log="$dir/log"; resp="$dir/responses"; : > "$log"
@@ -5935,6 +5960,7 @@ test_send_text_submit_send_failed
 test_send_text_submit_unknown_on_capture_failure
 test_send_text_submit_unknown_on_composer_capture_failure
 test_send_text_submit_long_literal_submits_when_composer_holds_every_byte
+test_send_text_submit_claude_titled_rule_composer_is_proven_and_submitted
 test_send_text_submit_refuses_enter_when_composer_holds_only_the_suffix
 test_send_text_submit_refused_suffix_that_will_not_clear_is_unknown
 test_send_text_submit_clears_a_wrapped_suffix_one_row_per_press
