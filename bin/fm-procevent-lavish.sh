@@ -686,22 +686,51 @@ cmd_read() {
     use strict; use warnings;
     my ($path, $lifecycle, $session_ended) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (@fields, $want, @rows);
+    my (@fields, $want, @rows, @listed, $list_form);
     while (my $line = <$fh>) {
-      if (!@fields) {
+      if (!@fields && !$list_form) {
+        if ($line =~ /^(?:prompts|feedback)\[(\d+)\]:\s*$/) {
+          ($want, $list_form) = ($1, 1);
+          next;
+        }
         next unless $line =~ /^(?:prompts|feedback)\[(\d+)\]\{([^}]*)\}:\s*$/;
         ($want, @fields) = ($1, split /,/, $2);
         next;
       }
       last unless $line =~ /^\s/;
-      last if defined($want) && @rows >= $want;
       chomp $line;
+      if ($list_form) {
+        # Expanded list form: `  - key: value` opens an item, `    key: value`
+        # continues it, and anything indented deeper (a nested `target:`
+        # block) belongs to the item but is not a prompt field.
+        if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
+          last if @listed >= $want;
+          push @listed, {};
+          $listed[-1]{$1} = $2;
+        } elsif (@listed && $line =~ /^    (\w+):[ ]?(.*)$/) {
+          $listed[-1]{$1} = $2;
+        }
+        next;
+      }
+      last if defined($want) && @rows >= $want;
       push @rows, $line;
     }
     close $fh;
     $want = 0 unless defined $want;
     my @parsed;
     my $malformed = 0;
+    for my $item (@listed) {
+      my %f;
+      for my $k (keys %$item) {
+        my $v = $item->{$k};
+        if ($v =~ /^"((?:[^"\\]|\\.)*)"\s*$/) {
+          $v = $1;
+          $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
+        }
+        $f{$k} = $v;
+      }
+      push @parsed, \%f;
+    }
     for my $row (@rows) {
       $row =~ s/^\s+//;
       my @vals;
