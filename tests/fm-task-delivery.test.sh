@@ -1016,6 +1016,14 @@ Claim model: gpt-5.6-sol, exactly.'
   out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
   assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "AGENTS.md ritual was not detected"
 
+  # shellcheck disable=SC2016 # single quotes keep the PR 43 backticks literal
+  printf '%s\n' 'An abandoned `review:changes-requested`' 'fix-owner  claim never transfers accepted findings directly.' > "$proj/AGENTS.md"
+  id='ritual-agents-wrapped'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "wrapped agents brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "a hard-wrapped AGENTS.md ritual was not detected"
+
   printf '%s\n' 'Do not claim the fix is verified without running tests.' 'Never claim success early; recover from errors by retrying.' > "$proj/AGENTS.md"
   id='ritual-harmless'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "harmless brief should scaffold"
