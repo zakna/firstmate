@@ -849,14 +849,24 @@ archived_entry_answered() {  # <entry>
 # unknown entry and must not be spent as absence. On success prints
 # "<id> <how>" so the caller can keep the attestation evidence.
 verify_entry_durable() {  # <origin-or-empty> <entry>; prints "<id> <how>"
-  local origin=$1 entry=$2 resolved resolve_status=0 err
+  local origin=$1 entry=$2 resolved resolve_status=0 err archived
   err=$(umask 077; mktemp "${TMPDIR:-/tmp}/fm-captain-hold-resolve.XXXXXX") \
     || fail "cannot stage the resolution diagnostics"
   resolved=$(resolve_entry "$origin" "$entry" 2>"$err") || resolve_status=$?
-  if [ "$resolve_status" -eq 1 ] && archived_entry_answered "$entry"; then
-    rm -f -- "$err"
-    printf '%s archived\n' "$entry"
-    return 0
+  if [ "$resolve_status" -eq 1 ]; then
+    archived=$entry
+    archived_entry_answered "$archived" || {
+      archived=''
+      if [ -n "$origin" ] && [ "$origin" != "$BINDING_ANY" ]; then
+        archived=$(legacy_hold_id "$origin" "$entry")
+        archived_entry_answered "$archived" || archived=''
+      fi
+    }
+    if [ -n "$archived" ]; then
+      rm -f -- "$err"
+      printf '%s archived\n' "$archived"
+      return 0
+    fi
   fi
   cat "$err" >&2
   rm -f -- "$err"

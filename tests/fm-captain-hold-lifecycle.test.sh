@@ -798,10 +798,6 @@ EOF
   pass "the completion gate attests captain-held inventory and transfers open status decisions"
 }
 
-# The recorded-answer rule: answering closes with the captain's exact words, an
-# exact retry is idempotent, a drifted retry is rejected, dependent work routed
-# behind the answered task is released by the close, and the completion gate is
-# satisfied only by a recorded answer.
 # done_keep prunes an answered, closed captain call to the done archive; the
 # completion gate must still accept it there, and only when the archived row
 # carries a recorded answer.
@@ -876,6 +872,10 @@ test_archived_call_without_an_answer_still_refuses() {
   pass "an archived captain call without a recorded answer still refuses"
 }
 
+# The recorded-answer rule: answering closes with the captain's exact words, an
+# exact retry is idempotent, a drifted retry is rejected, dependent work routed
+# behind the answered task is released by the close, and the completion gate is
+# satisfied only by a recorded answer.
 test_answer_records_and_closes() {
   local home id json show
   home=$(make_home answer-close)
