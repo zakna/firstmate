@@ -1,0 +1,5 @@
+AGENTS.md=[Post a superseding claim comment before any edit.] -> ritual
+AGENTS.md=[Claims older than 14 days are stale; recover them via RITUAL.] -> ritual
+AGENTS.md=[We claim no warranty.] -> none
+AGENTS.md=[Use pnpm to build.] -> none
+empty recovery value -> missing: Claim recovery: <the project's recovery procedure for an abandoned claim>
