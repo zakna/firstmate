@@ -749,17 +749,33 @@ fm_composer_classify_content() {  # <bordered> <content> [idle_re] [idle_case] [
 # exact positive proof they require (`empty`), so unrecognized future verdicts
 # fail safe by default.
 
-# _fm_composer_pi_separator_row: a solid pi separator - nothing but `─`, at
-# least 8 columns wide. The width floor is a literal substring test so it is
-# byte-exact in every locale.
+# _fm_composer_pi_separator_row: a composer separator rule at least 8 columns
+# wide - either solid `─` (pi, and claude's unnamed session), or claude's
+# titled top rule, which embeds a named session's name: `──── <name> ─`. A
+# title is one space-padded run with no `─` and no leading prompt glyph, so a
+# typed composer row can never pass as a rule. The width floor is a literal
+# prefix test so it is byte-exact in every locale.
 _fm_composer_pi_separator_row() {  # <trimmed-row>
-  local row=$1
-  [ -n "$row" ] || return 1
-  [ -z "${row//─/}" ] || return 1
+  local row=$1 title glyph
   case "$row" in
-    *────────*) return 0 ;;
+    ────────*) ;;
+    *) return 1 ;;
   esac
-  return 1
+  [ -z "${row//─/}" ] && return 0
+  case "$row" in
+    *' ─') ;;
+    *) return 1 ;;
+  esac
+  title=${row#"${row%%[!─]*}"}
+  title=${title%"${title##*[!─]}"}
+  case "$title" in
+    ' '*' ') ;;
+    *) return 1 ;;
+  esac
+  case "$title" in *─*) return 1 ;; esac
+  fm_composer_normalize_trim_var title
+  [ -n "$title" ] || return 1
+  ! fm_composer_leading_prompt_glyph_var glyph "$title"
 }
 
 # Row-scan results are returned through FM_COMPOSER_SCAN_* globals (bash 3.2
