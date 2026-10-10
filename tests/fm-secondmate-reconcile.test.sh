@@ -733,7 +733,7 @@ test_reconcile_request_rejects_an_unbounded_input_without_filling_storage() {
     fail "an oversized streaming request was accepted"
   fi
   elapsed=$(( $(date +%s) - started ))
-  [ "$elapsed" -lt 20 ] || fail "an oversized streaming request did not stop at its byte bound"
+  [ "$elapsed" -lt 3 ] || fail "an oversized streaming request did not stop at its byte bound"
   files=$(find "$home/state/reconcile-notify" -maxdepth 1 -type f | wc -l | tr -d '[:space:]')
   [ "$files" -eq 0 ] || fail "an oversized streaming request left captured data behind"
   pass "reconcile requests stop oversized streams at the capture bound"
@@ -912,7 +912,7 @@ test_bearings_request_returns_before_remote_delivery_and_supervision_sends_later
     "$RECONCILE" request --snapshot - > "$home/request.out" \
     || fail "the reconcile notify request could not be recorded"
   elapsed=$(( $(date +%s) - started ))
-  [ "$elapsed" -lt 20 ] \
+  [ "$elapsed" -lt 5 ] \
     || fail "Bearings and request publication waited past the collector budget behind remote delivery (${elapsed}s)"
   printf '%s' "$snap" | jq -e '.secondmates | any(.id == "remote-offpath-mate" and .freshness == "cached" and .age_seconds == 100)' >/dev/null \
     || fail "the delayed queue did not leave an age-labeled cached mismatch row"
