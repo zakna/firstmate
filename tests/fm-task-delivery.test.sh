@@ -969,6 +969,71 @@ EOF
   pass "fm-spawn/fm-promote: authorized intent preserves exact words and refuses operator-address lines"
 }
 
+# A project that runs its own claim ritual (a root RITUAL.md, or an AGENTS.md
+# describing recovery of an abandoned claim) must have the recovery procedure
+# and the required model carried in the brief, or the ship is not dispatched
+# (bin/fm-claim-ritual-lib.sh).
+test_spawn_refuses_claim_ritual_project_without_recovery_and_model() {
+  local rec home proj fakebin id out
+  rec=$(make_home claim-ritual)
+  IFS='|' read -r home proj fakebin <<EOF
+$rec
+EOF
+  printf '# Ritual\nTo recover a stale claim, post a superseding comment.\n' > "$proj/RITUAL.md"
+
+  id='ritual-bare'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "ritual brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'See the handoff for context.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" "runs its own claim ritual (RITUAL.md)" "bare brief was not refused for the claim ritual"
+  assert_contains "$out" "Claim recovery:" "refusal did not name the recovery line"
+  assert_contains "$out" "Claim model:" "refusal did not name the model line"
+  assert_absent "$home/data/$id/launch-brief.md" "a refused spawn rendered a launch brief"
+
+  id='ritual-half'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "half brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' \
+    'Claim recovery: post a superseding review-claimed-by comment first.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" "lacks: Claim model:" "half brief was not refused for the missing model"
+  assert_not_contains "$out" "lacks: Claim recovery:" "half brief was refused for a recovery line it carries"
+
+  id='ritual-full'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "full brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' \
+    'Claim recovery: post a superseding review-claimed-by comment first.
+Claim model: gpt-5.6-sol, exactly.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "claim ritual" "a complete brief was refused"
+  assert_present "$home/data/$id/launch-brief.md" "a complete ritual brief did not launch"
+
+  rm -f "$proj/RITUAL.md"
+  # shellcheck disable=SC2016 # single quotes keep the PR 43 backticks literal
+  printf '%s\n' 'An abandoned `review:changes-requested` fix-owner claim never transfers accepted findings directly. The recovery procedure records the exact current subject, returns it to `review:needed`, and requires a fresh `gpt-5.6-sol` finding review before another session may own fixes.' > "$proj/AGENTS.md"
+  id='ritual-agents'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "agents brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "AGENTS.md ritual was not detected"
+
+  printf '%s\n' 'Do not claim the fix is verified without running tests.' 'Never claim success early; recover from errors by retrying.' > "$proj/AGENTS.md"
+  id='ritual-harmless'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "harmless brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "claim ritual" "harmless uses of claim were taken for a ritual"
+  assert_present "$home/data/$id/launch-brief.md" "a harmless-claim project did not launch"
+
+  rm -f "$proj/AGENTS.md"
+  id='ritual-none'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "plain brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "claim ritual" "a project with no ritual was refused"
+  assert_present "$home/data/$id/launch-brief.md" "a ritual-free project did not launch"
+  pass "fm-spawn: a claim-ritual project needs the recovery procedure and model in the brief"
+}
+
 # A Firstmate spec that hands the worker its own gate responses would silently
 # outrank the brief's ask-user escalation rule, so spawn and promotion warn on
 # it, naming the matched wording, and still proceed
@@ -1722,6 +1787,7 @@ test_spawn_notices_a_ship_branch_against_the_registry_prefix
 test_spawn_refuses_a_registry_forge_it_cannot_read
 test_promotion_carries_the_forge_binding
 test_spawn_and_promote_require_filled_task_subsections
+test_spawn_refuses_claim_ritual_project_without_recovery_and_model
 test_spawn_and_promote_warn_on_gate_delegation_wording
 test_project_mode_resolves_branch_prefix
 echo "# all fm-task-delivery tests passed"
