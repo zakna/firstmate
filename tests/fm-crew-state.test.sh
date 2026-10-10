@@ -1206,7 +1206,7 @@ test_terminal_green_keeps_status_log_held_disclosure() {
       pass "$scenario: terminal green reading keeps the status-log held disclosure"
     ) || failures=$((failures + 1))
   done
-  [ "$failures" = 0 ]
+  [ "$failures" -eq 0 ] || fail "$failures terminal held-disclosure regressions"
 }
 
 # Regression for the PR #252 incident: the crew's own status log never got a
