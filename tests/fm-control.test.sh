@@ -1240,6 +1240,29 @@ test_dialog_closure_needs_one_successful_capture() {
   pass "fm-control exit: dialog closure is proven from one successful capture"
 }
 
+test_claude_exit_dialog_text_in_transcript_is_not_the_dialog() {
+  local dir out rc
+  dir=$(new_case claude-bg-transcript)
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf '1\n' > "$dir/fake/slow-exit"
+  cat > "$dir/fake/pane" <<'EOF'
+bin/fm-control-lib.sh:249:    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
++  printf '\n   ❯ 1. Exit and stop tasks\n     3. Stay\n'
+  - `❯ 1. Exit and stop tasks` row looks like typed composer text
+────
+❯ 
+────
+  ⏵⏵ auto mode on · ← for agents
+EOF
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 0 "$rc" "dialog words in the transcript are not an open exit dialog"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
+  [ -z "$(keys_sent "$dir")" ] || fail "no dialog opened, so no Escape may be sent, got: $(keys_sent "$dir")"
+  pass "fm-control exit: Claude's dialog words in the transcript are not its exit dialog"
+}
+
 test_stop_background_is_rejected_on_interrupt() {
   local dir out rc
   dir=$(new_case stop-bg-interrupt)
