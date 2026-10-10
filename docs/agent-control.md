@@ -40,7 +40,8 @@ An exit that delivers lifecycle input but cannot prove the agent stopped fails w
 Claude Code answers its exit command with a `Background work is running` dialog while a background shell or agent runs.
 `exit` and `relaunch` then choose Stay, keep the agent running, and refuse with the listed background work, so the caller decides whether that work is disposable.
 `--stop-background` is that decision: only with it is the dialog's `Exit and stop tasks` option confirmed, and the stopped work is reported as `background-stopped=`.
-No retried submit Enter is sent once the dialog can be on screen, because Enter confirms it.
+Claude's exit command gets exactly one Enter and no retry, because a later Enter could land on the dialog and confirm it.
+A relaunch that fails after its exit stopped background work still names that work in its error and its journal.
 Interrupt never rewrites busy state as proof of its own success.
 Claude exposes no lifecycle acknowledgement for a manual interrupt, so delivery succeeds with `cancel=unconfirmed` and its adapter-owned busy state remains as observed.
 Devin emits no lifecycle hook for cancellation either, so after an armed interrupt the control plane invalidates the interrupted turn's busy record to `unknown` with `cancel=unconfirmed`; that invalidation is a conservative loss of knowledge, never a fabricated idle.

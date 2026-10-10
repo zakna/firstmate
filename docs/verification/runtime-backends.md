@@ -1219,18 +1219,24 @@ It renders a dialog instead: `Background work is running`, then `The following w
 Escape is Stay: the dialog closes, the composer is empty, and the agent and its background shell keep running.
 Enter on the highlighted option 1 exits Claude and stops the listed background shell.
 On Herdr the styled composer read classifies the dialog screen as `pending`, because its `❯ 1. Exit and stop tasks` row looks like typed composer text, so the submit core's own Enter retry could confirm option 1 unasked; tmux reads the same screen as `unknown`.
-`bin/fm-control.sh` therefore submits Claude's `/exit` with one Enter, looks for the dialog before any retried Enter, and refuses with Stay unless `--stop-background` is passed (`fm_control_exit_dialog_signal` in `bin/fm-control-lib.sh`).
+`bin/fm-control.sh` therefore submits Claude's `/exit` with exactly one Enter and no retry, since no screen read can rule out the dialog rendering before a later key, and refuses with Stay unless `--stop-background` is passed (`fm_control_exit_dialog_signal` in `bin/fm-control-lib.sh`).
+One Enter submitted `/exit` in every live run above, on both backends.
 
 Portable regressions:
 
 ```sh
 tests/fm-control.test.sh
+tests/fm-control-relaunch.test.sh
 ```
 
 ```text
 ok - fm-control exit: Claude's background-work dialog refuses, stays, and names the work
 ok - fm-control exit --stop-background: Claude's dialog is confirmed with option 1
-ok - fm-control exit: a retried submit Enter never confirms Claude's background-work dialog
+ok - fm-control exit: Claude's /exit gets no retry Enter that could confirm its dialog
+ok - fm-control exit: a slow-rendering dialog is never confirmed by a retried Enter
+ok - fm-control exit: dialog closure is proven from one successful capture
+ok - fm-control exit: Claude's dialog words in the transcript are not its exit dialog
+ok - fm-control relaunch: a failed relaunch keeps the evidence of the background work it stopped
 ok - fm-control: --stop-background applies to exit and relaunch only
 ```
 
