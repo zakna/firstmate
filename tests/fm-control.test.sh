@@ -75,7 +75,11 @@ verified_adapter_contract() {  # <harness> -> exit command, interrupt key, repea
 #            dialog instead of stopping the agent, Escape there is "Stay", and
 #            Enter there confirms option 1 and stops the agent.
 #            FM_FAKE_SWALLOW_ENTERS=<n> makes the first <n> Enters leave /exit
-#            unsubmitted in the composer.
+#            unsubmitted in the composer. FM_FAKE_SLOW_DIALOG=<n> keeps /exit
+#            visible for <n> captures after its Enter before the dialog
+#            renders, and an Enter in that window confirms the dialog.
+#            FM_FAKE_DIALOG_STUCK keeps the dialog open after Escape, and
+#            FM_FAKE_ALTERNATE_CAPTURE_FAIL then fails every second capture.
 #   devin    optional Devin screen model, which capture-pane renders as the
 #            rows devin 3000.11.1 draws: `running`, `armed`, `cancelled`,
 #            `idle`, `primed`, or `picker`. Escape moves running->armed (the
@@ -158,10 +162,18 @@ case "${1:-}" in
       printf '%s\n' "$payload" >> "$D/keys"
       printf '%s %s\n' "$(perl -MTime::HiRes=time -e 'printf "%.3f", time')" "$payload" >> "$D/key-times"
       if [ -f "$D/claude-bg" ]; then
-        if [ -f "$D/claude-dialog" ]; then
+        if [ -f "$D/claude-processing" ] && [ "$payload" = Enter ]; then
+          # The first Enter's dialog is about to render; this Enter lands on
+          # it and confirms "Exit and stop tasks".
+          rm -f "$D/claude-processing" "$D/exit-typed"
+          : > "$D/background-killed"
+          printf 'zsh' > "$D/command"
+        elif [ -f "$D/claude-dialog" ]; then
           case "$payload" in
             # Escape is the dialog's "Stay": the agent keeps running.
-            Escape) rm -f "$D/claude-dialog" ;;
+            Escape)
+              if [ -n "${FM_FAKE_DIALOG_STUCK:-}" ]; then : > "$D/escaped"; else rm -f "$D/claude-dialog"; fi
+              ;;
             # Enter confirms the highlighted option 1, "Exit and stop tasks".
             Enter) rm -f "$D/claude-dialog"; printf 'zsh' > "$D/command" ;;
           esac
@@ -170,6 +182,11 @@ case "${1:-}" in
           if [ -n "${FM_FAKE_SWALLOW_ENTERS:-}" ] \
              && [ "$(grep -c '^Enter$' "$D/keys")" -le "$FM_FAKE_SWALLOW_ENTERS" ]; then
             : > "$D/exit-typed"
+          elif [ -n "${FM_FAKE_SLOW_DIALOG:-}" ]; then
+            # Claude is still processing: /exit stays visible for that many
+            # captures before the dialog renders.
+            : > "$D/exit-typed"
+            printf '%s' "$FM_FAKE_SLOW_DIALOG" > "$D/claude-processing"
           else
             : > "$D/claude-dialog"
           fi
@@ -221,6 +238,21 @@ case "${1:-}" in
     done
     printf 'fakepane\n'; exit 0 ;;
   capture-pane)
+    if [ -f "$D/claude-processing" ]; then
+      n=$(cat "$D/claude-processing")
+      if [ "$n" -le 0 ]; then
+        rm -f "$D/claude-processing" "$D/exit-typed"
+        : > "$D/claude-dialog"
+      else
+        printf '%s' "$((n - 1))" > "$D/claude-processing"
+      fi
+    fi
+    if [ -f "$D/escaped" ] && [ -n "${FM_FAKE_ALTERNATE_CAPTURE_FAIL:-}" ]; then
+      # After Escape every second viewport read fails.
+      c=$(( $(cat "$D/capture-count" 2>/dev/null || printf 0) + 1 ))
+      printf '%s' "$c" > "$D/capture-count"
+      [ $((c % 2)) = 1 ] || exit 1
+    fi
     if [ -f "$D/claude-dialog" ]; then claude_bg_dialog; exit 0; fi
     if [ -f "$D/claude-bg" ]; then
       # Claude's composer, holding /exit while that Enter is still unsubmitted.
@@ -297,12 +329,16 @@ run_control() {
   local dir=$1; shift
   env PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" \
     FM_CONTROL_POLL=0.01 FM_CONTROL_SETTLE_WAIT=0.05 \
-    FM_CONTROL_EXIT_WAIT=0.05 FM_CONTROL_LAUNCH_WAIT=0.05 \
+    FM_CONTROL_LAUNCH_WAIT=0.05 \
     FM_FAKE_MUSE_LOG="${FM_FAKE_MUSE_LOG:-}" \
     FM_FAKE_MUSE_DISAPPEAR_BEFORE_ACK="${FM_FAKE_MUSE_DISAPPEAR_BEFORE_ACK:-}" \
     FM_FAKE_INTERRUPT_STOPS_AGENT="${FM_FAKE_INTERRUPT_STOPS_AGENT:-}" \
     FM_FAKE_DEVIN_PICKER_STUCK="${FM_FAKE_DEVIN_PICKER_STUCK:-}" \
     FM_FAKE_SWALLOW_ENTERS="${FM_FAKE_SWALLOW_ENTERS:-}" \
+    FM_FAKE_SLOW_DIALOG="${FM_FAKE_SLOW_DIALOG:-}" \
+    FM_FAKE_DIALOG_STUCK="${FM_FAKE_DIALOG_STUCK:-}" \
+    FM_FAKE_ALTERNATE_CAPTURE_FAIL="${FM_FAKE_ALTERNATE_CAPTURE_FAIL:-}" \
+    FM_CONTROL_EXIT_WAIT="${FM_CONTROL_EXIT_WAIT:-0.05}" \
     "$CONTROL" "$@" 2>&1
 }
 
@@ -1168,39 +1204,40 @@ test_claude_background_dialog_stop_background_exits() {
   pass "fm-control exit --stop-background: Claude's dialog is confirmed with option 1"
 }
 
-test_claude_exit_enter_retry_never_lands_on_the_dialog() {
+test_claude_exit_sends_no_retry_enter() {
   local dir out rc
   dir=$(claude_bg_case claude-bg-swallow)
   out=$(FM_FAKE_SWALLOW_ENTERS=1 run_control "$dir" t1 exit); rc=$?
-  expect_code 1 "$rc" "a swallowed first Enter should still end in the dialog refusal"$'\n'"$out"
-  assert_contains "$out" "--stop-background" "the retried submit should reach the dialog refusal"
-  [ "$(enters_sent "$dir")" = 2 ] \
-    || fail "one retried Enter submits /exit and none may follow onto the dialog, got $(enters_sent "$dir")"
+  expect_code 1 "$rc" "an unsubmitted /exit should end as an unconfirmed exit"$'\n'"$out"
+  assert_contains "$out" "exit=unconfirmed" "the failure should report the unconfirmed exit"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "Claude's /exit gets its one submit Enter and no retry, got $(enters_sent "$dir") Enters"
   [ "$(cat "$dir/fake/command")" = claude ] || fail "the agent must keep running"
-  pass "fm-control exit: a retried submit Enter never confirms Claude's background-work dialog"
+  pass "fm-control exit: Claude's /exit gets no retry Enter that could confirm its dialog"
 }
 
-test_claude_exit_dialog_text_in_transcript_is_not_the_dialog() {
+test_claude_slow_dialog_is_never_confirmed_by_a_retry() {
   local dir out rc
-  dir=$(new_case claude-bg-transcript)
-  add_task "$dir" t1 claude
-  alive_as "$dir" claude
-  printf '1\n' > "$dir/fake/slow-exit"
-  cat > "$dir/fake/pane" <<'EOF'
-bin/fm-control-lib.sh:249:    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
-+  printf '\n   ❯ 1. Exit and stop tasks\n     3. Stay\n'
-  - `❯ 1. Exit and stop tasks` row looks like typed composer text
-────
-❯ 
-────
-  ⏵⏵ auto mode on · ← for agents
-EOF
-  out=$(run_control "$dir" t1 exit); rc=$?
-  expect_code 0 "$rc" "dialog words in the transcript are not an open exit dialog"$'\n'"$out"
-  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
-  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
-  [ -z "$(keys_sent "$dir")" ] || fail "no dialog opened, so no Escape may be sent, got: $(keys_sent "$dir")"
-  pass "fm-control exit: Claude's dialog words in the transcript are not its exit dialog"
+  dir=$(claude_bg_case claude-bg-slow)
+  out=$(FM_FAKE_SLOW_DIALOG=8 FM_CONTROL_EXIT_WAIT=1 run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "a slow dialog should still end in the Stay refusal"$'\n'"$out"
+  assert_contains "$out" "--stop-background" "the refusal should name the flag"
+  [ ! -e "$dir/fake/background-killed" ] \
+    || fail "a retried Enter confirmed 'Exit and stop tasks' without --stop-background"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "no Enter may follow the submit Enter while the dialog can still render, got $(enters_sent "$dir")"
+  [ "$(cat "$dir/fake/command")" = claude ] || fail "the agent must keep running"
+  pass "fm-control exit: a slow-rendering dialog is never confirmed by a retried Enter"
+}
+
+test_dialog_closure_needs_one_successful_capture() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-stuck)
+  out=$(FM_FAKE_DIALOG_STUCK=1 FM_FAKE_ALTERNATE_CAPTURE_FAIL=1 run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "a dialog that stays open after Escape should refuse"$'\n'"$out"
+  assert_contains "$out" "still open after Escape" "a failed read must not count as the dialog closing"
+  assert_not_contains "$out" "Chose Stay" "the refusal must not claim Stay took effect"
+  pass "fm-control exit: dialog closure is proven from one successful capture"
 }
 
 test_stop_background_is_rejected_on_interrupt() {
@@ -1254,7 +1291,9 @@ test_exit_accepts_agent_stopped_by_busy_interrupt
 test_agent_that_does_not_stop_fails_closed
 test_claude_background_dialog_refuses_and_keeps_agent
 test_claude_background_dialog_stop_background_exits
-test_claude_exit_enter_retry_never_lands_on_the_dialog
+test_claude_exit_sends_no_retry_enter
+test_claude_slow_dialog_is_never_confirmed_by_a_retry
+test_dialog_closure_needs_one_successful_capture
 test_claude_exit_dialog_text_in_transcript_is_not_the_dialog
 test_stop_background_is_rejected_on_interrupt
 test_grok_interrupt_without_acknowledgement_reports_unconfirmed
