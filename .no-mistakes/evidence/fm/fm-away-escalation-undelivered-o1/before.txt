@@ -1,0 +1,1 @@
+not ok - claude idle under a titled rule on herdr: expected empty, got 'unknown'
