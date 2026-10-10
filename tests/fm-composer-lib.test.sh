@@ -226,9 +226,9 @@ test_matrix_claude_titled_rule_composer() {
   # an unpaired separator below the `❯` row refused every read as `unknown`,
   # and the away-mode daemon deferred every escalation until the captain came
   # back. The titled rule must pair with the closing rule.
-  local rule='' i top footer screen typed claude_idle
+  local rule='' top footer screen typed claude_idle
   claude_idle=$(printf 'claude\tidle')
-  for i in $(seq 1 111); do rule="$rule─"; done
+  for _ in $(seq 1 111); do rule="$rule─"; done
   top="$rule"$' demo-session ─'
   footer=$'\n  ➜  ~/repo (main) ctx 234612/1000000  Opus high | 5h [░░░░░░] 0% →13:40\n  ⏵⏵ auto mode on · 1 shell · ← for agents'
   screen=$'transcript line\n'"$top"$'\n❯\n'"$rule──────────────"$footer
