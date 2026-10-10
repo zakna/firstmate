@@ -235,6 +235,51 @@ fm_control_exit_command() {  # <harness>
   esac
 }
 
+# A confirmation dialog the exit command can open INSTEAD of exiting, as an ERE
+# over the visible viewport; empty when the adapter has none. Claude Code asks
+# before stopping running background work (a backgrounded shell or agent):
+# `Background work is running`, a `The following will stop when you exit:` task
+# list, then `1. Exit and stop tasks`, `2. Move to background and exit`, and
+# `3. Stay`. Either of the two independent rows recognizes it. Escape is Stay
+# and leaves the composer empty; Enter confirms the highlighted option, which is
+# option 1 when the dialog opens, and that exit also stops the listed work.
+# Verified live on claude 2.1.296.
+fm_control_exit_dialog_signal() {  # <harness>
+  case "${1-}" in
+    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
+    codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The row proving the exit dialog's highlighted option is the one that stops
+# the background work and exits, so Enter may confirm it; empty without a
+# dialog.
+fm_control_exit_dialog_stop_row() {  # <harness>
+  case "${1-}" in
+    claude) printf '%s' '❯ 1\. Exit and stop tasks' ;;
+    codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The background work an exit dialog says will stop, one trimmed row per item,
+# read from a captured <screen>: the rows between Claude's `will stop when you
+# exit:` heading and its first numbered option.
+fm_control_exit_dialog_tasks() {  # <harness> <screen>
+  case "${1-}" in
+    claude)
+      printf '%s\n' "${2-}" | awk '
+        /will stop when you exit:/ { on = 1; next }
+        on && /^[[:space:]]*(❯[[:space:]]*)?[0-9]+\. / { exit }
+        on {
+          sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, "")
+          if ($0 != "") print
+        }'
+      ;;
+  esac
+}
+
 # The launch argument that makes a RELAUNCH of <harness> RESUME an exact agent
 # session instead of starting a fresh one, printed only when <registered-agent>
 # is the label that session reference belongs to; nothing otherwise.

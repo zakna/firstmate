@@ -1188,6 +1188,41 @@ FM_HERDR_SUBMIT_CONFIRM_LIVE=1 tests/fm-herdr-submit-confirm-live-e2e.test.sh
 ok - live Herdr submit confirm: Claude Code (2.1.283 (Claude Code)) on herdr 0.9.0 proves and submits a typed /exit behind its command popup
 ```
 
+### Claude exit dialog for running background work
+
+Measured 2026-10-10 against Claude Code 2.1.296, on Herdr 0.9.3 in an isolated `fm-lab-` session and on a private tmux socket.
+
+With a background shell running, `/exit` does not exit Claude Code.
+It renders a dialog instead: `Background work is running`, then `The following will stop when you exit:` with one row per item (`shell · sleep 900`), then `❯ 1. Exit and stop tasks`, `2. Move to background and exit`, `3. Stay`, and `Enter to confirm · Esc to cancel`.
+Escape is Stay: the dialog closes, the composer is empty, and the agent and its background shell keep running.
+Enter on the highlighted option 1 exits Claude and stops the listed background shell.
+On Herdr the styled composer read classifies the dialog screen as `pending`, because its `❯ 1. Exit and stop tasks` row looks like typed composer text, so the submit core's own Enter retry could confirm option 1 unasked; tmux reads the same screen as `unknown`.
+`bin/fm-control.sh` therefore submits Claude's `/exit` with one Enter, looks for the dialog before any retried Enter, and refuses with Stay unless `--stop-background` is passed (`fm_control_exit_dialog_signal` in `bin/fm-control-lib.sh`).
+
+Portable regressions:
+
+```sh
+tests/fm-control.test.sh
+```
+
+```text
+ok - fm-control exit: Claude's background-work dialog refuses, stays, and names the work
+ok - fm-control exit --stop-background: Claude's dialog is confirmed with option 1
+ok - fm-control exit: a retried submit Enter never confirms Claude's background-work dialog
+ok - fm-control: --stop-background applies to exit and relaunch only
+```
+
+Live guard:
+
+```sh
+FM_CONTROL_EXIT_DIALOG_LIVE=1 tests/fm-control-exit-dialog-live-e2e.test.sh
+```
+
+```text
+ok - live control exit: Claude Code (2.1.296 (Claude Code)) on herdr 0.9.3 refuses at the background-work dialog and keeps the agent and its work
+ok - live control exit --stop-background: Claude Code (2.1.296 (Claude Code)) on herdr 0.9.3 confirms 'Exit and stop tasks' and stops
+```
+
 ### Prune and respawn
 
 The real label-collision reproduction is owned by:
@@ -1733,6 +1768,22 @@ poll 8: {"agent_status":"working","session":".../2026-09-21T14-10-08-776Z_01a0c4
 ```
 
 The read that supplies the reference is `bin/backends/herdr.sh`'s `fm_backend_herdr_pane_agent_session_ref`, the per-harness rule is `bin/fm-control-lib.sh`'s `fm_control_relaunch_resume_flag`, and the launch argument is composed by `relaunch_resume_args` in `bin/fm-spawn.sh`; `docs/herdr-backend.md` "Agent status authority and relaunch" owns the contract. Nothing here changes `resume` as a control verb, and only a relaunch asks for it.
+
+### Worker resume directory after a server restart
+
+Measured 2026-10-10 on herdr 0.9.3 and Claude Code 2.1.296.
+
+- `bin/fm-spawn.sh` creates a ship or scout Herdr pane with its cwd set to the project's primary checkout (`fm_backend_herdr_create_task` ... `tab create --cwd`).
+- `treehouse get` then opens a NESTED subshell in the task worktree, and the agent is launched in that nested shell.
+- Live process chain of a running worker pane: herdr server -> pane top shell `-zsh` (cwd = primary checkout, `/Users/<user>/projects/firstmate`) -> `treehouse` -> `zsh` (cwd = worktree) -> `claude` (cwd = worktree).
+- `herdr pane get <pane>` reports that pane's `cwd` as the primary checkout.
+- Herdr's saved `session.json` records every `fm-*` worker pane with the primary checkout as `cwd` plus an `agent_session` reference (`source: herdr:claude`, `kind: id`).
+- Herdr's session-state documentation (v0.9.3): after a server restart it restores panes in their saved directory, preferring the live shell's directory.
+- With `session.resume_agents_on_restore` (default true) it relaunches supported agents with their native resume command, `claude --resume <id>` for Claude Code.
+- That is why workers come back resumed in the primary checkout instead of the recorded worktree.
+- Options, none implemented here:
+- Set `[session] resume_agents_on_restore = false` in the operator's Herdr config so restored worker panes come back as plain shells and are recovered with `bin/fm-control.sh <id> relaunch`, which launches in the recorded worktree.
+- Or start the pane's top shell in the worktree, e.g. `cd "$(treehouse get --lease)"`, which changes pool return to an explicit `treehouse return` at cleanup and is a spawn/teardown design change.
 
 ### Away-mode transport
 
