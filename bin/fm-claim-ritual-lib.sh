@@ -19,8 +19,8 @@
 # lacks and fails when it carries both: a `Claim recovery:` line naming the
 # project's recovery procedure and a `Claim model:` line naming the model the
 # ritual requires (or stating that none is required). bin/fm-spawn.sh refuses a
-# first launch of a ship task whose project declares a ritual and whose brief
-# lacks either line. This file is the single owner of both line labels.
+# first launch of a ship task, and bin/fm-promote.sh refuses promotion of a
+# scout, whose project declares a ritual and whose brief lacks either line. This file is the single owner of both line labels.
 # No side effects on source. set -u / set -e safe.
 
 # shellcheck source=bin/fm-brief-heading-lib.sh

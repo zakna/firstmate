@@ -1617,6 +1617,43 @@ EOF
 # one. Promotion decides the mode and yolo itself, but the forge is the project's
 # binding, so promotion takes it from the registry with no flag to remember, and
 # refuses a flag that contradicts it.
+# Promotion hands a scout a ship contract, so a scout in a claim-ritual project
+# must not become a ship without the recovery procedure and model in its brief.
+test_promotion_refuses_claim_ritual_project_without_recovery_and_model() {
+  local home proj meta out status id
+  home="$TMP_ROOT/ritual-promote/home"
+  proj="$home/projects/proj"
+  mkdir -p "$home/state" "$home/data" "$proj"
+  printf '%s\n' '- proj [direct-PR] - fixture (added 2026-01-01)' > "$home/data/projects.md"
+  printf '# Ritual\nTo recover a stale claim, post a superseding comment.\n' > "$proj/RITUAL.md"
+
+  id="ritual-promote-r1"
+  meta="$home/state/$id.meta"
+  printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\nproject=%s\n' "$id" "$proj" > "$meta"
+  FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 \
+    || fail "scout brief generation should succeed"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off 2>&1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "promotion into a claim-ritual project without the lines should exit non-zero"
+  assert_contains "$out" "runs its own claim ritual (RITUAL.md)" "promotion was not refused for the claim ritual"
+  assert_contains "$out" "Claim recovery:" "promotion refusal did not name the missing recovery line"
+  assert_contains "$out" "Claim model:" "promotion refusal did not name the missing model line"
+  assert_grep 'kind=scout' "$meta" "refused promotion still changed the task record"
+  assert_absent "$home/data/$id/ship-instructions.md" "refused promotion still published ship instructions"
+
+  rm "$home/data/$id/brief.md"
+  FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 \
+    || fail "scout brief regeneration should succeed"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' \
+    'Claim recovery: post a superseding review-claimed-by comment first.
+Claim model: gpt-5.6-sol, exactly.'
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off 2>&1) \
+    || fail "promotion with both claim lines should succeed: $out"
+  assert_grep 'kind=ship' "$meta" "a complete claim-ritual brief was not promoted"
+  pass "fm-promote: a claim-ritual project needs the recovery procedure and model in the scout brief"
+}
+
 test_promotion_carries_the_forge_binding() {
   local home sendroot meta out payload id
   home="$TMP_ROOT/forge-promote/home"
@@ -1794,6 +1831,7 @@ test_spawn_requires_the_brief_to_carry_the_selected_branch
 test_spawn_notices_a_ship_branch_against_the_registry_prefix
 test_spawn_refuses_a_registry_forge_it_cannot_read
 test_promotion_carries_the_forge_binding
+test_promotion_refuses_claim_ritual_project_without_recovery_and_model
 test_spawn_and_promote_require_filled_task_subsections
 test_spawn_refuses_claim_ritual_project_without_recovery_and_model
 test_spawn_and_promote_warn_on_gate_delegation_wording

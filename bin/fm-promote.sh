@@ -16,7 +16,10 @@
 # instructions under `## Firstmate spec`; the scout-time spec remains context but
 # is not relabeled as the ship spec. Promotion refuses leftover `{TASK}` /
 # `{FIRSTMATE_SPEC}` placeholders and a `## Captain's intent` line opening with
-# a Captain label or address (bin/fm-dod-lib.sh). It warns, and still
+# a Captain label or address (bin/fm-dod-lib.sh). It also refuses a scout whose
+# project runs its own claim ritual when the scout brief's `# Task` lacks the
+# `Claim recovery:` and `Claim model:` lines (bin/fm-claim-ritual-lib.sh), the
+# same refusal bin/fm-spawn.sh applies to a first ship launch. It warns, and still
 # promotes, when the scout-time `## Firstmate spec` hands the worker its own
 # gate responses (bin/fm-gate-delegation-lib.sh). A pre-subsection scout
 # brief contributes only Task lines explicitly marked as captain words to intent,
@@ -50,6 +53,8 @@ DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
 . "$SCRIPT_DIR/fm-dod-lib.sh"
 # shellcheck source=bin/fm-gate-delegation-lib.sh
 . "$SCRIPT_DIR/fm-gate-delegation-lib.sh"
+# shellcheck source=bin/fm-claim-ritual-lib.sh
+. "$SCRIPT_DIR/fm-claim-ritual-lib.sh"
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
 # shellcheck source=bin/fm-wake-lib.sh
@@ -215,6 +220,12 @@ fi
 if ADDRESS_LINE=$(fm_brief_intent_address_line "$SCOUT_BRIEF"); then
   echo "error: $SCOUT_BRIEF ## Captain's intent has an operator-address line: $ADDRESS_LINE; write the captain's actual words without a Captain label or address before promotion, since the heading already records provenance" >&2
   exit 1
+fi
+if [ -n "$PROMOTE_PROJECT" ] && RITUAL_FILE=$(fm_claim_ritual_detect "$PROMOTE_PROJECT"); then
+  if RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$SCOUT_BRIEF"); then
+    echo "error: $PROMOTE_PROJECT runs its own claim ritual (${RITUAL_FILE#"$PROMOTE_PROJECT"/}) but $SCOUT_BRIEF # Task lacks: $RITUAL_MISSING; copy the project's claim-recovery procedure and model requirement into the brief before promotion (bin/fm-claim-ritual-lib.sh)" >&2
+    exit 1
+  fi
 fi
 if DELEGATION_PHRASE=$(fm_gate_delegation_brief_match "$SCOUT_BRIEF"); then
   echo "warning: $SCOUT_BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; promoting anyway, so it carries into the promoted brief" >&2
