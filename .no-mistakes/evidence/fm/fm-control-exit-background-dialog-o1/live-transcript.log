@@ -1,0 +1,77 @@
+== S1: relaunch WITHOUT --stop-background (dialog open) ==
+rc=1
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG2719x2302. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, retry 'relaunch' with --stop-background; otherwise let it finish first
+error: relaunch of xdlg failed while stopping the old agent, which is still running; its original instructions were restored
+agent-state=alive
+6431 /bin/zsh -c source /Users/olivier/.claude/shell-snapshots/snapshot-zsh-1791662267642-hgu7dv.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'sleep 1801 # FMEXITDIALOG2719x2302' < /dev/null && pwd -P >| /tmp/claude-baf6-cwd
+background shell still running
+----- pane (after-relaunch-refusal) -----
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Haiku 5.5 · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+❯ Use the Bash tool with run_in_background set to true to run exactly: sleep 1801 # FMEXITDIALOG2719x2302 - then reply
+  only STARTED.
+  Thought for 2s, ran 1 shell command
+⏺ STARTED
+✻ Baked for 3s · done 9:57 PM · 1 shell still running
+❯ /exit
+                                                                                                    ◐ medium · /effort
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.N1tQ7c/wt (xdlg) ctx 29889/1000000  Haiku medium | 5h [█░░░░░] 13% →23:40 | 7d [░░░░░░]…
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+-----
+== S2: exit WITHOUT --stop-background ==
+rc=1
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG2719x2302. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, retry 'exit' with --stop-background; otherwise let it finish first
+agent-state=alive
+6431 /bin/zsh -c source /Users/olivier/.claude/shell-snapshots/snapshot-zsh-1791662267642-hgu7dv.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'sleep 1801 # FMEXITDIALOG2719x2302' < /dev/null && pwd -P >| /tmp/claude-baf6-cwd
+background shell still running
+----- pane (after-exit-refusal) -----
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Haiku 5.5 · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+❯ Use the Bash tool with run_in_background set to true to run exactly: sleep 1801 # FMEXITDIALOG2719x2302 - then reply
+  only STARTED.
+  Thought for 2s, ran 1 shell command
+⏺ STARTED
+✻ Baked for 3s · done 9:57 PM · 1 shell still running
+❯ /exit
+❯ /exit
+                                                                                                    ◐ medium · /effort
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.N1tQ7c/wt (xdlg) ctx 29889/1000000  Haiku medium | 5h [█░░░░░] 13% →23:40 | 7d [░░░░░░]…
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+-----
+== S3: relaunch WITH --stop-background ==
+rc=1
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/home/data/xdlg/brief.md must contain nonempty ## Captain's intent and ## Firstmate spec subsections (or a nonempty legacy # Task body) before spawn
+error: the replacement agent for xdlg could not be launched on claude
+error: xdlg's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+agent-state=dead
+background shell gone
+----- pane (after-relaunch-stop) -----
+CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+➜  wt git:xdlg CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+Resume this session with:
+claude --resume 41d59d27-7141-4b41-8471-c75839fc1cd8
+➜  wt git:xdlg
+-----
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+from_harness=claude
+to_harness=claude
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+harness=claude
+evidence relaunch
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N1tQ7c/wt
+harness=claude

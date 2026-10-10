@@ -1,0 +1,62 @@
+== S3-only run ==
+== S3: relaunch WITH --stop-background ==
+rc=0
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/data/xdlg/launch-brief.md records no ship branch; defaulting to legacy branch fm/xdlg
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/data/xdlg/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+relaunched xdlg harness=claude from=claude model=default effort=default backend=herdr endpoint=fm-lab-control-exit-dialog-75526:w1:p2 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/wt background-stopped=shell · sleep 1801 # FMEXITDIALOG75526x28178
+agent-state=alive
+background shell gone
+----- pane (after-relaunch-stop) -----
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/wt
+❯ : Firstmate operational input waiting: read '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit
+  -dialog.N6tWWn/home/state/operational-inbox/1791662356-c6fc61287d1a0108.msg' and handle its contents as Firstmate
+  operational input.
+  Thought for 2s, read 1 file, ran 1 shell command
+⏺ DONE
+  The steering inbox xdlg.inbox doesn't exist, so there were no queued messages to handle. I'm waiting for further
+  instructions.
+✻ Churned for 8s · done 9:59 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.N6tWWn/wt (xdlg) ctx 31000/1000000  Opus medium | 5h [█░░░░░] 13% →23:40 | 7d [░░░░░░] …
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
+-----
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/wt
+from_harness=claude
+to_harness=claude
+note_file=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.control-relaunch.note
+exit_result=stopped background-stopped=shell · sleep 1801 # FMEXITDIALOG75526x28178
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/wt
+harness=claude
+evidence relaunch
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/wt
+harness=claude
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-rebase: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-applypatch: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-auto-gc: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-merge-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/post-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/sendemail-validate: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/applypatch-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/prepare-commit-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/post-checkout: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/post-applypatch: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/post-rewrite: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/commit-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-push: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/post-merge: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks/pre-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state/xdlg.git-hooks: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home/state: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn/home: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.N6tWWn: Directory not empty
