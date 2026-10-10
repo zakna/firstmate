@@ -11,9 +11,12 @@
 #
 # fm_claim_ritual_detect reads the project clone only (never writes) and prints
 # the project file that declares a ritual: a root RITUAL.md, or a root
-# AGENTS.md or CLAUDE.md that qualifies a claim as abandoned, stale,
-# superseding, or recovered (the qualifier within two words before "claim",
-# across line breaks). It fails when the project declares none.
+# AGENTS.md or CLAUDE.md that describes a contributor-ownership claim (an
+# owner, reviewer, ticket, issue, task, session, agent, worker, contributor,
+# assignee, work, pr, or handoff claim) as abandoned, stale, superseded, or
+# recovered, across line breaks, or that names a superseding claim. Product
+# wording such as recovering stale lease claims is not a ritual. It fails when
+# the project declares none.
 #
 # fm_claim_ritual_brief_missing prints the lines the given brief text still
 # lacks and fails when it carries both: a `Claim recovery:` line naming the
@@ -37,7 +40,7 @@ fm_claim_ritual_detect() {  # <project-dir>
   for f in "$dir"/AGENTS.md "$dir"/CLAUDE.md; do
     [ -f "$f" ] || continue
     if tr -s '[:space:]' ' ' < "$f" \
-      | grep -Ei '(abandon|stale|supersed|recover)[a-z]*( [^ .]+){0,2} claim' >/dev/null; then
+      | grep -Ei '(supersed[a-z]* claim|(abandon|stale|supersed|recover)[a-z]*( [^ .]+){0,2} ([a-z]+-)?(owner|reviewer|review|ticket|issue|task|session|agent|worker|contributor|assignee|work|pr|handoff) claim)' >/dev/null; then
       printf '%s\n' "$f"
       return 0
     fi
