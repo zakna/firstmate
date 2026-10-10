@@ -1,0 +1,11 @@
+ok - herdr client selection: only protocol_mismatch triggers reselection; other failures pass through untouched
+ok - fm_backend_herdr_container_ensure: surfaces the exact ambiguous-placement refusal instead of a generic failure
+ok - fm_backend_herdr_create_task: refuses (fail-safe) rather than guessing when the duplicate's agent state cannot be classified confidently
+ok - herdr presentation: an unrecognized value warns and follows the default instead of failing a spawn
+ok - herdr presentation: warning marker publication is atomic, symlink-safe, and fails visible
+ok - herdr presentation focus: unexpected foreground-client reasons fail closed
+ok - herdr presentation focus: pane close fails when exact focus restoration fails
+ok - herdr presentation cleanup: a failed repositioning move falls back to the plain close with a warning
+ok - herdr presentation cleanup: a failed pane-death close falls back to the plain close
+ok - herdr presentation cleanup: every unconfirmed removal restores the exact original workspace order and reports failure
+rc=
