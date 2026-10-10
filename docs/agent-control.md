@@ -37,6 +37,10 @@ A recorded `harness=` is not always an exact adapter name: a task launched from 
 | `relaunch` | Replace the running agent with a new one in the same worktree - and the same endpoint whenever that endpoint still exists - on the exact recorded adapter or an explicitly chosen harness, model, and effort. | The new agent is alive on the endpoint the task's record now names, and that record names the harness that is actually running. |
 
 An exit that delivers lifecycle input but cannot prove the agent stopped fails with `exit=unconfirmed`, reports the observed agent state and any interrupt cancellation claim, and never claims that nothing changed.
+Claude Code answers its exit command with a `Background work is running` dialog while a background shell or agent runs.
+`exit` and `relaunch` then choose Stay, keep the agent running, and refuse with the listed background work, so the caller decides whether that work is disposable.
+`--stop-background` is that decision: only with it is the dialog's `Exit and stop tasks` option confirmed, and the stopped work is reported as `background-stopped=`.
+No retried submit Enter is sent once the dialog can be on screen, because Enter confirms it.
 Interrupt never rewrites busy state as proof of its own success.
 Claude exposes no lifecycle acknowledgement for a manual interrupt, so delivery succeeds with `cancel=unconfirmed` and its adapter-owned busy state remains as observed.
 Devin emits no lifecycle hook for cancellation either, so after an armed interrupt the control plane invalidates the interrupted turn's busy record to `unknown` with `cancel=unconfirmed`; that invalidation is a conservative loss of knowledge, never a fabricated idle.
