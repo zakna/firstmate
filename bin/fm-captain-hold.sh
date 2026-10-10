@@ -792,23 +792,25 @@ write_hold_set_stamp() {  # <task-id> <shown-body> <timestamp> <preserve-existin
   rm -f -- "$tmp"
 }
 
-# The done archive of this home's markdown backlog: the [markdown] archive key
-# of the backlog root's .tasks.toml (relative to that root), else the
-# done-archive.md that tasks-axi keeps beside the backlog. Fails when the
-# archive file is absent.
+# The done archive of this home's markdown backlog, resolved as tasks-axi does:
+# the [markdown] archive key of the backlog root's .tasks.toml, else of
+# ~/.tasks-axi/config.toml (a relative value is against the root, tasks-axi's
+# cwd), else the done-archive.md that tasks-axi keeps beside the backlog. Fails
+# when the archive file is absent.
 done_archive_path() {
   local data root toml archive=''
   data=$(fm_backlog_data_absolute "$DATA") || return 1
   root=$(fm_backlog_root "$data") || return 1
-  toml="$root/.tasks.toml"
-  if [ -f "$toml" ]; then
+  for toml in "$root/.tasks.toml" "$HOME/.tasks-axi/config.toml"; do
+    [ -f "$toml" ] || continue
     archive=$(awk '
       /^[[:space:]]*\[/ { in_md = ($0 ~ /^[[:space:]]*\[markdown\][[:space:]]*$/); next }
       in_md && /^[[:space:]]*archive[[:space:]]*=/ {
         v = $0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]]*#.*$/, "", v)
         gsub(/^["\047]|["\047]$/, "", v); print v; exit
       }' "$toml")
-  fi
+    [ -z "$archive" ] || break
+  done
   case "$archive" in
     '') archive="$data/done-archive.md" ;;
     /*) ;;

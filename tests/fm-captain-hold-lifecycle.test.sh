@@ -851,6 +851,35 @@ test_archived_self_owned_call_still_satisfies_the_gate() {
   pass "an archived self-owned captain call with a recorded answer still satisfies the gate"
 }
 
+# tasks-axi falls back to ~/.tasks-axi/config.toml for the archive path when the
+# backlog root's .tasks.toml sets none; the gate must read that same archive.
+test_archived_call_in_user_configured_archive_satisfies_the_gate() {
+  local home id call user
+  home=$(make_home archived-user-config)
+  user="$home/user"
+  id=sample-user-archive-scout
+  call=sample-user-archive-call
+  mkdir -p "$home/data/$id" "$user/.tasks-axi"
+  printf 'backend = "markdown"\n\n[markdown]\npath = "data/backlog.md"\ndone_keep = 10\n' > "$home/.tasks.toml"
+  printf '[markdown]\narchive = "data/user-archive.md"\n' > "$user/.tasks-axi/config.toml"
+  HOME=$user tasks_in "$home" add "$id" "User archive origin" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the user-archive origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  HOME=$user run_captain "$home" hold "$call" --title "User archive call" --reason "captain choice pending" --repo sample >/dev/null \
+    || fail "could not register the captain-held task"
+  HOME=$user run_captain "$home" complete "$id" "$call" >/dev/null || fail "completion failed for the held inventory"
+  printf 'Captain chose.\n' > "$home/choice.txt"
+  HOME=$user run_captain "$home" answer "$call" --decision-file "$home/choice.txt" >/dev/null \
+    || fail "answer could not close the captain-held task"
+  HOME=$user tasks_in "$home" prune --keep 0 >/dev/null || fail "could not prune the done section"
+  grep -q "^- \[x\] $call - " "$home/data/user-archive.md" 2>/dev/null \
+    || fail "the fixture did not prune the call into the user-configured archive"
+  HOME=$user run_captain "$home" verify "$id" >/dev/null \
+    || fail "verify refused an answered call archived at the user-configured path"
+  pass "an answered call in the user-configured archive still satisfies the gate"
+}
+
 test_archived_call_without_an_answer_still_refuses() {
   local home id call
   home=$(make_home archived-unanswered)
@@ -4115,6 +4144,7 @@ test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
 test_archived_answered_call_still_satisfies_the_gate
 test_archived_self_owned_call_still_satisfies_the_gate
+test_archived_call_in_user_configured_archive_satisfies_the_gate
 test_archived_call_without_an_answer_still_refuses
 test_release_frees_held_work
 test_hold_stamp_precedes_hold_visibility
