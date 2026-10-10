@@ -1008,12 +1008,20 @@ Claim model: gpt-5.6-sol, exactly.'
   assert_present "$home/data/$id/launch-brief.md" "a complete ritual brief did not launch"
 
   rm -f "$proj/RITUAL.md"
-  printf 'An abandoned claim is recovered by a superseding comment.\n' > "$proj/AGENTS.md"
+  printf '%s\n' 'An abandoned `review:changes-requested` fix-owner claim never transfers accepted findings directly. The recovery procedure records the exact current subject, returns it to `review:needed`, and requires a fresh `gpt-5.6-sol` finding review before another session may own fixes.' > "$proj/AGENTS.md"
   id='ritual-agents'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "agents brief should scaffold"
   fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
   out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
   assert_contains "$out" "runs its own claim ritual (AGENTS.md)" "AGENTS.md ritual was not detected"
+
+  printf '%s\n' 'Do not claim the fix is verified without running tests.' 'Never claim success early; recover from errors by retrying.' > "$proj/AGENTS.md"
+  id='ritual-harmless'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "harmless brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "claim ritual" "harmless uses of claim were taken for a ritual"
+  assert_present "$home/data/$id/launch-brief.md" "a harmless-claim project did not launch"
 
   rm -f "$proj/AGENTS.md"
   id='ritual-none'
