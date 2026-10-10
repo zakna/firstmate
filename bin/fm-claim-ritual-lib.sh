@@ -16,7 +16,8 @@
 # assignee, work, pr, or handoff claim) as abandoned, stale, superseded, or
 # recovered, across line breaks, or that names a superseding claim, or that
 # puts the word claim in the same sentence as a contributor action (comment,
-# take over, abandon, supersede). Product wording such as recovering stale
+# take over, abandon, supersede); blank lines, list items, and headings end a
+# sentence. Product wording such as recovering stale
 # lease claims is not a ritual. It fails when the project declares none.
 #
 # fm_claim_ritual_brief_missing prints the lines the given brief text still
@@ -45,7 +46,9 @@ fm_claim_ritual_detect() {  # <project-dir>
       printf '%s\n' "$f"
       return 0
     fi
-    if tr -s '[:space:]' ' ' < "$f" | tr '[:upper:]' '[:lower:]' \
+    if tr '[:upper:]' '[:lower:]' < "$f" \
+      | awk '/^[[:space:]]*$/ || /^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]/ || /^[[:space:]]*#/ { printf "\n" } { printf "%s ", $0 } END { printf "\n" }' \
+      | tr -s ' \t\r' ' ' \
       | awk '{ gsub(/[.!?] /, "&\n"); print }' \
       | awk '/(^|[^a-z])claims?([^a-z]|$)/ && /(^|[^a-z])(comment(s|ed|ing)?|(take|takes|taken|taking|took) over|abandon(s|ed|ing)?|supersed(e|es|ed|ing))([^a-z]|$)/ { found = 1 } END { exit !found }'; then
       printf '%s\n' "$f"
