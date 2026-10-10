@@ -1032,6 +1032,14 @@ Claim model: gpt-5.6-sol, exactly.'
   assert_not_contains "$out" "claim ritual" "harmless uses of claim were taken for a ritual"
   assert_present "$home/data/$id/launch-brief.md" "a harmless-claim project did not launch"
 
+  printf '%s\n' 'The queue worker should recover stale lease claims after timeout.' > "$proj/AGENTS.md"
+  id='ritual-product-claims'
+  FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "product-claims brief should scaffold"
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' 'Plain spec.'
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "claim ritual" "product wording about stale lease claims was taken for a ritual"
+  assert_present "$home/data/$id/launch-brief.md" "a project with application-level claims did not launch"
+
   rm -f "$proj/AGENTS.md"
   id='ritual-none'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "plain brief should scaffold"
