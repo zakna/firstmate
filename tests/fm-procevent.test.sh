@@ -4743,4 +4743,40 @@ assert_contains "$list_out" "placeholder comment two, with a comma" "read trunca
 assert_contains "$list_out" "element_uid: 2" "read lost the element uid of the list form"
 pass "read presents every prompt of an expanded list-form capture"
 
+LISTCHOICE="$TMP_ROOT/list-form-choice.result"
+cat > "$LISTCHOICE" <<'EOF_LIST'
+session:
+  file: /placeholder/board.html
+  status: feedback
+prompts[3]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-call\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main > form:nth-of-type(1)"
+    tag: choice
+    text: "Placeholder call: yes"
+  - uid: "2"
+    prompt: "Reconcile first\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-reconcile\",\n  \"selection\": \"reconcile\",\n  \"note\": \"placeholder detail\"\n}"
+    selector: "main > form:nth-of-type(2)"
+    tag: choice
+    text: Reconcile
+  - uid: "3"
+    prompt: placeholder cell comment
+    selector: "main > table > tbody > tr:nth-of-type(2)"
+    tag: td
+    text: Placeholder cell
+    target:
+      type: table-cell
+      selector: "main > table > tbody > tr:nth-of-type(2)"
+      text: Placeholder cell
+EOF_LIST
+choice_out=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$LISTCHOICE" 2>&1) \
+  || fail "answers failed on the expanded list form: $choice_out"
+[ "$choice_out" = "$(printf 'placeholder-call\tyes\tPlaceholder call: yes')" ] \
+  || fail "answers dropped the choice of a list-form capture: $choice_out"
+reconcile_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCHOICE" 2>&1) \
+  || fail "reconciles failed on the expanded list form: $reconcile_out"
+[ "$reconcile_out" = "$(printf 'placeholder-reconcile\tplaceholder detail')" ] \
+  || fail "reconciles dropped the reconcile of a list-form capture: $reconcile_out"
+pass "answers and reconciles key the choices of an expanded list-form capture"
+
 printf '\nall procevent tests passed\n'

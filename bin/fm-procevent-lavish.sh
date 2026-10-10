@@ -542,6 +542,53 @@ cmd_silent() {
   [ "$content_rc" -eq 1 ]
 }
 
+# Shared Perl reader for the queued-prompt section of a captured result. The
+# tabular form is a `NAME[N]{field,...}:` header followed by N indented CSV
+# rows, returned raw for the caller to split. The expanded list form is a
+# `NAME[N]:` header where `  - key: value` opens an item, `    key: value`
+# continues it, and anything indented deeper (a nested `target:` block) belongs
+# to the item but is not a prompt field; its items are returned as decoded
+# field hashes.
+PROMPT_ITEMS_PL='
+  sub read_prompt_items {
+    my ($fh, $sections) = @_;
+    my (@fields, $want, @rows, @listed, $list_form);
+    while (my $line = <$fh>) {
+      if (!@fields && !$list_form) {
+        if ($line =~ /^(?:$sections)\[(\d+)\]:\s*$/) {
+          ($want, $list_form) = ($1, 1);
+          next;
+        }
+        next unless $line =~ /^(?:$sections)\[(\d+)\]\{([^}]*)\}:\s*$/;
+        ($want, @fields) = ($1, split /,/, $2);
+        next;
+      }
+      last unless $line =~ /^\s/;
+      chomp $line;
+      if ($list_form) {
+        if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
+          last if @listed >= $want;
+          push @listed, {};
+          $listed[-1]{$1} = $2;
+        } elsif (@listed && $line =~ /^    (\w+):[ ]?(.*)$/) {
+          $listed[-1]{$1} = $2;
+        }
+        next;
+      }
+      last if @rows >= $want;
+      push @rows, $line;
+    }
+    for my $item (@listed) {
+      for my $v (values %$item) {
+        next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
+        $v = $1;
+        $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
+      }
+    }
+    return ($want, \@fields, \@rows, \@listed);
+  }
+'
+
 # Print `key<TAB>answer<TAB>label[<TAB>mode]` for each non-reconcile structured choice the
 # captain submitted in a captured result; the optional mode column relays the
 # card's declared close mode (`done` or `release`) to the keyed-answer intake. The published response frames queued feedback as
@@ -561,26 +608,15 @@ cmd_choice_rows() {
   local selection=$1 file=${2-}
   [ -n "$file" ] || usage
   [ -f "$file" ] && [ ! -L "$file" ] || die "result file does not exist: $file"
-  perl -MJSON::PP -e '
+  perl -MJSON::PP -e "$PROMPT_ITEMS_PL"'
     use strict; use warnings;
     my ($selection, $path) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (@fields, $want, @rows);
-    while (my $line = <$fh>) {
-      if (!@fields) {
-        next unless $line =~ /^prompts\[(\d+)\]\{([^}]*)\}:\s*$/;
-        ($want, @fields) = ($1, split /,/, $2);
-        next;
-      }
-      last unless $line =~ /^\s/;
-      last if @rows >= $want;
-      chomp $line;
-      push @rows, $line;
-    }
+    my (undef, $fields, $rows, $items) = read_prompt_items($fh, "prompts");
+    my @fields = @$fields;
     close $fh;
-    my %seen;
-    my @choices;
-    for my $row (@rows) {
+    my @parsed;
+    for my $row (@$rows) {
       $row =~ s/^\s+//;
       my @vals;
       while (length $row) {
@@ -596,6 +632,12 @@ cmd_choice_rows() {
       }
       my %f;
       $f{$fields[$_]} = $vals[$_] for 0 .. $#fields;
+      push @parsed, \%f;
+    }
+    my %seen;
+    my @choices;
+    for my $parsed (@parsed, @$items) {
+      my %f = %$parsed;
       next unless defined $f{tag} && $f{tag} eq "choice";
       my $prompt = $f{prompt};
       next unless defined $prompt && $prompt =~ /Context data:\s*(\{.*\})/s;
@@ -682,56 +724,17 @@ cmd_read() {
   [ -f "$file" ] && [ ! -L "$file" ] || die "result file does not exist: $file"
   lifecycle=$(cmd_classify "$file")
   session_ended=$(session_field "$file" session_ended)
-  perl -e '
+  perl -e "$PROMPT_ITEMS_PL"'
     use strict; use warnings;
     my ($path, $lifecycle, $session_ended) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (@fields, $want, @rows, @listed, $list_form);
-    while (my $line = <$fh>) {
-      if (!@fields && !$list_form) {
-        if ($line =~ /^(?:prompts|feedback)\[(\d+)\]:\s*$/) {
-          ($want, $list_form) = ($1, 1);
-          next;
-        }
-        next unless $line =~ /^(?:prompts|feedback)\[(\d+)\]\{([^}]*)\}:\s*$/;
-        ($want, @fields) = ($1, split /,/, $2);
-        next;
-      }
-      last unless $line =~ /^\s/;
-      chomp $line;
-      if ($list_form) {
-        # Expanded list form: `  - key: value` opens an item, `    key: value`
-        # continues it, and anything indented deeper (a nested `target:`
-        # block) belongs to the item but is not a prompt field.
-        if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
-          last if @listed >= $want;
-          push @listed, {};
-          $listed[-1]{$1} = $2;
-        } elsif (@listed && $line =~ /^    (\w+):[ ]?(.*)$/) {
-          $listed[-1]{$1} = $2;
-        }
-        next;
-      }
-      last if defined($want) && @rows >= $want;
-      push @rows, $line;
-    }
+    my ($want, $fields, $rows, $items) = read_prompt_items($fh, "prompts|feedback");
+    my @fields = @$fields;
     close $fh;
     $want = 0 unless defined $want;
-    my @parsed;
+    my @parsed = @$items;
     my $malformed = 0;
-    for my $item (@listed) {
-      my %f;
-      for my $k (keys %$item) {
-        my $v = $item->{$k};
-        if ($v =~ /^"((?:[^"\\]|\\.)*)"\s*$/) {
-          $v = $1;
-          $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
-        }
-        $f{$k} = $v;
-      }
-      push @parsed, \%f;
-    }
-    for my $row (@rows) {
+    for my $row (@$rows) {
       $row =~ s/^\s+//;
       my @vals;
       while (length $row) {
