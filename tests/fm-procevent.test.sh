@@ -4697,4 +4697,50 @@ PATH="$UNDISP/bin:$PATH" FM_HOME="$UNDISP/home" \
   "$ROOT/bin/fm-procevent-lavish.sh" retire "$undisp_art" >/dev/null 2>&1 || true
 pass "arm does not launch beside a stale claim whose process group is alive"
 
+# --- regression: the expanded list form of a captured result is read ---------
+# A live capture can frame its prompts as a `prompts[N]:` header followed by
+# `- uid:` list items with nested `target:` blocks, not a tabular `{fields}`
+# header. `read` once reported zero items for such a capture, so a handler that
+# trusted it dropped every captain answer. All text below is neutral placeholder.
+LISTRES="$TMP_ROOT/list-form.result"
+cat > "$LISTRES" <<'EOF_LIST'
+session:
+  file: /placeholder/board.html
+  status: feedback
+prompts[3]:
+  - uid: "1"
+    prompt: "placeholder comment one"
+    selector: "main > ol > li:nth-of-type(1) > b"
+    tag: b
+    text: Placeholder element one?
+  - uid: "2"
+    prompt: placeholder comment two, with a comma
+    selector: "main > table > tbody > tr:nth-of-type(2)"
+    tag: td
+    text: Placeholder cell
+    target:
+      type: table-cell
+      selector: "main > table > tbody > tr:nth-of-type(2)"
+      rowLabel: 1 - 2
+      columnLabel: Placeholder column
+      text: Placeholder cell
+  - uid: ""
+    prompt: placeholder freeform message
+    selector: ""
+    tag: message
+    text: ""
+next_step: "Placeholder next step"
+dom_snapshot: "uid=9 body"
+EOF_LIST
+list_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$LISTRES" 2>&1) \
+  || fail "read failed on the expanded list form: $list_out"
+assert_contains "$list_out" "declared_items: 3" "read lost the declared item count of the list form"
+assert_contains "$list_out" "presented_items: 3" "read dropped captain prompts in the list form"
+assert_contains "$list_out" "complete: yes" "read called a fully parsed list form incomplete"
+assert_contains "$list_out" "annotation_count: 2" "read lost the annotations of the list form"
+assert_contains "$list_out" "| placeholder freeform message" "read lost the freeform message of the list form"
+assert_contains "$list_out" "placeholder comment two, with a comma" "read truncated a list-form comment holding a comma"
+assert_contains "$list_out" "element_uid: 2" "read lost the element uid of the list form"
+pass "read presents every prompt of an expanded list-form capture"
+
 printf '\nall procevent tests passed\n'
