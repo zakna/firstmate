@@ -792,15 +792,84 @@ write_hold_set_stamp() {  # <task-id> <shown-body> <timestamp> <preserve-existin
   rm -f -- "$tmp"
 }
 
+# The done archive of this home's markdown backlog: the [markdown] archive key
+# of the backlog root's .tasks.toml (relative to that root), else the
+# done-archive.md that tasks-axi keeps beside the backlog. Fails when the
+# archive file is absent.
+done_archive_path() {
+  local data root toml archive=''
+  data=$(fm_backlog_data_absolute "$DATA") || return 1
+  root=$(fm_backlog_root "$data") || return 1
+  toml="$root/.tasks.toml"
+  if [ -f "$toml" ]; then
+    archive=$(awk '
+      /^[[:space:]]*\[/ { in_md = ($0 ~ /^[[:space:]]*\[markdown\][[:space:]]*$/); next }
+      in_md && /^[[:space:]]*archive[[:space:]]*=/ {
+        v = $0; sub(/^[^=]*=[[:space:]]*/, "", v); sub(/[[:space:]]*#.*$/, "", v)
+        gsub(/^["\047]|["\047]$/, "", v); print v; exit
+      }' "$toml")
+  fi
+  case "$archive" in
+    '') archive="$data/done-archive.md" ;;
+    /*) ;;
+    *) archive="$root/$archive" ;;
+  esac
+  [ -f "$archive" ] || return 1
+  printf '%s\n' "$archive"
+}
+
+# A row pruned from the live backlog by done_keep lives on in the done archive.
+# It still attests a captain call when it is closed there with a recorded
+# answer; an archived row without one attests nothing. The newest archived copy
+# of the id decides. Succeeds silently on an attesting row.
+archived_entry_answered() {  # <entry>
+  local archive block
+  archive=$(done_archive_path) || return 1
+  block=$(awk -v id="$1" '
+    function flush() { if (in_row && closed) last = block; in_row = 0 }
+    /^- \[[ x]\] / {
+      flush()
+      line = $0; sub(/^- \[[ x]\] /, "", line)
+      if (index(line, id " - ") == 1) { in_row = 1; closed = ($0 ~ /^- \[x\] /); block = $0 "\n" }
+      next
+    }
+    in_row && (/^  / || /^$/) { block = block $0 "\n"; next }
+    { flush() }
+    END { flush(); printf "%s", last }
+  ' "$archive") || return 1
+  [ -n "$block" ] || return 1
+  body_has_resolution_record "$block"
+}
+
 # Resolve one entry and verify the row it names is durably captain-held. A
 # resolution failure that is not the read bound keeps resolve_entry's own
-# status - its stderr already named the entry; 124 means the backend never
-# answered, which is not the same as an unknown entry and must not be spent
-# as absence. On success prints "<id> <how>" so the caller can keep the
-# attestation evidence.
+# status - its stderr already named the entry - unless the live backlog no
+# longer has the row and the done archive holds it closed with a recorded
+# answer; 124 means the backend never answered, which is not the same as an
+# unknown entry and must not be spent as absence. On success prints
+# "<id> <how>" so the caller can keep the attestation evidence.
 verify_entry_durable() {  # <origin-or-empty> <entry>; prints "<id> <how>"
-  local origin=$1 entry=$2 resolved resolve_status=0
-  resolved=$(resolve_entry "$origin" "$entry") || resolve_status=$?
+  local origin=$1 entry=$2 resolved resolve_status=0 err archived
+  err=$(umask 077; mktemp "${TMPDIR:-/tmp}/fm-captain-hold-resolve.XXXXXX") \
+    || fail "cannot stage the resolution diagnostics"
+  resolved=$(resolve_entry "$origin" "$entry" 2>"$err") || resolve_status=$?
+  if [ "$resolve_status" -eq 1 ]; then
+    archived=$entry
+    archived_entry_answered "$archived" || {
+      archived=''
+      if [ -n "$origin" ] && [ "$origin" != "$BINDING_ANY" ]; then
+        archived=$(legacy_hold_id "$origin" "$entry")
+        archived_entry_answered "$archived" || archived=''
+      fi
+    }
+    if [ -n "$archived" ]; then
+      rm -f -- "$err"
+      printf '%s archived\n' "$archived"
+      return 0
+    fi
+  fi
+  cat "$err" >&2
+  rm -f -- "$err"
   if [ "$resolve_status" -ne 0 ]; then
     [ "$resolve_status" -ne 124 ] \
       || fail "the backlog backend exceeded its read bound resolving $entry"

@@ -798,6 +798,80 @@ EOF
   pass "the completion gate attests captain-held inventory and transfers open status decisions"
 }
 
+# done_keep prunes an answered, closed captain call to the done archive; the
+# completion gate must still accept it there, and only when the archived row
+# carries a recorded answer.
+test_archived_answered_call_still_satisfies_the_gate() {
+  local home id call
+  home=$(make_home archived-answer)
+  id=sample-archive-scout
+  call=sample-archive-call
+  mkdir -p "$home/data/$id"
+  tasks_in "$home" add "$id" "Archive gate origin" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the archive-gate origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold "$call" --title "Archive call" --reason "captain choice pending" --repo sample >/dev/null \
+    || fail "could not register the captain-held task"
+  run_captain "$home" complete "$id" "$call" >/dev/null || fail "completion failed for the held inventory"
+  printf 'Captain chose.\n' > "$home/choice.txt"
+  run_captain "$home" answer "$call" --decision-file "$home/choice.txt" >/dev/null \
+    || fail "answer could not close the captain-held task"
+  tasks_in "$home" prune --keep 0 >/dev/null || fail "could not prune the done section"
+  if tasks_in "$home" show "$call" >/dev/null 2>&1; then
+    fail "the fixture did not move the answered call to the done archive"
+  fi
+  run_captain "$home" verify "$id" >/dev/null \
+    || fail "verify refused an answered call that was archived"
+  run_captain "$home" complete "$id" "$call" >/dev/null \
+    || fail "complete refused an answered call that was archived"
+  pass "an archived captain call with a recorded answer still satisfies the gate"
+}
+
+# The scout's own task can be the owner of its calls (decision_keys names the
+# scout itself); archiving that closed row must not strand teardown either.
+test_archived_self_owned_call_still_satisfies_the_gate() {
+  local home id
+  home=$(make_home archived-self)
+  id=sample-self-scout
+  mkdir -p "$home/data/$id"
+  tasks_in "$home" add "$id" "Self-owned call" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the self-owned origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold "$id" --reason "captain choice pending" >/dev/null \
+    || fail "could not hold the scout's own task"
+  run_captain "$home" complete "$id" "$id" >/dev/null || fail "completion failed for the self-owned call"
+  printf 'Captain chose.\n' > "$home/choice.txt"
+  run_captain "$home" answer "$id" --decision-file "$home/choice.txt" >/dev/null \
+    || fail "answer could not close the self-owned call"
+  tasks_in "$home" prune --keep 0 >/dev/null || fail "could not prune the done section"
+  run_captain "$home" verify "$id" >/dev/null \
+    || fail "verify refused a self-owned call that was archived with its answer"
+  pass "an archived self-owned captain call with a recorded answer still satisfies the gate"
+}
+
+test_archived_call_without_an_answer_still_refuses() {
+  local home id call
+  home=$(make_home archived-unanswered)
+  id=sample-unanswered-scout
+  call=sample-unanswered-call
+  mkdir -p "$home/data/$id"
+  tasks_in "$home" add "$id" "Unanswered archive origin" --kind scout --repo sample --start >/dev/null \
+    || fail "could not create the origin"
+  write_origin_meta "$home" "$id"
+  printf 'done: report complete\n' > "$home/state/$id.status"
+  run_captain "$home" hold "$call" --title "Unanswered call" --reason "captain choice pending" --repo sample >/dev/null \
+    || fail "could not register the captain-held task"
+  run_captain "$home" complete "$id" "$call" >/dev/null || fail "completion failed for the held inventory"
+  tasks_in "$home" 'done' "$call" >/dev/null 2>&1 || fail "could not close the call out of band"
+  tasks_in "$home" prune --keep 0 >/dev/null || fail "could not prune the done section"
+  if run_captain "$home" verify "$id" > "$home/unanswered.out" 2> "$home/unanswered.err"; then
+    fail "verify accepted an archived call that carries no recorded answer"
+  fi
+  pass "an archived captain call without a recorded answer still refuses"
+}
+
 # The recorded-answer rule: answering closes with the captain's exact words, an
 # exact retry is idempotent, a drifted retry is rejected, dependent work routed
 # behind the answered task is released by the close, and the completion gate is
@@ -4039,6 +4113,9 @@ test_hold_decodes_a_bare_scalar_body_without_the_nonref_default
 test_retained_body_keeps_its_utf8_bytes
 test_completion_gate_attests_and_transfers
 test_answer_records_and_closes
+test_archived_answered_call_still_satisfies_the_gate
+test_archived_self_owned_call_still_satisfies_the_gate
+test_archived_call_without_an_answer_still_refuses
 test_release_frees_held_work
 test_hold_stamp_precedes_hold_visibility
 test_interrupted_answer_preserves_hold_age
