@@ -3652,6 +3652,25 @@ test_workspace_find_matches_only_this_homes_own_label() {
   pass "fm_backend_herdr_workspace_find: matches only THIS home's own label among several coexisting workspaces"
 }
 
+test_workspace_find_reads_its_producer_whole_when_sigpipe_is_ignored() {
+  local dir err out
+  dir="$TMP_ROOT/find-sigpipe"; mkdir -p "$dir"
+  # CI ignores SIGPIPE, so a first-match reader that stops before its writer
+  # ends leaves the writer printing a broken-pipe line on stderr. The producer
+  # pauses after its first line to make that timing deterministic.
+  out=$(bash -c '
+    trap "" PIPE
+    . "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_workspace_find_all() { printf "%s\n" w1; sleep 0.3; printf "%s\n" w2; }
+    fm_backend_herdr_workspace_find fmtest
+    sleep 0.5
+  ' "$ROOT" 2> "$dir/err")
+  err=$(cat "$dir/err")
+  [ "$out" = "w1" ] || fail "workspace_find should keep the first match, got '$out'"
+  [ -z "$err" ] || fail "workspace_find printed on stderr with SIGPIPE ignored: $err"
+  pass "fm_backend_herdr_workspace_find: reads its producer whole, so an ignored SIGPIPE adds no stderr line"
+}
+
 # --- list_live: scoped to this home's own workspace only ---------------------
 
 test_list_live_scoped_to_this_homes_workspace_only() {
@@ -5871,6 +5890,7 @@ test_projection_reclaim_refusal_matrix_is_non_mutating
 test_projection_reclaim_replaces_only_exact_husk_and_advances_binding
 test_projection_recovery_is_read_only_and_refuses_live_duplicate_risk
 test_workspace_find_matches_only_this_homes_own_label
+test_workspace_find_reads_its_producer_whole_when_sigpipe_is_ignored
 test_list_live_scoped_to_this_homes_workspace_only
 test_parse_target
 test_normalize_key
