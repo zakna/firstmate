@@ -1,0 +1,82 @@
+=== lab home: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8 (done_keep=10, archive=data/done-archive.md)
+
+##### S1: answered separate captain call, pruned by done_keep 10 (unraid-array-reclaim shape)
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh hold lab-reclaim-call --title Reclaim call --reason captain choice pending --repo sample
+lab-reclaim-call
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-reclaim-s1 lab-reclaim-call
+complete: lab-reclaim-s1 captain-call inventory reviewed (lab-reclaim-call)
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh answer lab-reclaim-call --decision-file /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/choice.txt
+answered: lab-reclaim-call
+[exit 0]
+-- closing 11 filler tasks so done_keep=10 prunes naturally
+$ tasks-axi show lab-reclaim-call
+error: "Task \"lab-reclaim-call\" not found in this backlog"
+code: NOT_FOUND
+help[1]: Run `tasks-axi list` to see existing tasks
+
+$ grep archive
+- [x] lab-reclaim-call - Reclaim call (repo: sample) (kind: captain) (done 2026-10-10) (hold: captain choice pending) (hold-kind: captain)
+  Resolution recorded by fm-captain-hold.
+  Decision digest: 0b3568a8fb97d351d50764c24b0230c20f8a113b88d96a20d7ba5838690d6af5
+  Resolution mode: answered
+-- BASE commit:
+$ /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-base.YmPT8O/bin/fm-captain-hold.sh verify lab-reclaim-s1
+fm-captain-hold: no captain-held task lab-reclaim-call and no migrated hold for it in this home's configured backlog (data directory /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/data); the nearest legacy identity lab-reclaim-s1-decision-lab-reclaim-call also resolves to nothing
+[exit 1]
+-- CHANGE:
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh verify lab-reclaim-s1
+verified: lab-reclaim-s1 captain-call inventory
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-reclaim-s1 lab-reclaim-call
+complete: lab-reclaim-s1 captain-call inventory reviewed (lab-reclaim-call)
+[exit 0]
+
+##### S2: scout's own task owns its call (decision_keys=self, cv-rendercv-update shape)
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh hold lab-cv-s1 --reason captain choice pending
+lab-cv-s1
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-cv-s1 lab-cv-s1
+complete: lab-cv-s1 captain-call inventory reviewed (lab-cv-s1)
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh answer lab-cv-s1 --decision-file /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/choice.txt
+answered: lab-cv-s1
+[exit 0]
+archived copies: 1
+live copies: 0
+decision_keys=lab-cv-s1
+-- BASE commit:
+$ /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-base.YmPT8O/bin/fm-captain-hold.sh verify lab-cv-s1
+fm-captain-hold: no captain-held task lab-cv-s1 and no migrated hold for it in this home's configured backlog (data directory /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/data); the nearest legacy identity lab-cv-s1-decision-lab-cv-s1 also resolves to nothing
+[exit 1]
+-- CHANGE:
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh verify lab-cv-s1
+verified: lab-cv-s1 captain-call inventory
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-cv-s1 lab-cv-s1
+complete: lab-cv-s1 captain-call inventory reviewed (lab-cv-s1)
+[exit 0]
+
+##### S3 (adversarial): call closed out-of-band with NO recorded answer, then archived
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh hold lab-noanswer-call --title Unanswered call --reason captain choice pending --repo sample
+lab-noanswer-call
+[exit 0]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-noanswer-s1 lab-noanswer-call
+complete: lab-noanswer-s1 captain-call inventory reviewed (lab-noanswer-call)
+[exit 0]
+- [x] lab-noanswer-call - Unanswered call (repo: sample) (kind: captain) (done 2026-10-10) (hold: captain choice pending) (hold-kind: captain)
+  Captain hold set: 2026-10-10T19:36:54Z
+
+## Archived 2026-10-10
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh verify lab-noanswer-s1
+fm-captain-hold: no captain-held task lab-noanswer-call and no migrated hold for it in this home's configured backlog (data directory /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/data); the nearest legacy identity lab-noanswer-s1-decision-lab-noanswer-call also resolves to nothing
+[exit 1]
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-noanswer-s1 lab-noanswer-call
+fm-captain-hold: no captain-held task lab-noanswer-call and no migrated hold for it in this home's configured backlog (data directory /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/data); the nearest legacy identity lab-noanswer-s1-decision-lab-noanswer-call also resolves to nothing
+[exit 1]
+
+##### S4 (adversarial): unknown entry never held is still refused
+$ /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4KMTT0049C6CD2YJQWWAGAE/bin/fm-captain-hold.sh complete lab-cv-s1 lab-never-existed
+fm-captain-hold: no captain-held task lab-never-existed and no migrated hold for it in this home's configured backlog (data directory /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.FNxNJ8/data); the nearest legacy identity lab-cv-s1-decision-lab-never-existed also resolves to nothing
+[exit 1]
