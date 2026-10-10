@@ -1008,6 +1008,7 @@ Claim model: gpt-5.6-sol, exactly.'
   assert_present "$home/data/$id/launch-brief.md" "a complete ritual brief did not launch"
 
   rm -f "$proj/RITUAL.md"
+  # shellcheck disable=SC2016 # single quotes keep the PR 43 backticks literal
   printf '%s\n' 'An abandoned `review:changes-requested` fix-owner claim never transfers accepted findings directly. The recovery procedure records the exact current subject, returns it to `review:needed`, and requires a fresh `gpt-5.6-sol` finding review before another session may own fixes.' > "$proj/AGENTS.md"
   id='ritual-agents'
   FM_HOME="$home" "$BRIEF" "$id" proj --mode no-mistakes >/dev/null 2>&1 || fail "agents brief should scaffold"
