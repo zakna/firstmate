@@ -1,0 +1,31 @@
+# fm-procevent-lavish read on the reported capture lavish-54cd6a11a119825a.1.result (copy; captain text redacted)
+raw header: prompts[8]:  items: 8  tags:  4 b, 2 li, 1 message, 1 td,
+
+## base 7922da01
+declared_items: 0
+presented_items: 0
+complete: yes
+annotation_count: 0
+ANNOTATIONS: (none)
+
+## fix dd072a7a
+CAPTAIN MESSAGE
+declared_items: 8
+presented_items: 8
+complete: yes
+annotation_count: 7
+ANNOTATION 1 of 7
+ANNOTATION 2 of 7
+ANNOTATION 3 of 7
+ANNOTATION 4 of 7
+ANNOTATION 5 of 7
+ANNOTATION 6 of 7
+ANNOTATION 7 of 7
+
+## fix: answers on same capture (no choice rows expected)
+[] rc=0
+
+## adversarial: capture truncated to 3 of declared 8 items
+declared_items: 8
+presented_items: 3
+complete: no
