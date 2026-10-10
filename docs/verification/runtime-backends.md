@@ -782,6 +782,7 @@ bash -c '. bin/fm-composer-lib.sh
 Observed output: `unknown` before the fix, and `empty` after it.
 Replacing only the titled row with a solid rule gave `empty` before the fix too, which isolates the title as the cause.
 `test_matrix_claude_titled_rule_composer` in `tests/fm-composer-lib.test.sh` pins the scrubbed capture, and also checks that typed text under the titled rule still reads `pending` and that a prompt glyph inside a rule never proves a composer.
+Any tool can print a titled rule, so it pairs only under a proven `claude` identity; `test_matrix_titled_rule_needs_claude_identity` pins that gate, and `test_send_text_submit_claude_titled_rule_composer_is_proven_and_submitted` in `tests/fm-backend-herdr.test.sh` pins the Herdr submit path's payload proof under the same rule.
 
 ### 2026-09-15 codex-cli 0.154.0 idle starfield and status footer through Herdr
 
