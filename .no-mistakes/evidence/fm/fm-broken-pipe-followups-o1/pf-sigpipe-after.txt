@@ -1,0 +1,6 @@
+consume rc=0
+consume stdout: rejected 30d8dad4dc440e966751f60a170060439059165364cecf3419e4e561a2ad7e76: first refusal line: deliverable refused
+consume stderr (0 bytes):
+rejection reason file:
+first refusal line: deliverable refused
+

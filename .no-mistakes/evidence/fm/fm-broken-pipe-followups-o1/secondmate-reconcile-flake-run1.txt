@@ -1,0 +1,5 @@
+# run 1 of 4 (failed); runs 2-4 passed
+ok - reconcile requests stop oversized streams at the capture bound
+ok - reconcile requests require exactly one snapshot document
+ok - reconcile requests coalesce per target and retire independently after delivery
+not ok - the watcher beacon stalled behind delayed reconcile delivery

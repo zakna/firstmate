@@ -1,0 +1,6 @@
+== BEFORE (herdr.sh from /tmp/fm-base.fZuHw7)
+stdout=[w1]
+stderr=[/tmp/fm-base.fZuHw7: line 4: printf: write error: Broken pipe]
+== AFTER (herdr.sh from /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4M1ABB83HWCMATCCECBY5DK)
+stdout=[w1]
+stderr=[]

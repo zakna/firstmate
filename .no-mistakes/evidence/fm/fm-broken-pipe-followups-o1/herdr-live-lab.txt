@@ -1,0 +1,18 @@
+lab panes:
+[{"pane_id":"w1:p1","tab_id":"w1:t1"},{"pane_id":"w1:p2","tab_id":"w1:t2"},{"pane_id":"w1:p5","tab_id":"w1:t2"},{"pane_id":"w1:p3","tab_id":"w1:t3"},{"pane_id":"w1:p4","tab_id":"w1:t4"}]
+== BEFORE
+pane_for_tab w1:t2 -> w1:p2; rc=0
+pane_for_tab w1:t9 (absent) -> []
+resolve_bare_selector fm-dup -> fm-lab-pipe-46563-13105:w1:p2
+resolve_bare_selector fm-none -> [error: no herdr tab named fm-none in any running session]
+socket_path fm-lab-pipe-46563-13105 -> /Users/olivier/.config/herdr/sessions/fm-lab-pipe-46563-13105/herdr.sock
+socket_path fm-lab-absent -> []
+stderr: []
+== AFTER
+pane_for_tab w1:t2 -> w1:p2; rc=0
+pane_for_tab w1:t9 (absent) -> []
+resolve_bare_selector fm-dup -> fm-lab-pipe-46563-13105:w1:p2
+resolve_bare_selector fm-none -> [error: no herdr tab named fm-none in any running session]
+socket_path fm-lab-pipe-46563-13105 -> /Users/olivier/.config/herdr/sessions/fm-lab-pipe-46563-13105/herdr.sock
+socket_path fm-lab-absent -> []
+stderr: []
