@@ -1612,20 +1612,19 @@ EOF
   pass "fm-spawn: a registry forge token the parser refuses stops the launch, reason included"
 }
 
-# Promotion renders the same single owner an ordinary brief does, so a promoted
-# worker on a bound forge must receive that forge's contract rather than the PR
-# one. Promotion decides the mode and yolo itself, but the forge is the project's
-# binding, so promotion takes it from the registry with no flag to remember, and
-# refuses a flag that contradicts it.
 # Promotion hands a scout a ship contract, so a scout in a claim-ritual project
-# must not become a ship without the recovery procedure and model in its brief.
+# must not become a ship unless the ship-time text it delivers, the Captain's
+# intent, carries the recovery procedure and model; the scout-time spec is only
+# context to the promoted worker.
 test_promotion_refuses_claim_ritual_project_without_recovery_and_model() {
-  local home proj meta out status id
+  local home proj meta out status id claim_lines
   home="$TMP_ROOT/ritual-promote/home"
   proj="$home/projects/proj"
   mkdir -p "$home/state" "$home/data" "$proj"
   printf '%s\n' '- proj [direct-PR] - fixture (added 2026-01-01)' > "$home/data/projects.md"
   printf '# Ritual\nTo recover a stale claim, post a superseding comment.\n' > "$proj/RITUAL.md"
+  claim_lines='Claim recovery: post a superseding review-claimed-by comment first.
+Claim model: gpt-5.6-sol, exactly.'
 
   id="ritual-promote-r1"
   meta="$home/state/$id.meta"
@@ -1645,15 +1644,34 @@ test_promotion_refuses_claim_ritual_project_without_recovery_and_model() {
   rm "$home/data/$id/brief.md"
   FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 \
     || fail "scout brief regeneration should succeed"
-  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' \
-    'Claim recovery: post a superseding review-claimed-by comment first.
-Claim model: gpt-5.6-sol, exactly.'
+  fill_brief_subsections "$home/data/$id/brief.md" 'Finish the fix.' "$claim_lines"
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off 2>&1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "claim lines only in the scout-time spec should not satisfy promotion"
+  assert_contains "$out" "runs its own claim ritual (RITUAL.md)" "scout-spec-only claim lines were accepted"
+  assert_grep 'kind=scout' "$meta" "refused scout-spec-only promotion still changed the task record"
+  assert_absent "$home/data/$id/ship-instructions.md" "refused scout-spec-only promotion still published ship instructions"
+
+  rm "$home/data/$id/brief.md"
+  FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 \
+    || fail "scout brief regeneration should succeed"
+  fill_brief_subsections "$home/data/$id/brief.md" "Finish the fix.
+$claim_lines" 'Plain spec.'
   out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off 2>&1) \
-    || fail "promotion with both claim lines should succeed: $out"
+    || fail "promotion with both claim lines in the Captain's intent should succeed: $out"
   assert_grep 'kind=ship' "$meta" "a complete claim-ritual brief was not promoted"
-  pass "fm-promote: a claim-ritual project needs the recovery procedure and model in the scout brief"
+  assert_grep 'Claim recovery: post a superseding' "$home/data/$id/ship-instructions.md" \
+    "the promoted worker's ship instructions did not carry the recovery procedure"
+  assert_grep 'Claim model: gpt-5.6-sol' "$home/data/$id/ship-instructions.md" \
+    "the promoted worker's ship instructions did not carry the model requirement"
+  pass "fm-promote: a claim-ritual project needs the recovery procedure and model in the delivered Captain's intent"
 }
 
+# Promotion renders the same single owner an ordinary brief does, so a promoted
+# worker on a bound forge must receive that forge's contract rather than the PR
+# one. Promotion decides the mode and yolo itself, but the forge is the project's
+# binding, so promotion takes it from the registry with no flag to remember, and
+# refuses a flag that contradicts it.
 test_promotion_carries_the_forge_binding() {
   local home sendroot meta out payload id
   home="$TMP_ROOT/forge-promote/home"

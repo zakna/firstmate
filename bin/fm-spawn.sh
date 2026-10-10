@@ -2978,7 +2978,7 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
     exit 1
   fi
   if [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ] && RITUAL_FILE=$(fm_claim_ritual_detect "$PROJ_ABS"); then
-    if RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$BRIEF"); then
+    if RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$(fm_brief_heading_body "$BRIEF" "# Task")"); then
       echo "error: $PROJ_ABS runs its own claim ritual (${RITUAL_FILE#"$PROJ_ABS"/}) but $BRIEF # Task lacks: $RITUAL_MISSING; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)" >&2
       exit 1
     fi

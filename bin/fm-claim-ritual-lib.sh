@@ -15,16 +15,16 @@
 # superseding, or recovered (the qualifier within two words before "claim",
 # across line breaks). It fails when the project declares none.
 #
-# fm_claim_ritual_brief_missing prints the lines a brief's `# Task` body still
+# fm_claim_ritual_brief_missing prints the lines the given brief text still
 # lacks and fails when it carries both: a `Claim recovery:` line naming the
 # project's recovery procedure and a `Claim model:` line naming the model the
 # ritual requires (or stating that none is required). bin/fm-spawn.sh refuses a
-# first launch of a ship task, and bin/fm-promote.sh refuses promotion of a
-# scout, whose project declares a ritual and whose brief lacks either line. This file is the single owner of both line labels.
+# first launch of a ship task whose project declares a ritual and whose brief
+# `# Task` lacks either line. bin/fm-promote.sh refuses promotion of such a
+# scout when the ship-time text it delivers, the `## Captain's intent`, lacks
+# either line; the scout-time spec is only context for the promoted worker.
+# This file is the single owner of both line labels.
 # No side effects on source. set -u / set -e safe.
-
-# shellcheck source=bin/fm-brief-heading-lib.sh
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-brief-heading-lib.sh"
 
 fm_claim_ritual_detect() {  # <project-dir>
   local dir=$1 f
@@ -45,9 +45,8 @@ fm_claim_ritual_detect() {  # <project-dir>
   return 1
 }
 
-fm_claim_ritual_brief_missing() {  # <brief-file>
-  local task missing=
-  task=$(fm_brief_heading_body "$1" "# Task")
+fm_claim_ritual_brief_missing() {  # <brief-text>
+  local task=$1 missing=
   printf '%s\n' "$task" | grep -Eiq '^[[:space:]>*-]*claim recovery:[[:space:]]*[^[:space:]]' \
     || missing="Claim recovery: <the project's recovery procedure for an abandoned claim>"
   printf '%s\n' "$task" | grep -Eiq '^[[:space:]>*-]*claim model:[[:space:]]*[^[:space:]]' \
