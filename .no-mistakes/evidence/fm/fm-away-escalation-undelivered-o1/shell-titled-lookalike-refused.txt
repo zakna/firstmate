@@ -1,0 +1,6 @@
+composer_state=unknown
+inject_msg rc=1 failure=deferred: supervisor composer not confirmed-empty (state=unknown: pending input, dead-shell prompt, or unreadable pane) submit_attempted=0
+──────────────────────────────────────────────────────────── fake-title ─
+❯
+────────────────────────────────────────────────────────────
+➜  tmp

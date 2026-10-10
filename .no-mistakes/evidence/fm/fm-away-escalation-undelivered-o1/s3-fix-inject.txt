@@ -1,0 +1,1 @@
+inject_msg rc=1 failure=initial send or Enter delivery (verdict=send-failed, bytes=228; text may be in composer on backends that typed before Enter failed): no transport error output

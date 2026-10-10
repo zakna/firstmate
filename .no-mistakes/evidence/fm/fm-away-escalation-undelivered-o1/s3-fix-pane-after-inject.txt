@@ -1,0 +1,8 @@
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯ Try "fix lint errors"
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx --  Opus medium
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

@@ -1,0 +1,8 @@
+== FIX
+identity=[claude idle]
+composer_content rc=1 (no composer extracted -> send_text_submit returns send-failed before typing)
+composer_state=empty
+== BASE
+identity=[claude idle]
+composer_content rc=1 (no composer extracted -> send_text_submit returns send-failed before typing)
+composer_state=unknown

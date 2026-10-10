@@ -1,0 +1,6 @@
+named claude with typed draft: composer_state=pending
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯ half typed captain draft
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx --  Opus medium
+  ⏵⏵ auto mode on (shift+tab to cycle)

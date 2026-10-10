@@ -1,0 +1,4 @@
+Live Herdr 0.9.3 lab (fm-lab-titled-28035-26821), pane w1:p1 running `claude -n away-esc-lab` (Claude Code 2.1.296), idle composer with titled top rule.
+fm_backend_composer_state herdr <lab>:w1:p1
+  FIX  (0e1b5684): identity=claude idle verdict=empty
+  BASE (883c308e): identity=claude idle verdict=unknown

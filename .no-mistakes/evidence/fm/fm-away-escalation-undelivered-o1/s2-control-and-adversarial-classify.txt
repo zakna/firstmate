@@ -1,0 +1,4 @@
+FIX fm-lab-titled-28035-26821:w2:p1 identity=[claude idle] composer_state=empty
+BASE fm-lab-titled-28035-26821:w2:p1 identity=[claude idle] composer_state=empty
+FIX fm-lab-titled-28035-26821:w3:p1 identity=[] composer_state=unknown
+BASE fm-lab-titled-28035-26821:w3:p1 identity=[] composer_state=unknown

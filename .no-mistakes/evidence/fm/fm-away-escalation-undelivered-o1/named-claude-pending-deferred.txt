@@ -1,0 +1,7 @@
+composer_state=pending
+inject_msg rc=1 failure=deferred: supervisor composer not confirmed-empty (state=pending: pending input, dead-shell prompt, or unreadable pane) submit_attempted=0
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯ captain half-typed line do not clobber
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx 48388/1000000  Opus medium | 5h [░░░░░░] 3% →04:40 | 7d […
+  ⏵⏵ auto mode on (shift+tab to cycle)
