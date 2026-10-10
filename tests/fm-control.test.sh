@@ -145,6 +145,8 @@ case "${1:-}" in
       printf '%s\n' "$payload" >> "$D/literal"
       if [ -f "$D/claude-bg" ] && [ "$payload" = /exit ]; then
         : > "$D/exit-typed"
+      elif [ -f "$D/slow-exit" ] && [ "$payload" = /exit ]; then
+        : > "$D/exiting"
       elif [ -z "${FM_FAKE_NEVER_DIES:-}" ] \
          && { [ "$payload" = /exit ] || [ "$payload" = /quit ]; }; then
         printf 'zsh' > "$D/command"
@@ -201,11 +203,19 @@ case "${1:-}" in
           # A modelled Devin screen parks the cursor on its composer row.
           if [ -f "$D/devin" ]; then
             devin_screen "$(cat "$D/devin")" | awk '/^❭ /{ print NR - 1; exit }'
+          elif [ -f "$D/pane" ]; then
+            awk '/^❯ /{ print NR - 1; f = 1; exit } END { if (!f) print 1 }' "$D/pane"
           else
             printf '1\n'
           fi
           exit 0 ;;
-        *pane_current_command*) cat "$D/command"; printf '\n'; exit 0 ;;
+        *pane_current_command*)
+          # slow-exit holds the reads an exiting agent still answers alive.
+          if [ -f "$D/exiting" ]; then
+            n=$(cat "$D/slow-exit")
+            if [ "$n" -le 0 ]; then printf 'zsh' > "$D/command"; else printf '%s' "$((n - 1))" > "$D/slow-exit"; fi
+          fi
+          cat "$D/command"; printf '\n'; exit 0 ;;
         *pane_current_path*) cat "$D/cwd"; printf '\n'; exit 0 ;;
       esac
     done
@@ -1170,6 +1180,29 @@ test_claude_exit_enter_retry_never_lands_on_the_dialog() {
   pass "fm-control exit: a retried submit Enter never confirms Claude's background-work dialog"
 }
 
+test_claude_exit_dialog_text_in_transcript_is_not_the_dialog() {
+  local dir out rc
+  dir=$(new_case claude-bg-transcript)
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf '1\n' > "$dir/fake/slow-exit"
+  cat > "$dir/fake/pane" <<'EOF'
+bin/fm-control-lib.sh:249:    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
++  printf '\n   ❯ 1. Exit and stop tasks\n     3. Stay\n'
+  - `❯ 1. Exit and stop tasks` row looks like typed composer text
+────
+❯ 
+────
+  ⏵⏵ auto mode on · ← for agents
+EOF
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 0 "$rc" "dialog words in the transcript are not an open exit dialog"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
+  [ -z "$(keys_sent "$dir")" ] || fail "no dialog opened, so no Escape may be sent, got: $(keys_sent "$dir")"
+  pass "fm-control exit: Claude's dialog words in the transcript are not its exit dialog"
+}
+
 test_stop_background_is_rejected_on_interrupt() {
   local dir out rc
   dir=$(new_case stop-bg-interrupt)
@@ -1222,6 +1255,7 @@ test_agent_that_does_not_stop_fails_closed
 test_claude_background_dialog_refuses_and_keeps_agent
 test_claude_background_dialog_stop_background_exits
 test_claude_exit_enter_retry_never_lands_on_the_dialog
+test_claude_exit_dialog_text_in_transcript_is_not_the_dialog
 test_stop_background_is_rejected_on_interrupt
 test_grok_interrupt_without_acknowledgement_reports_unconfirmed
 test_grok_idle_footer_does_not_confirm_cancellation

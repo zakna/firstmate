@@ -240,13 +240,15 @@ fm_control_exit_command() {  # <harness>
 # before stopping running background work (a backgrounded shell or agent):
 # `Background work is running`, a `The following will stop when you exit:` task
 # list, then `1. Exit and stop tasks`, `2. Move to background and exit`, and
-# `3. Stay`. Either of the two independent rows recognizes it. Escape is Stay
-# and leaves the composer empty; Enter confirms the highlighted option, which is
-# option 1 when the dialog opens, and that exit also stops the listed work.
+# `3. Stay`. Its option row, matched as a whole row, recognizes it, so the same
+# words inside a transcript line (a grep hit, a diff, quoted docs) do not.
+# Escape is Stay and leaves the composer empty; Enter confirms the highlighted
+# option, which is option 1 when the dialog opens, and that exit also stops the
+# listed work.
 # Verified live on claude 2.1.296.
 fm_control_exit_dialog_signal() {  # <harness>
   case "${1-}" in
-    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
+    claude) printf '%s' '^[[:space:]]*(❯[[:space:]]*)?1\. Exit and stop tasks[[:space:]]*$' ;;
     codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
     *) return 1 ;;
   esac
@@ -257,7 +259,7 @@ fm_control_exit_dialog_signal() {  # <harness>
 # dialog.
 fm_control_exit_dialog_stop_row() {  # <harness>
   case "${1-}" in
-    claude) printf '%s' '❯ 1\. Exit and stop tasks' ;;
+    claude) printf '%s' '^[[:space:]]*❯[[:space:]]*1\. Exit and stop tasks[[:space:]]*$' ;;
     codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
     *) return 1 ;;
   esac
@@ -270,7 +272,7 @@ fm_control_exit_dialog_tasks() {  # <harness> <screen>
   case "${1-}" in
     claude)
       printf '%s\n' "${2-}" | awk '
-        /will stop when you exit:/ { on = 1; next }
+        /^[[:space:]]*The following will stop when you exit:[[:space:]]*$/ { on = 1; next }
         on && /^[[:space:]]*(❯[[:space:]]*)?[0-9]+\. / { exit }
         on {
           sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, "")
