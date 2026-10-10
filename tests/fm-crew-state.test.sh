@@ -1170,6 +1170,20 @@ test_ci_ready_done_log_beats_monitoring_run() {
 # but the ci step's log shows CI is actually green and only waiting on
 # merge/close. fm-crew-state must surface this as done, not "validating
 # (running)", so a green PR is never silently absorbed as still-in-progress.
+test_ci_green_keeps_status_log_held_disclosure() {
+  reset_fakes
+  local d; d=$(new_case ci-green-held)
+  make_repo_on_branch "$d/wt" fm/feat-cigreenheld
+  make_fakebin "$d" >/dev/null
+  fm_write_meta "$d/state/feat-cigreenheld.meta" "window=fm:fm-feat-cigreenheld" "worktree=$d/wt" "kind=ship"
+  printf 'working [at=1]: validating\ndone [at=2]: PR https://github.com/o/r/pull/2 checks green; held: review pending on head abc\n' > "$d/state/feat-cigreenheld.status"
+  FM_FAKE_AXI_STATUS="$(run_ci_monitoring fm/feat-cigreenheld)"
+  FM_FAKE_CI_LOGS='all CI checks passed - still monitoring until merged or closed'
+  local out; out=$(run_crew_state "$d" feat-cigreenheld)
+  assert_contains "$out" "source: run-step" "green reading is still the run-step"
+  assert_contains "$out" "held: review pending on head abc" "held disclosure stays visible"
+  pass "green ci reading keeps the status-log held disclosure"
+}
 test_ci_monitoring_checks_green_surfaces_done() {
   reset_fakes
   local d; d=$(new_case ci-green)
@@ -5702,6 +5716,7 @@ test_scalar_gate_parked_not_superseded
 test_gate_block_parked_not_superseded
 test_ci_ready_done_log_beats_monitoring_run
 test_ci_monitoring_checks_green_surfaces_done
+test_ci_green_keeps_status_log_held_disclosure
 test_top_level_ci_checks_green_surfaces_done
 test_ci_monitoring_no_checks_terminal_surfaces_done
 test_ci_monitoring_declared_no_ci_surfaces_done
