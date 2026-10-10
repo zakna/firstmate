@@ -732,7 +732,7 @@ confirm_exit_dialog() {  # <dialog-ere>
     || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and the Escape that chooses Stay was not delivered, so its exit dialog is still open; close it with Escape, never Enter, which stops that work"
   wait_rendered_gone "$dialog" "$SETTLE_WAIT" \
     || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and its exit dialog is still open after Escape; close it with Escape, never Enter, which stops that work"
-  die "task $ID's $HARNESS agent has background work its exit would stop: $tasks. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh $ID $VERB --stop-background'; otherwise let it finish first"
+  die "task $ID's $HARNESS agent has background work its exit would stop: $tasks. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh $ID $VERB' directly with the same options plus --stop-background; otherwise let it finish first"
 }
 
 # wait_rendered_gone <ere> <timeout>: poll until one successful viewport read
