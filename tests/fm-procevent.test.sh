@@ -4849,6 +4849,36 @@ assert_contains "$esc_out" "café and " "read lost the decoded unicode escape of
 assert_not_contains "$esc_out" "u00e9" "read turned a list-form unicode escape into literal text"
 pass "list-form items are validated and keep nested data and unicode escapes"
 
+# A capture cut off inside a quoted value, or holding more items than it
+# declares, is not a complete capture even though every declared key is present.
+UNTERM="$TMP_ROOT/list-form-unterminated.result"
+printf 'session:\n  status: feedback\nprompts[1]:\n  - uid: "1"\n    prompt: "placeholder text cut off\n    selector: ""\n    tag: message\n    text: ""' > "$UNTERM"
+unterm_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$UNTERM" 2>&1) \
+  || fail "read failed on an unterminated list-form value: $unterm_out"
+assert_contains "$unterm_out" "complete: no" "read certified a list item cut off inside a quoted value as complete"
+
+SURPLUS="$TMP_ROOT/list-form-surplus.result"
+cat > "$SURPLUS" <<'EOF_SURPLUS'
+session:
+  status: feedback
+prompts[1]:
+  - uid: ""
+    prompt: placeholder first message
+    selector: ""
+    tag: message
+    text: ""
+  - uid: ""
+    prompt: placeholder second message
+    selector: ""
+    tag: message
+    text: ""
+EOF_SURPLUS
+surplus_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$SURPLUS" 2>&1) \
+  || fail "read failed on a list form with surplus items: $surplus_out"
+assert_contains "$surplus_out" "complete: no" "read called a list holding more items than declared complete"
+assert_contains "$surplus_out" "placeholder second message" "read hid a surplus list-form message"
+pass "read does not certify unterminated or surplus list-form items"
+
 TABESC="$TMP_ROOT/tabular-escape.result"
 cat > "$TABESC" <<'EOF_TABESC'
 session:
