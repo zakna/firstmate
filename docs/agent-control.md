@@ -41,6 +41,7 @@ Claude Code answers its exit command with a `Background work is running` dialog 
 `exit` and `relaunch` then choose Stay, keep the agent running, and refuse with the listed background work, so the caller decides whether that work is disposable.
 `--stop-background` is that decision: only with it is the dialog's `Exit and stop tasks` option confirmed, and the stopped work is reported as `background-stopped=`.
 Claude's exit command gets exactly one Enter and no retry, because a later Enter could land on the dialog and confirm it.
+The dialog counts as open only when one screen read shows it complete at the bottom of the screen, so its rows left in scrollback never get a key.
 A relaunch that fails after confirming that option still names the work in its error and its journal: as `background-stopped=` once the old agent is proven dead, and as `background-stop-attempted=` while it is not, because a delivered Enter proves only the key.
 Interrupt never rewrites busy state as proof of its own success.
 Claude exposes no lifecycle acknowledgement for a manual interrupt, so delivery succeeds with `cancel=unconfirmed` and its adapter-owned busy state remains as observed.

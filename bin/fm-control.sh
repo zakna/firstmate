@@ -669,7 +669,7 @@ do_exit() {
   [ "$verdict" != send-failed ] \
     || die "the exit command could not be sent to task $ID on $BACKEND"
   if [ -n "$dialog" ]; then
-    background=$(await_exit_through_dialog "$dialog") || return $?
+    background=$(await_exit_through_dialog) || return $?
   else
     state=$(wait_agent_state "$EXIT_WAIT" dead) || {
       die "exit-delivered $ID interrupt=$interrupt_result exit-command=delivered agent-state=$state exit=unconfirmed; the agent did not stop within ${EXIT_WAIT}s"
@@ -682,21 +682,30 @@ do_exit() {
   [ -z "$background" ] || printf '\nbackground-stopped=%s' "$background"
 }
 
-# await_exit_through_dialog <dialog-ere>: wait for the agent to stop after its
-# exit command, handling the exit dialog when it opens. It sends no Enter of its
+# rendered_exit_dialog: print the exit dialog's rows when one successful
+# viewport read shows the complete dialog as the live bottom of the screen
+# (fm_control_exit_dialog_block); status 1 otherwise.
+rendered_exit_dialog() {
+  local screen
+  screen=$(fm_backend_visible_capture "$BACKEND" "$T" "$LABEL" 2>/dev/null) || return 1
+  fm_control_exit_dialog_block "$HARNESS" "$screen"
+}
+
+# await_exit_through_dialog: wait for the agent to stop after its exit
+# command, handling the exit dialog when it opens. It sends no Enter of its
 # own. Prints the background work an authorized dialog stopped, joined with
 # "; ", or nothing when no dialog opened.
-await_exit_through_dialog() {  # <dialog-ere>
-  local dialog=$1 elapsed=0 state seen=0 background=
+await_exit_through_dialog() {
+  local elapsed=0 state seen=0 background='' block
   while :; do
     state=$(agent_state)
     if [ "$state" = dead ]; then
       printf '%s' "$background"
       return 0
     fi
-    if [ "$seen" = 0 ] && rendered_matches "$dialog"; then
+    if [ "$seen" = 0 ] && block=$(rendered_exit_dialog); then
       seen=1
-      background=$(confirm_exit_dialog "$dialog") || return $?
+      background=$(confirm_exit_dialog "$block") || return $?
     fi
     awk -v e="$elapsed" -v t="$EXIT_WAIT" 'BEGIN{exit !(e < t)}' || break
     sleep "$POLL"
@@ -708,18 +717,18 @@ await_exit_through_dialog() {  # <dialog-ere>
   die "exit-delivered $ID interrupt=$interrupt_result exit-command=delivered agent-state=$state exit=unconfirmed; the agent did not stop within ${EXIT_WAIT}s"
 }
 
-# confirm_exit_dialog <dialog-ere>: the exit dialog is on screen. With
-# --stop-background, confirm its highlighted "Exit and stop tasks" option and
-# print the work it stops. Without it, choose Stay with Escape and refuse,
-# naming the work, so the caller decides whether it is disposable.
-confirm_exit_dialog() {  # <dialog-ere>
-  local dialog=$1 screen tasks stop_row
-  screen=$(fm_backend_visible_capture "$BACKEND" "$T" "$LABEL" 2>/dev/null) || screen=
-  tasks=$(fm_control_exit_dialog_tasks "$HARNESS" "$screen" | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')
+# confirm_exit_dialog <dialog-rows>: the exit dialog is on screen, as the rows
+# one read returned. With --stop-background, confirm its highlighted "Exit and
+# stop tasks" option and print the work it stops. Without it, choose Stay with
+# Escape and refuse, naming the work, so the caller decides whether it is
+# disposable.
+confirm_exit_dialog() {  # <dialog-rows>
+  local block=$1 tasks stop_row
+  tasks=$(fm_control_exit_dialog_tasks "$HARNESS" "$block" | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')
   [ -n "$tasks" ] || tasks="unlisted background work"
   if [ "$STOP_BACKGROUND" = 1 ]; then
     stop_row=$(fm_control_exit_dialog_stop_row "$HARNESS")
-    if ! rendered_matches "$stop_row"; then
+    if ! printf '%s\n' "$block" | grep -Eq -- "$stop_row"; then
       fm_backend_send_key "$BACKEND" "$T" Escape "$LABEL" || true
       die "task $ID's $HARNESS exit dialog is open but 'Exit and stop tasks' is not its highlighted option, so Enter would choose something else; sent Escape (Stay) and nothing was stopped. Background work: $tasks"
     fi
@@ -731,22 +740,23 @@ confirm_exit_dialog() {  # <dialog-ere>
   fi
   fm_backend_send_key "$BACKEND" "$T" Escape "$LABEL" \
     || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and the Escape that chooses Stay was not delivered, so its exit dialog is still open; close it with Escape, never Enter, which stops that work"
-  wait_rendered_gone "$dialog" "$SETTLE_WAIT" \
+  wait_exit_dialog_gone "$SETTLE_WAIT" \
     || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and its exit dialog is still open after Escape; close it with Escape, never Enter, which stops that work"
   die "task $ID's $HARNESS agent has background work its exit would stop: $tasks. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh $ID $VERB' directly with the same options plus --stop-background; otherwise let it finish first"
 }
 
-# wait_rendered_gone <ere> <timeout>: poll until one successful viewport read
-# has no matching row. An unreadable viewport is not proof the surface closed,
-# so the read that proves closure is the same one that was tested.
-wait_rendered_gone() {  # <ere> <timeout>
+# wait_exit_dialog_gone <timeout>: poll until one successful viewport read no
+# longer shows the live exit dialog. An unreadable viewport is not proof the
+# dialog closed, so the read that proves closure is the same one that was
+# tested.
+wait_exit_dialog_gone() {  # <timeout>
   local elapsed=0 screen
   while :; do
     if screen=$(fm_backend_visible_capture "$BACKEND" "$T" "$LABEL" 2>/dev/null) \
-       && ! printf '%s\n' "$screen" | grep -Eq -- "$1"; then
+       && ! fm_control_exit_dialog_block "$HARNESS" "$screen" >/dev/null; then
       return 0
     fi
-    awk -v e="$elapsed" -v t="$2" 'BEGIN{exit !(e < t)}' || return 1
+    awk -v e="$elapsed" -v t="$1" 'BEGIN{exit !(e < t)}' || return 1
     sleep "$POLL"
     elapsed=$(awk -v e="$elapsed" -v p="$POLL" 'BEGIN{printf "%.3f", e + p}')
   done
