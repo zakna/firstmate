@@ -1,0 +1,5 @@
+$ fm-spawn.sh lab-ok1 proj --scout --harness claude --model claude-haiku-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.8oG2GR
+spawned lab-ok1 harness=claude kind=scout window=primary:fm-lab-ok1 worktree=/Users/olivier/.treehouse/proj-444500/1/proj
+exit=0
+bash-5.3$

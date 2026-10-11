@@ -1,0 +1,11 @@
+$ fm-control.sh lab-ok1 relaunch --model claude-sonnet-5-5 --effort high
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.8oG2GR
+error: model 'claude-sonnet-5-5' (Sonnet) cannot start at effort 'high'; the allowed maximum for Sonnet is medium
+exit=1
+$ fm-control.sh lab-ok1 relaunch --model claude-haiku-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.8oG2GR
+error: model 'claude-haiku-5-5' (Haiku) cannot start at effort 'medium'; the allowed maximum for Haiku is low
+exit=1
+model=claude-haiku-5-5
+effort=low
+bash-5.3$
