@@ -794,7 +794,6 @@ nm_reclassify_failed_run_as_held_green() {
   RUN_STATE="done"
   pr_url=$(strip_quotes "$(nm_field pr)")
   [ -n "$pr_url" ] && RUN_DETAIL="$RUN_DETAIL: $pr_url"
-  append_log_held_disclosure
   return 0
 }
 
@@ -1119,7 +1118,7 @@ if [ "$HAVE_RUN" = 1 ]; then
       case "$outcome" in
         passed|passed-with-override) RUN_STATE="done"; RUN_DETAIL=$(passed_pr_detail) ;;
         passed-with-skips) RUN_STATE="done"; RUN_DETAIL="$(passed_pr_detail) (publication/CI verification skipped)" ;;
-        checks-passed) RUN_STATE="done"; RUN_DETAIL="checks green: PR ready for review"; append_log_held_disclosure ;;
+        checks-passed) RUN_STATE="done"; RUN_DETAIL="checks green: PR ready for review" ;;
         failed)
           if nm_reclassify_failed_run_as_held_green; then :; else
             RUN_STATE=failed; RUN_DETAIL="run failed"
@@ -1176,7 +1175,6 @@ if [ "$HAVE_RUN" = 1 ]; then
               # the worker never reported it and no pr= was recorded.
               ci_pr_url=$(strip_quotes "$(nm_field pr)")
               [ -z "$ci_pr_url" ] || RUN_DETAIL="$RUN_DETAIL: $ci_pr_url"
-              append_log_held_disclosure
             fi
             ;;
           fixing)
@@ -1185,6 +1183,9 @@ if [ "$HAVE_RUN" = 1 ]; then
         esac
       fi
     fi
+  fi
+  if [ "$RUN_STATE" = "done" ]; then
+    append_log_held_disclosure
   fi
 
   if [ "$RUN_STATE" = working ] && log_reports_ci_ready; then

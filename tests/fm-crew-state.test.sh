@@ -1182,10 +1182,10 @@ test_ci_green_keeps_status_log_held_disclosure() {
 
 test_terminal_green_keeps_status_log_held_disclosure() {
   local scenario failures=0
-  for scenario in checks-passed failed cancelled; do
+  for scenario in checks-passed failed cancelled passed completed; do
     (
       reset_fakes
-      local d out
+      local d out expect="checks green"
       d=$(new_case "terminal-held-$scenario")
       make_repo_on_branch "$d/wt" fm/termheld
       make_fakebin "$d" >/dev/null
@@ -1195,13 +1195,20 @@ test_terminal_green_keeps_status_log_held_disclosure() {
       case "$scenario" in
         checks-passed) FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS/outcome: failed/outcome: checks-passed} ;;
         cancelled) FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS//failed/cancelled} ;;
+        passed)
+          FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS/outcome: failed/outcome: passed}
+          expect="run passed: PR open" ;;
+        completed)
+          FM_FAKE_AXI_STATUS="$(run_failed_ci_orphan_status_only fm/termheld)"
+          FM_FAKE_AXI_STATUS=${FM_FAKE_AXI_STATUS//failed/completed}
+          expect="run completed" ;;
       esac
       FM_FAKE_PR_STATE=OPEN
       FM_FAKE_PR_MERGED=false
       FM_FAKE_PR_STATE_AXI=open
       FM_FAKE_CI_LOGS="all CI checks passed - still monitoring until merged or closed"
       out=$(FM_HOME="$d" run_crew_state "$d" termheld)
-      assert_contains "$out" "checks green" "$scenario: green run-step reading: $out"
+      assert_contains "$out" "$expect" "$scenario: green run-step reading: $out"
       assert_contains "$out" "held: review pending on head abc" "$scenario: held disclosure stays visible: $out"
       pass "$scenario: terminal green reading keeps the status-log held disclosure"
     ) || failures=$((failures + 1))
