@@ -145,7 +145,10 @@
 #      claims are superseded BECAUSE THE RUN IS ALIVE when the run is
 #      running/fixing with recent reported activity: a killed or timed-out drive
 #      call is not daemon death, so that claim is answered by steering the crew
-#      to reattach, not by escalating.
+#      to reattach, not by escalating. A run-step reading of done, short of
+#      PR merged, keeps the log's latest `done: ...; held: <why>` disclosure as
+#      its own detail component (append_log_held_disclosure), so the merge
+#      authority still sees it.
 #   4. No current run for this crew (pre-validation, uninitialized repository,
 #      proven historical head, or kind=scout): fall back to the recorded
 #      backend's pane busy state, then the resolved status declaration
@@ -769,6 +772,19 @@ EOF
   [ "$(nm_ci_checks_state)" = green ]
 }
 
+# A worker's `done: ...; held: <why>` disclosure must stay visible beside a
+# green run-step reading, or the merge authority can miss it. A merged reading
+# drops it: a hold only matters before merge.
+append_log_held_disclosure() {
+  [ "$LOG_VERB" = "done" ] || return 0
+  case "$RUN_DETAIL" in *"PR merged"*) return 0 ;; esac
+  local note
+  note=$(status_line_note "$LOG_LINE")
+  case "$note" in
+    *"; held:"*) RUN_DETAIL="$RUN_DETAIL${SEP}held:${note#*"; held:"}" ;;
+  esac
+}
+
 # Apply the header's terminal-delivery safeguard. The earlier green log cannot
 # prove current PR disposition: a subsequent close can itself end the monitor.
 nm_reclassify_failed_run_as_held_green() {
@@ -1172,6 +1188,9 @@ if [ "$HAVE_RUN" = 1 ]; then
         esac
       fi
     fi
+  fi
+  if [ "$RUN_STATE" = "done" ]; then
+    append_log_held_disclosure
   fi
 
   if [ "$RUN_STATE" = working ] && log_reports_ci_ready; then
