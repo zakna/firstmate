@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Haiku 5.5 · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.RDrgFz/wt
+
+
+❯ Use the Bash tool with run_in_background set to true to run exactly: sleep 1801 # FMEXITDIALOG87826x8310 - then reply
+  only STARTED.
+
+  Thought for 2s, ran 1 shell command
+
+⏺ STARTED
+
+✻ Cooked for 3s · done 9:24 AM · 1 shell still running
+
+❯ /exit
+
+
+
+
+
+
+
+
+
+
+
+
+
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ ◐ medium · /effort ▔
+   Background work is running
+   The following will stop when you exit:
+
+   shell · sleep 1801 # FMEXITDIALOG87826x8310
+
+   ❯ 1. Exit and stop tasks
+     2. Move to background and exit
+     3. Stay
+
+   Enter to confirm · Esc to cancel

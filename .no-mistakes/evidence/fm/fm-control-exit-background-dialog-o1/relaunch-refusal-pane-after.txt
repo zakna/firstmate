@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.296
+▝▜██████▀  Haiku 5.5 · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.RDrgFz/wt
+
+
+❯ Use the Bash tool with run_in_background set to true to run exactly: sleep 1801 # FMEXITDIALOG87826x8310 - then reply
+  only STARTED.
+
+  Thought for 2s, ran 1 shell command
+
+⏺ STARTED
+
+✻ Cooked for 3s · done 9:24 AM · 1 shell still running
+
+❯ /exit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                    ◐ medium · /effort
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.RDrgFz/wt (xdlg) ctx 29846/1000000  Haiku medium | 5h [░░░░░░] 6% →10:10 | 7d [░░░░░░] …
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents

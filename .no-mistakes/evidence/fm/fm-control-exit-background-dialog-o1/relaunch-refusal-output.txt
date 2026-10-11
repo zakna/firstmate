@@ -1,0 +1,3 @@
+rc=1
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG87826x8310. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg relaunch' directly with the same options plus --stop-background; otherwise let it finish first
+error: relaunch of xdlg failed while stopping the old agent, which is still running; its original instructions were restored

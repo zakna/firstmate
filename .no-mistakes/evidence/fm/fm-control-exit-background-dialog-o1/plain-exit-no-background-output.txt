@@ -1,0 +1,2 @@
+rc=0
+stopped xdlg harness=claude backend=herdr endpoint=fm-lab-control-exit-dialog-87826:w1:p2 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.RDrgFz/wt
