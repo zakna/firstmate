@@ -1,0 +1,2 @@
+ok - refresh takes the slowest passing sample, keeps unmeasured hints, and is idempotent
+ok - refresh refuses missing input

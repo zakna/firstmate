@@ -1,0 +1,18 @@
+$ grep retired copy (before)
+679:tests/fm-retired-gone.test.sh 99999
+1688:        # A retired source path with no remaining test consumer cannot select
+$ refresh --target copy failonly.json (only a failing sample + stale hint)
+serial hints refreshed: 0 of 181 scripts changed
+exit=0
+stale hint after: 1
+fm-backend before: tests/fm-backend.test.sh 21658 / after: tests/fm-backend.test.sh 21658
+$ refresh with malformed JSON
+jq: parse error: Invalid numeric literal at line 1, column 5
+exit=5
+$ refresh with unknown option
+fm-test-weights-refresh: unknown option: --bogus
+exit=2
+$ refresh with no table in target
+fm-test-weights-refresh: no serial hint table found in /tmp/fm-live.OkljnC/notable.sh
+exit=2
+stale-hint line count after refresh: 0

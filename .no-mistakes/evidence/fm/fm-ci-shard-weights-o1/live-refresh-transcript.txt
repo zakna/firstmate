@@ -1,0 +1,13 @@
+BEFORE: FM_TEST_COVERAGE ok total=242 parallel=24 parallel_max_ms=417163 parallel_imbalance_ms=2894 parallel_unhinted=0 serial=202 serial_shards=9 serial_unhinted=21 herdr=16
+$ bin/fm-test-weights-refresh.sh <27 timing JSONs from green main CI runs 38122366996 38120465692 38118089514>
+serial hints refreshed: 163 of 198 scripts changed
+exit=0
+$ git diff --stat
+ bin/fm-test-run.sh | 309 ++++++++++++++++++++++++++++-------------------------
+ 1 file changed, 163 insertions(+), 146 deletions(-)
+$ bin/fm-test-run.sh --check-coverage
+FM_TEST_COVERAGE ok total=242 parallel=24 parallel_max_ms=417163 parallel_imbalance_ms=2894 parallel_unhinted=0 serial=202 serial_shards=9 serial_unhinted=4 herdr=16
+exit=0
+$ (rerun, idempotence)
+serial hints unchanged (198 scripts)
+byte-identical after rerun
