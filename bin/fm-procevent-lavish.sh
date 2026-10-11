@@ -633,7 +633,7 @@ PROMPT_ITEMS_PL='
 # form of `- key: value` items; read_prompt_items parses both, so this reads
 # fields by name rather than assuming a fixed column, and takes only items whose
 # `tag` field is `choice`; a list-form item flagged `_incomplete`, as from a
-# truncated capture, is skipped so a partial choice never feeds intake. A freeform `message` row is captain prose and is deliberately never a
+# truncated capture, or `_surplus`, beyond the declared count, is skipped so a partial choice never feeds intake. A freeform `message` row is captain prose and is deliberately never a
 # source of decision keys. A row that does not carry both a slug-shaped `question`
 # and the versioned `selection` and `note` fields inside its `Context data:` block
 # is skipped. A time-limited rollout branch accepts the old question/answer
