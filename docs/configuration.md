@@ -1067,7 +1067,7 @@ This single-provider table is separate from the frozen legacy mapping used by `f
 **Model, effort, and fallback behavior**
 
 - `ultra` is native-only: the model-aware validation contract and launch mapping are owned by `bin/fm-harness.sh validate-native-effort` and `bin/fm-spawn.sh` respectively.
-- A claude profile or launch whose model id names the Sonnet family is refused above `medium` effort, and the Haiku family above `low`, at spawn and relaunch time before anything is provisioned; Opus and Fable, other harnesses, and an omitted effort are unaffected, and `bin/fm-harness.sh validate-model-effort` owns the limits.
+- A claude profile or launch whose model id names the Sonnet family is refused above `medium` effort, and the Haiku family above `low`, at spawn and relaunch time before anything is provisioned; Opus and Fable, other harnesses, and an omitted effort are unaffected, and `bin/fm-harness.sh` owns the limits, which `bin/fm-bootstrap.sh` and `bin/fm-dispatch-resolve.sh` also apply so a profile above them is rejected during dispatch configuration validation.
 - Codex `max` is valid when the profile selects `gpt-5.6-luna`, whose installed catalog entry supports that reasoning level.
 - An omitted model or effort means the selected harness uses its own default for that axis.
 - OpenCode receives the effort as its default `build` agent's `variant`, keyed to the resolved model, inside the `OPENCODE_CONFIG_CONTENT` JSON its launch already writes (the per-model reasoning-effort field of the config schema, verified on opencode 1.18.32); with no model resolved, the effort is recorded in task metadata but omitted from the launch.
@@ -1082,7 +1082,7 @@ See [`docs/examples/crew-dispatch.json`](examples/crew-dispatch.json) for a star
 
 - When the file exists, bootstrap validates it with `jq`.
 - Valid files stay silent by default; with `FM_BOOTSTRAP_VERBOSE_FACTS=1`, bootstrap emits `BOOTSTRAP_INFO: crew dispatch active config/crew-dispatch.json`, one `BOOTSTRAP_INFO:` fact per rule, and one fact for the optional default profile set.
-- Malformed JSON, malformed rules, an empty or malformed profile array, an unverified harness, or an effort value unsupported by that harness is reported as `CREW_DISPATCH: invalid config/crew-dispatch.json - ...`.
+- Malformed JSON, malformed rules, an empty or malformed profile array, an unverified harness, or an effort value unsupported by that harness (including above the claude family ceilings) is reported as `CREW_DISPATCH: invalid config/crew-dispatch.json - ...`.
 - While typed resolution is active, malformed `approval`, `min_confidence`, `floor`, and present `provider` declarations receive the same diagnostic; without the key those inert declarations preserve the pre-existing bootstrap behavior.
 - Missing `jq` is reported through the normal `MISSING: jq` install-consent flow.
 - While the file remains present, no crewmate or scout spawn may proceed without an explicit resolved harness; malformed configuration must be reported and corrected rather than selected around.
