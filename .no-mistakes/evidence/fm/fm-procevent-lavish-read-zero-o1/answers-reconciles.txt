@@ -1,0 +1,10 @@
+### base: answers (list-form capture with 2 choice rows)
+exit=0
+### head: answers
+placeholder-call	yes	Placeholder call: yes
+exit=0
+### base: reconciles (list-form capture with 2 choice rows)
+exit=0
+### head: reconciles
+placeholder-reconcile	placeholder detail
+exit=0

@@ -1,0 +1,6 @@
+### truncated capture (prompts[8] header, 7 items)
+declared_items: 8
+presented_items: 7
+malformed_items: 0
+complete: no
+END LAVISH RESULT (7 of 8)

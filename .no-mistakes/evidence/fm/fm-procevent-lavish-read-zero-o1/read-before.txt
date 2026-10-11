@@ -1,4 +1,4 @@
-$ (base 8694c272) bin/fm-procevent-lavish.sh read lavish-54cd6a11a119825a.1.result
+### BASE 8694c272: read lavish-54cd6a11a119825a.1.result
 SESSION-ENDING MESSAGE: (none)
 
 declared_items: 0

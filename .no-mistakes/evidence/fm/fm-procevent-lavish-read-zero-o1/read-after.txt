@@ -1,4 +1,4 @@
-$ (fix e77c48ae) bin/fm-procevent-lavish.sh read lavish-54cd6a11a119825a.1.result
+### HEAD bfaaf522: read lavish-54cd6a11a119825a.1.result
 CAPTAIN MESSAGE
 | uopdatet dashboarsd
 END CAPTAIN MESSAGE
@@ -69,6 +69,12 @@ text:
 | Learn the machines, find starting weights, no heavy soreness
 prompt:
 | im already familiar with some routine and some machiones but i beleive i need to lower the load
+| nested target:
+| nested   type: table-cell
+| nested   selector: "main > table:nth-of-type(1) > tbody > tr:nth-of-type(2) > td:nth-of-type(5)"
+| nested   rowLabel: 1 - 2
+| nested   columnLabel: Main aim
+| nested   text: "Learn the machines, find starting weights, no heavy soreness"
 END ANNOTATIONS
 END LAVISH RESULT (8 of 8)
 exit=0
