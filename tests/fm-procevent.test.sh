@@ -4823,10 +4823,14 @@ prompts[1]:
     text: ""
     attachments[1]{id,path,mime}:
       "placeholder-id","/placeholder/state/attachments/image.png","image/png"
+    target:
+      bounds:
+        x: 17
 EOF_ATT
 att_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$ATTRES" 2>&1) \
   || fail "read failed on a list form with an attachment: $att_out"
 assert_contains "$att_out" "/placeholder/state/attachments/image.png" "read dropped the nested attachment path of a list-form message"
+assert_contains "$att_out" "x: 17" "read dropped a deeply nested line of a list-form block"
 
 ESCRES="$TMP_ROOT/list-form-escape.result"
 cat > "$ESCRES" <<'EOF_ESC'

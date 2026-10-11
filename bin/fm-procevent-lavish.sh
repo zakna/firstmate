@@ -589,7 +589,7 @@ PROMPT_ITEMS_PL='
             $listed[-1]{$key} = $value;
             $block = undef;
           }
-        } elsif ($block && $line =~ /^      \S/) {
+        } elsif ($block && $line =~ /^      /) {
           push @$block, substr $line, 4;
         }
         next;
