@@ -28,6 +28,9 @@
 #            is printed as its own field even when a selector is also present
 #            and even when that comment matches the element text, so typed
 #            words are never dropped. Choice Context data is not a comment.
+#            Both the tabular and the expanded list form of a result are read;
+#            a list-form item's nested block, such as `target:`, is printed
+#            verbatim as `| nested` lines after that item.
 #            Captain-supplied body lines are visibly prefixed so they cannot
 #            forge structural labels. Empty message and annotation sections
 #            are reported explicitly.
@@ -498,8 +501,10 @@ cmd_terminal() {
 # `feedback[N]{...}:` header whose rows are INDENTED, so this anchors on column
 # zero: an indented payload line is captain-supplied text and must never be able
 # to forge - or, here, to hide behind - a content header. Any recognized block
-# is content regardless of its declared count, while a malformed top-level
-# prompts or feedback header makes the result indeterminate.
+# is content regardless of its declared count, while any other top-level
+# prompts or feedback header makes the result indeterminate. That includes the
+# expanded `prompts[N]:` list form, which is deliberately left indeterminate:
+# the check fails closed, so such a result is still announced.
 #
 # 0 = content present, 1 = provably no content, anything else = the check did
 # not complete. The caller must distinguish those three, because "the check
@@ -542,13 +547,149 @@ cmd_silent() {
   [ "$content_rc" -eq 1 ]
 }
 
+# Shared Perl reader for the queued-prompt section of a captured result. The
+# tabular form is a `NAME[N]{field,...}:` header followed by N indented CSV
+# rows, returned raw for the caller to split. The expanded list form is a
+# `NAME[N]:` header where `  - key: value` opens an item, `    key: value`
+# continues it, and a keyed block such as `target:` or `attachments[N]{...}:`
+# is kept verbatim under `_blocks` rather than as a prompt field. An item that
+# lacks any of uid, prompt, selector, tag, or text is flagged `_incomplete`;
+# item counts and unterminated quotes are judged once, for the whole capture,
+# by capture_invalid. Its items are returned as decoded field hashes. decode_value turns the
+# JSON-style escapes of a quoted value into text the same way for both forms.
+# shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
+PROMPT_ITEMS_PL='
+  use Encode ();
+  sub capture_invalid {
+    my ($fh) = @_;
+    seek $fh, 0, 0;
+    my @lines = <$fh>;
+    seek $fh, 0, 0;
+    my (@stack, $bad);
+    my $close = sub {
+      my $b = pop @stack;
+      $bad = 1 if $b->{seen} != $b->{declared};
+    };
+    my $fields_ok = sub {
+      my ($text) = @_;
+      while (length $text) {
+        if ($text =~ s/^"(?:[^"\\]|\\.)*"//) {
+        } elsif ($text =~ /^"/) {
+          return 0;
+        } else {
+          $text =~ s/^[^,]*//;
+        }
+        last unless $text =~ s/^,//;
+      }
+      return 1;
+    };
+    for my $line (@lines) {
+      chomp $line;
+      next unless $line =~ /\S/;
+      my ($sp, $rest) = $line =~ /^( *)(.*)$/;
+      my $indent = length $sp;
+      $close->() while @stack && $indent <= $stack[-1]{indent};
+      if (@stack && $stack[-1]{kind} eq "tabular") {
+        $stack[-1]{seen}++;
+        $bad = 1 unless $fields_ok->($rest);
+        next;
+      }
+      my $is_item = $rest =~ s/^- //;
+      $stack[-1]{seen}++ if $is_item && @stack && $stack[-1]{kind} eq "list"
+        && $indent == $stack[-1]{indent} + 2;
+      my $cindent = $indent + ($is_item ? 2 : 0);
+      if ($rest =~ /^[\w.-]+\[(\d+)\]\{[^}]*\}:\s*$/) {
+        push @stack, { kind => "tabular", declared => $1, seen => 0, indent => $cindent };
+      } elsif ($rest =~ /^[\w.-]+\[(\d+)\]:\s*$/) {
+        push @stack, { kind => "list", declared => $1, seen => 0, indent => $cindent };
+      } elsif ($rest =~ /^[\w.-]+\[(\d+)\]: (.*)$/) {
+        my ($declared, $values) = ($1, $2);
+        $bad = 1 unless $fields_ok->($values);
+        my $count = 0;
+        my $v = $values;
+        while (length $v) {
+          $count++;
+          $v =~ s/^(?:"(?:[^"\\]|\\.)*"|[^,]*)//;
+          last unless $v =~ s/^,//;
+        }
+        $bad = 1 if $count != $declared;
+      } elsif ($rest =~ /^[\w.-]+: (.*)$/) {
+        my $value = $1;
+        $bad = 1 if $value =~ /^"/ && $value !~ /^"(?:[^"\\]|\\.)*"\s*$/;
+      }
+    }
+    $close->() while @stack;
+    return $bad ? 1 : 0;
+  }
+  sub read_prompt_items {
+    my ($fh, $sections) = @_;
+    my $invalid = capture_invalid($fh);
+    my (@fields, $want, @rows, @listed, $list_form, $block);
+    while (my $line = <$fh>) {
+      if (!@fields && !$list_form) {
+        if ($line =~ /^(?:$sections)\[(\d+)\]:\s*$/) {
+          ($want, $list_form) = ($1, 1);
+          next;
+        }
+        next unless $line =~ /^(?:$sections)\[(\d+)\]\{([^}]*)\}:\s*$/;
+        ($want, @fields) = ($1, split /,/, $2);
+        next;
+      }
+      last unless $line =~ /^\s/;
+      chomp $line;
+      if ($list_form) {
+        if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
+          push @listed, {};
+          $listed[-1]{$1} = $2;
+          $block = undef;
+        } elsif (@listed && $line =~ /^    (\w+)(\[\d+\](?:\{[^}]*\})?)?:[ ]?(.*)$/) {
+          my ($key, $shape, $value) = ($1, $2, $3);
+          if (defined $shape || $value eq "") {
+            $block = [substr $line, 4];
+            push @{$listed[-1]{_blocks}}, $block;
+          } else {
+            $listed[-1]{$key} = $value;
+            $block = undef;
+          }
+        } elsif ($block && $line =~ /^      /) {
+          push @$block, substr $line, 4;
+        }
+        next;
+      }
+      last if @rows >= $want;
+      push @rows, $line;
+    }
+    for my $item (@listed) {
+      $item->{_incomplete} = (grep { !exists $item->{$_} } qw(uid prompt selector tag text)) ? 1 : 0;
+      for my $k (grep { !/^_/ } keys %$item) {
+        my $v = $item->{$k};
+        next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
+        $item->{$k} = decode_value($1);
+      }
+    }
+    return ($want, \@fields, \@rows, \@listed, $invalid);
+  }
+  sub decode_value {
+    my ($v) = @_;
+    $v =~ s{\\(?:u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|(.))}{
+      defined $1 ? Encode::encode("UTF-8", chr(0x10000 + ((hex($1) - 0xD800) << 10) + (hex($2) - 0xDC00)))
+      : defined $3 ? (hex($3) < 0x20 || hex($3) == 0x7f || (hex($3) >= 0xD800 && hex($3) <= 0xDFFF)
+          ? "\\u" . lc($3) : Encode::encode("UTF-8", chr(hex($3))))
+      : $4 eq "n" ? "\n" : $4 eq "t" ? "\t" : $4 eq "r" ? "\r" : $4
+    }ge;
+    return $v;
+  }
+'
+
 # Print `key<TAB>answer<TAB>label[<TAB>mode]` for each non-reconcile structured choice the
 # captain submitted in a captured result; the optional mode column relays the
-# card's declared close mode (`done` or `release`) to the keyed-answer intake. The published response frames queued feedback as
+# card's declared close mode (`done` or `release`) to the keyed-answer intake. The published response frames queued feedback either as
 # a `prompts[N]{field,...}:` header followed by exactly N indented CSV rows whose
-# quoted fields carry JSON-style escapes, so this reads the declared field ORDER
-# rather than assuming a fixed column, and takes only rows whose `tag` field is
-# `choice`. A freeform `message` row is captain prose and is deliberately never a
+# quoted fields carry JSON-style escapes, or as the expanded `prompts[N]:` list
+# form of `- key: value` items; read_prompt_items parses both, so this reads
+# fields by name rather than assuming a fixed column, and takes only items whose
+# `tag` field is `choice`; an invalid capture yields nothing, and a list-form
+# item flagged `_incomplete` is skipped so a partial choice never feeds intake. A freeform `message` row is captain prose and is deliberately never a
 # source of decision keys. A row that does not carry both a slug-shaped `question`
 # and the versioned `selection` and `note` fields inside its `Context data:` block
 # is skipped. A time-limited rollout branch accepts the old question/answer
@@ -561,33 +702,21 @@ cmd_choice_rows() {
   local selection=$1 file=${2-}
   [ -n "$file" ] || usage
   [ -f "$file" ] && [ ! -L "$file" ] || die "result file does not exist: $file"
-  perl -MJSON::PP -e '
+  perl -MJSON::PP -e "$PROMPT_ITEMS_PL"'
     use strict; use warnings;
     my ($selection, $path) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (@fields, $want, @rows);
-    while (my $line = <$fh>) {
-      if (!@fields) {
-        next unless $line =~ /^prompts\[(\d+)\]\{([^}]*)\}:\s*$/;
-        ($want, @fields) = ($1, split /,/, $2);
-        next;
-      }
-      last unless $line =~ /^\s/;
-      last if @rows >= $want;
-      chomp $line;
-      push @rows, $line;
-    }
+    my (undef, $fields, $rows, $items, $invalid) = read_prompt_items($fh, "prompts");
+    my @fields = @$fields;
     close $fh;
-    my %seen;
-    my @choices;
-    for my $row (@rows) {
+    exit 0 if $invalid;
+    my @parsed;
+    for my $row (@$rows) {
       $row =~ s/^\s+//;
       my @vals;
       while (length $row) {
         if ($row =~ s/^"((?:[^"\\]|\\.)*)"//) {
-          my $v = $1;
-          $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
-          push @vals, $v;
+          push @vals, decode_value($1);
         } else {
           $row =~ s/^([^,]*)//;
           push @vals, $1;
@@ -596,6 +725,13 @@ cmd_choice_rows() {
       }
       my %f;
       $f{$fields[$_]} = $vals[$_] for 0 .. $#fields;
+      push @parsed, \%f;
+    }
+    my %seen;
+    my @choices;
+    for my $parsed (@parsed, @$items) {
+      my %f = %$parsed;
+      next if $f{_incomplete};
       next unless defined $f{tag} && $f{tag} eq "choice";
       my $prompt = $f{prompt};
       next unless defined $prompt && $prompt =~ /Context data:\s*(\{.*\})/s;
@@ -682,27 +818,21 @@ cmd_read() {
   [ -f "$file" ] && [ ! -L "$file" ] || die "result file does not exist: $file"
   lifecycle=$(cmd_classify "$file")
   session_ended=$(session_field "$file" session_ended)
-  perl -e '
+  perl -e "$PROMPT_ITEMS_PL"'
     use strict; use warnings;
     my ($path, $lifecycle, $session_ended) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (@fields, $want, @rows);
-    while (my $line = <$fh>) {
-      if (!@fields) {
-        next unless $line =~ /^(?:prompts|feedback)\[(\d+)\]\{([^}]*)\}:\s*$/;
-        ($want, @fields) = ($1, split /,/, $2);
-        next;
-      }
-      last unless $line =~ /^\s/;
-      last if defined($want) && @rows >= $want;
-      chomp $line;
-      push @rows, $line;
-    }
+    my ($want, $fields, $rows, $items, $invalid) = read_prompt_items($fh, "prompts|feedback");
+    my @fields = @$fields;
     close $fh;
     $want = 0 unless defined $want;
     my @parsed;
-    my $malformed = 0;
-    for my $row (@rows) {
+    my $malformed = $invalid ? 1 : 0;
+    for my $item (@$items) {
+      if ($item->{_incomplete}) { $malformed++; next; }
+      push @parsed, $item;
+    }
+    for my $row (@$rows) {
       $row =~ s/^\s+//;
       my @vals;
       while (length $row) {
@@ -727,7 +857,7 @@ cmd_read() {
         $malformed++;
         next;
       }
-      s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge for @vals;
+      $_ = decode_value($_) for @vals;
       my %f;
       $f{$fields[$_]} = $vals[$_] for 0 .. $#fields;
       push @parsed, \%f;
@@ -742,6 +872,12 @@ cmd_read() {
         push @messages, $f;
       } else {
         push @annotations, $f;
+      }
+    }
+    sub emit_nested {
+      my ($f) = @_;
+      for my $block (@{$f->{_blocks} || []}) {
+        print "| nested $_\n" for @$block;
       }
     }
     sub emit_body {
@@ -764,6 +900,7 @@ cmd_read() {
           ? $messages[$i]{prompt}
           : (defined $messages[$i]{text} ? $messages[$i]{text} : "");
         emit_body($body);
+        emit_nested($messages[$i]);
       }
       print "END $message_label\n";
     } else {
@@ -800,6 +937,7 @@ cmd_read() {
           print "prompt:\n";
           emit_body($comment);
         }
+        emit_nested($f);
       }
       print "END ANNOTATIONS\n";
     } else {

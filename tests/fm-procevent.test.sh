@@ -4697,4 +4697,250 @@ PATH="$UNDISP/bin:$PATH" FM_HOME="$UNDISP/home" \
   "$ROOT/bin/fm-procevent-lavish.sh" retire "$undisp_art" >/dev/null 2>&1 || true
 pass "arm does not launch beside a stale claim whose process group is alive"
 
+# --- regression: the expanded list form of a captured result is read ---------
+# A live capture can frame its prompts as a `prompts[N]:` header followed by
+# `- uid:` list items with nested `target:` blocks, not a tabular `{fields}`
+# header. `read` once reported zero items for such a capture, so a handler that
+# trusted it dropped every captain answer. All text below is neutral placeholder.
+LISTRES="$TMP_ROOT/list-form.result"
+cat > "$LISTRES" <<'EOF_LIST'
+session:
+  file: /placeholder/board.html
+  status: feedback
+prompts[3]:
+  - uid: "1"
+    prompt: "placeholder comment one"
+    selector: "main > ol > li:nth-of-type(1) > b"
+    tag: b
+    text: Placeholder element one?
+  - uid: "2"
+    prompt: placeholder comment two, with a comma
+    selector: "main > table > tbody > tr:nth-of-type(2)"
+    tag: td
+    text: Placeholder cell
+    target:
+      type: table-cell
+      selector: "main > table > tbody > tr:nth-of-type(2)"
+      rowLabel: 1 - 2
+      columnLabel: Placeholder column
+      text: Placeholder cell
+  - uid: ""
+    prompt: placeholder freeform message
+    selector: ""
+    tag: message
+    text: ""
+next_step: "Placeholder next step"
+dom_snapshot: "uid=9 body"
+EOF_LIST
+list_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$LISTRES" 2>&1) \
+  || fail "read failed on the expanded list form: $list_out"
+assert_contains "$list_out" "declared_items: 3" "read lost the declared item count of the list form"
+assert_contains "$list_out" "presented_items: 3" "read dropped captain prompts in the list form"
+assert_contains "$list_out" "complete: yes" "read called a fully parsed list form incomplete"
+assert_contains "$list_out" "annotation_count: 2" "read lost the annotations of the list form"
+assert_contains "$list_out" "| placeholder freeform message" "read lost the freeform message of the list form"
+assert_contains "$list_out" "placeholder comment two, with a comma" "read truncated a list-form comment holding a comma"
+assert_contains "$list_out" "element_uid: 2" "read lost the element uid of the list form"
+pass "read presents every prompt of an expanded list-form capture"
+
+LISTCHOICE="$TMP_ROOT/list-form-choice.result"
+cat > "$LISTCHOICE" <<'EOF_LIST'
+session:
+  file: /placeholder/board.html
+  status: feedback
+prompts[3]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-call\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main > form:nth-of-type(1)"
+    tag: choice
+    text: "Placeholder call: yes"
+  - uid: "2"
+    prompt: "Reconcile first\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-reconcile\",\n  \"selection\": \"reconcile\",\n  \"note\": \"placeholder detail\"\n}"
+    selector: "main > form:nth-of-type(2)"
+    tag: choice
+    text: Reconcile
+  - uid: "3"
+    prompt: placeholder cell comment
+    selector: "main > table > tbody > tr:nth-of-type(2)"
+    tag: td
+    text: Placeholder cell
+    target:
+      type: table-cell
+      selector: "main > table > tbody > tr:nth-of-type(2)"
+      text: Placeholder cell
+EOF_LIST
+choice_out=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$LISTCHOICE" 2>&1) \
+  || fail "answers failed on the expanded list form: $choice_out"
+[ "$choice_out" = "$(printf 'placeholder-call\tyes\tPlaceholder call: yes')" ] \
+  || fail "answers dropped the choice of a list-form capture: $choice_out"
+reconcile_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCHOICE" 2>&1) \
+  || fail "reconciles failed on the expanded list form: $reconcile_out"
+[ "$reconcile_out" = "$(printf 'placeholder-reconcile\tplaceholder detail')" ] \
+  || fail "reconciles dropped the reconcile of a list-form capture: $reconcile_out"
+pass "answers and reconciles key the choices of an expanded list-form capture"
+
+# A list item cut off after its choice fields but before `text` is a truncated
+# capture: it must not feed a decision or a reconcile request.
+LISTCUT="$TMP_ROOT/list-form-choice-cut.result"
+cat > "$LISTCUT" <<'EOF_CUT'
+session:
+  status: feedback
+prompts[1]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-cut\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main > form"
+    tag: choice
+EOF_CUT
+cut_out=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$LISTCUT" 2>&1) \
+  || fail "answers failed on a truncated list-form choice: $cut_out"
+[ -z "$cut_out" ] || fail "answers fed a decision from a truncated list-form item: $cut_out"
+cut_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCUT" 2>&1) \
+  || fail "reconciles failed on a truncated list-form choice: $cut_out"
+[ -z "$cut_out" ] || fail "reconciles fed a request from a truncated list-form item: $cut_out"
+pass "answers and reconciles skip a truncated list-form item"
+
+# --- regression: list-form items are validated, nested data and escapes kept --
+# A list item cut off right after it opens must not count as presented, a
+# nested block under an item (an image attachment record) must reach the
+# handler, and a quoted value's \uXXXX escapes must decode instead of losing
+# their backslash. All text below is neutral placeholder.
+TRUNCRES="$TMP_ROOT/list-form-truncated.result"
+printf 'session:\n  status: feedback\nprompts[1]:\n  - uid: "1"\n' > "$TRUNCRES"
+trunc_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$TRUNCRES" 2>&1) \
+  || fail "read failed on a truncated list form: $trunc_out"
+assert_contains "$trunc_out" "complete: no" "read certified a list item cut off after its first field as complete"
+assert_not_contains "$trunc_out" "presented_items: 1" "read counted an incomplete list item as presented"
+
+ATTRES="$TMP_ROOT/list-form-attachment.result"
+cat > "$ATTRES" <<'EOF_ATT'
+session:
+  status: feedback
+prompts[1]:
+  - uid: ""
+    prompt: ""
+    selector: ""
+    tag: message
+    text: ""
+    attachments[1]{id,path,mime}:
+      "placeholder-id","/placeholder/state/attachments/image.png","image/png"
+    target:
+      bounds:
+        x: 17
+EOF_ATT
+att_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$ATTRES" 2>&1) \
+  || fail "read failed on a list form with an attachment: $att_out"
+assert_contains "$att_out" "/placeholder/state/attachments/image.png" "read dropped the nested attachment path of a list-form message"
+assert_contains "$att_out" "x: 17" "read dropped a deeply nested line of a list-form block"
+
+ESCRES="$TMP_ROOT/list-form-escape.result"
+cat > "$ESCRES" <<'EOF_ESC'
+session:
+  status: feedback
+prompts[1]:
+  - uid: "1"
+    prompt: "caf\u00e9 and \u001b[0m"
+    selector: ""
+    tag: b
+    text: Placeholder element
+EOF_ESC
+esc_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$ESCRES" 2>&1) \
+  || fail "read failed on a list form with unicode escapes: $esc_out"
+assert_contains "$esc_out" "café and " "read lost the decoded unicode escape of a list-form value"
+assert_not_contains "$esc_out" "u00e9" "read turned a list-form unicode escape into literal text"
+pass "list-form items are validated and keep nested data and unicode escapes"
+
+# A capture cut off inside a quoted value, or holding more items than it
+# declares, is not a complete capture even though every declared key is present.
+UNTERM="$TMP_ROOT/list-form-unterminated.result"
+printf 'session:\n  status: feedback\nprompts[1]:\n  - uid: "1"\n    prompt: "placeholder text cut off\n    selector: ""\n    tag: message\n    text: ""' > "$UNTERM"
+unterm_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$UNTERM" 2>&1) \
+  || fail "read failed on an unterminated list-form value: $unterm_out"
+assert_contains "$unterm_out" "complete: no" "read certified a list item cut off inside a quoted value as complete"
+
+SURPLUS="$TMP_ROOT/list-form-surplus.result"
+cat > "$SURPLUS" <<'EOF_SURPLUS'
+session:
+  status: feedback
+prompts[1]:
+  - uid: ""
+    prompt: placeholder first message
+    selector: ""
+    tag: message
+    text: ""
+  - uid: ""
+    prompt: placeholder second message
+    selector: ""
+    tag: message
+    text: ""
+EOF_SURPLUS
+surplus_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$SURPLUS" 2>&1) \
+  || fail "read failed on a list form with surplus items: $surplus_out"
+assert_contains "$surplus_out" "complete: no" "read called a list holding more items than declared complete"
+assert_contains "$surplus_out" "placeholder second message" "read hid a surplus list-form message"
+pass "read does not certify unterminated or surplus list-form items"
+
+# --- one strict whole-capture rule, table-driven over every nesting level -----
+# Every block at every depth must hold exactly the rows its header declares and
+# every quoted value must close; otherwise the whole capture is incomplete and
+# feeds no decision. The first row is the intact capture and must stay accepted.
+STRICT_BASE='session:
+  status: feedback
+prompts[2]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-call\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main"
+    tag: choice
+    text: "Placeholder call: yes"
+  - uid: ""
+    prompt: placeholder message
+    selector: ""
+    tag: message
+    text: ""
+    attachments[2]{id,path,mime}:
+      "a1","/placeholder/one.png","image/png"
+      "a2","/placeholder/two.png","image/png"
+next_step: "placeholder"
+'
+strict_case() {  # <name> <capture> <yes|no>
+  local name=$1 capture=$2 want=$3 f="$TMP_ROOT/strict-$1.result" out ans
+  printf '%s' "$capture" > "$f"
+  out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$f" 2>&1) || fail "strict case $name: read failed: $out"
+  ans=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$f" 2>&1) || fail "strict case $name: answers failed: $ans"
+  assert_contains "$out" "complete: $want" "strict case $name: wrong completeness verdict"
+  if [ "$want" = yes ]; then
+    [ -n "$ans" ] || fail "strict case $name: an intact capture lost its decision"
+  else
+    [ -z "$ans" ] || fail "strict case $name: an incomplete capture fed a decision: $ans"
+  fi
+}
+strict_case intact "$STRICT_BASE" yes
+strict_case top-count-short "${STRICT_BASE/prompts\[2\]/prompts[3]}" no
+strict_case top-count-surplus "${STRICT_BASE/prompts\[2\]/prompts[1]}" no
+strict_case nested-count-short "${STRICT_BASE/attachments\[2\]/attachments[3]}" no
+strict_case nested-count-surplus "${STRICT_BASE/attachments\[2\]/attachments[1]}" no
+strict_case nested-quote "${STRICT_BASE/\"image\/png\"$'\n'next_step/\"image\/png$'\n'next_step}" no
+strict_case top-quote "${STRICT_BASE/next_step: \"placeholder\"/next_step: \"placeholder}" no
+strict_case cut-before-nested-rows "$(printf '%s' "$STRICT_BASE" | sed -n '1,/attachments\[2\]/p')"$'\n' no
+strict_case cut-after-first-nested-row "$(printf '%s' "$STRICT_BASE" | sed -n '1,/"a1"/p')"$'\n' no
+strict_case cut-after-first-item "$(printf '%s' "$STRICT_BASE" | sed -n '1,/text: "Placeholder call: yes"/p')"$'\n' no
+pass "a capture is complete only when every block and quoted value at every depth is intact"
+
+TABESC="$TMP_ROOT/tabular-escape.result"
+cat > "$TABESC" <<'EOF_TABESC'
+session:
+  status: feedback
+prompts[2]{uid,prompt,selector,tag,text}:
+  "1","caf\u00e9 and \u001b[0m","","b","Placeholder element"
+  "2","Placeholder call: yes\n\nContext data:\n{\"schema\":\"fm-bearings-answer.v1\",\"question\":\"placeholder-call\",\"selection\":\"\",\"note\":\"placeholder\"}","","choice","Option caf\u00e9"
+EOF_TABESC
+tab_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$TABESC" 2>&1) \
+  || fail "read failed on a tabular form with unicode escapes: $tab_out"
+assert_contains "$tab_out" "café and \\u001b[0m" "read decoded a tabular unicode escape differently from the list form"
+assert_not_contains "$tab_out" "u00e9" "read turned a tabular unicode escape into literal text"
+tab_answers=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$TABESC" 2>&1) \
+  || fail "answers failed on a tabular form with unicode escapes: $tab_answers"
+[ "$tab_answers" = "$(printf 'placeholder-call\tplaceholder\tOption café')" ] \
+  || fail "answers did not decode tabular unicode escapes: $tab_answers"
+pass "tabular values decode unicode escapes like the list form"
+
 printf '\nall procevent tests passed\n'
