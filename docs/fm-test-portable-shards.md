@@ -66,7 +66,7 @@ Hints only affect balance: the coverage guard keeps the partition complete and d
 Balance is still worth keeping current, because enough unmeasured scripts let one shard carry more than twice another shard's real work and reach the job cap while another runner sits idle.
 That is not hypothetical: by 2026-09-01 the lane had grown from 116 to 139 scripts and from ~42 to ~63 minutes, 17 scripts were still unmeasured, and several hints were low by 2-5x, so shard 3 of 4 ran 17-20 minutes against its 20-minute cap while shard 1 ran 11.5 minutes and run [33574154856](https://github.com/kunchenguid/firstmate/actions/runs/33574154856) timed out seconds after a passing test.
 `bin/fm-test-run.sh --check-coverage` now reports the unmeasured share as `serial_unhinted=` and refuses past `PORTABLE_SERIAL_MAX_UNHINTED_PERCENT`, so hint drift fails the coverage guard instead of silently pushing one shard into its job cap.
-Refresh the hints whenever the serial lane gains scripts, rather than waiting for that bound to trip.
+The automatic refresh below keeps the hints current, so that bound is the backstop rather than the schedule.
 
 `bin/fm-test-run.sh` owns the per-shard packing, so its `--check-coverage` output is the current account of lane size and coverage rather than a copied inventory.
 Nine serial runners pack the refreshed measurements into a longest modeled script sum of 697969 ms (11m38s), with other shards near 10m36s.
@@ -75,21 +75,27 @@ This is a packing estimate, not measured new-workflow execution or an end-to-end
 Job timeouts remain hang tripwires under the policy in [Timeouts](#timeouts) below; they are not the desired healthy duration.
 `tests/fm-ci-workflow.test.sh` compares the parsed CI matrix to the executable runner lanes, and the runner rejects parallel `--jobs` on a serial lane even when that shard has only one member.
 
-Refresh the CI-derived hints by downloading the per-shard timing artifacts from several green CI runs and replacing the `portable_serial_weight_hints` table in `bin/fm-test-run.sh` with the slowest measured `duration_ms` per `path`:
+## Automatic refresh
+
+`.github/workflows/refresh-test-weights.yml` runs weekly and on demand.
+It downloads the `fm-test-timing-portable-serial-*` artifacts of the last three green `main` CI runs, runs [`bin/fm-test-weights-refresh.sh`](../bin/fm-test-weights-refresh.sh), checks `bin/fm-test-run.sh --check-coverage`, and opens or updates one pull request when the table changed.
+The pull request is never merged by the workflow, and a push made with the workflow token does not start CI, so close and reopen it (or push to its branch) to get the required checks before merging.
+
+The refresh script owns the rule: each script's hint becomes its slowest passing `duration_ms` across the inputs.
+A script with no passing sample keeps its current hint, and a hint for a script no longer in the serial lane is dropped.
+Only the serial table is rewritten, because the serial shards are packed from it at run time.
+The parallel lanes keep stored memberships, so refreshed values alone would not rebalance them; update `portable_parallel_weight_hints` and the lane lists by hand when that set changes.
+
+Run it locally the same way after downloading artifacts:
 
 ```sh
-for run in <run-id> <run-id> <run-id>; do
-  gh run download "$run" -R kunchenguid/firstmate --pattern 'fm-test-timing-portable-serial-*' -D "/tmp/fm-serial/$run"
-done
-jq -r '.scripts[] | select(.exit == 0) | [.path, .duration_ms] | @tsv' /tmp/fm-serial/*/*/*.json \
-  | awk -F'\t' '$2 > m[$1] { m[$1] = $2 } END { for (p in m) print p, m[p] }' \
-  | LC_ALL=C sort
+gh run download <run-id> -R kunchenguid/firstmate --pattern 'fm-test-timing-portable-serial-*' -D /tmp/fm-serial/<run-id>
+bin/fm-test-weights-refresh.sh /tmp/fm-serial/*/*/*.json
 bin/fm-test-run.sh --check-coverage
 ```
 
-A timed-out shard may upload no artifact, so include a complete green run or the slowest scripts go unmeasured in exactly the shard that needs them most.
-Completed shards from a partial run can supplement that complete baseline, but never treat missing tail scripts or the timeout duration as successful samples.
-Measure native-Windows-only scripts through the focused Git Bash runner and retain that `duration_ms` separately, because the portable CI shards skip them.
+A timed-out shard may upload no artifact, so its scripts keep their old hints until a green run measures them.
+Measure native-Windows-only scripts through the focused Git Bash runner and retain that `duration_ms` separately, because the portable CI shards skip them; the refresh drops a hint only when the script leaves the serial lane.
 
 ## Coverage guard
 
