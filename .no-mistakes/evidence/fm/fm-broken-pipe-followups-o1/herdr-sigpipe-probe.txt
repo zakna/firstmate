@@ -1,0 +1,15 @@
+=== base ===
+workspace_find -> [w1]
+pane_for_tab -> [p1]
+pane_for_tab(no match) -> [] rc=0
+socket_path -> [/sock1]
+socket_path(no match) -> []
+stderr lines: 1
+/tmp/fm-base.uHXF: line 6: printf: write error: Broken pipe
+=== target ===
+workspace_find -> [w1]
+pane_for_tab -> [p1]
+pane_for_tab(no match) -> [] rc=0
+socket_path -> [/sock1]
+socket_path(no match) -> []
+stderr lines: 0

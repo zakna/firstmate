@@ -1,8 +1,8 @@
-== BEFORE
-exit=2
-stderr lines=1
-error: malformed rules file: /tmp/fm-dr.WEvFxw/home/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: rovo; default profiles whose harness lacks one authoritative provider family require provider: pi
-== AFTER
-exit=2
-stderr lines=1
-error: malformed rules file: /tmp/fm-dr.WEvFxw/home/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: rovo; default profiles whose harness lacks one authoritative provider family require provider: pi
+--- base extra_rules=0 exit=2 stderr_lines=1 broken_pipe=0
+error: malformed rules file: /tmp/fm-dr-home.bYjy/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: ro
+--- target extra_rules=0 exit=2 stderr_lines=1 broken_pipe=0
+error: malformed rules file: /tmp/fm-dr-home.bYjy/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: ro
+--- base extra_rules=3000 exit=2 stderr_lines=1 broken_pipe=0
+error: malformed rules file: /tmp/fm-dr-home.bYjy/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: ro
+--- target extra_rules=3000 exit=2 stderr_lines=1 broken_pipe=0
+error: malformed rules file: /tmp/fm-dr-home.bYjy/config/crew-dispatch.json - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: ro

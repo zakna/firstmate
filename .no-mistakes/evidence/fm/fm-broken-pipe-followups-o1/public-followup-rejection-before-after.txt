@@ -1,0 +1,9 @@
+=== base bin/fm-public-followup.sh ===
+not ok - consume must add no broken-pipe line with SIGPIPE ignored (unexpected: 'Broken pipe')
+--- output ---
+grep: stdout: Broken pipe
+exit=
+=== target bin/fm-public-followup.sh ===
+ok - a tasks-axi refusal is read whole, so an ignored SIGPIPE adds no stderr line
+SINGLE_TEST_DONE
+exit=
