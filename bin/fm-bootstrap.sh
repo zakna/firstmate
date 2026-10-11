@@ -1029,7 +1029,7 @@ EOF
 }
 
 crew_dispatch_validate() {
-  local file err verified_harnesses typed_key typed_active=false
+  local file err verified_harnesses typed_key typed_active=false ceilings
   file="$CONFIG/crew-dispatch.json"
   [ -f "$file" ] || return 0
   if ! command -v jq >/dev/null 2>&1; then
@@ -1048,7 +1048,10 @@ crew_dispatch_validate() {
   else
     verified_harnesses='["claude","codex","opencode","pi","pi-signed","grok","kimi","cursor","agy","muse","rovo","omp","devin"]'
   fi
-  ceilings=$("$SCRIPT_DIR/fm-harness.sh" effort-ceilings) || ceilings='[]'
+  if ! ceilings=$("$SCRIPT_DIR/fm-harness.sh" effort-ceilings); then
+    echo "CREW_DISPATCH: invalid config/crew-dispatch.json - could not read effort ceilings"
+    return 0
+  fi
   err=$(jq -r --argjson ceilings "$ceilings" --argjson typed "$typed_active" --argjson verified_harnesses "$verified_harnesses" --arg provider_re "$FM_QUOTA_PROVIDER_ID_RE" '
     def verified($h): $verified_harnesses | index($h);
     def provider_id($p): ($p | type) == "string" and ($p | test($provider_re));
