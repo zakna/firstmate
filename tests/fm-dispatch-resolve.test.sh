@@ -57,7 +57,7 @@ cat > "$BASE_RULES" <<'JSON'
     {
       "when": "A simple bug fix with a stated root cause.",
       "use": [
-        { "harness": "claude", "model": "sonnet", "effort": "high" },
+        { "harness": "claude", "model": "sonnet", "effort": "medium" },
         { "harness": "cursor", "model": "cursor-grok-4.6-medium" },
         { "harness": "kimi", "model": "kimi-code/k3" }
       ]
@@ -665,7 +665,7 @@ jq '(.providers[] | select(.provider == "cursor") | .quotaSemantics.effectiveAva
 write_response "$RESPONSE" rule_4 0.9
 TYPESAFE_API_KEY=$KEY QUOTA_AXI_FIXTURE="$NONNUMERIC" run code out err "$BRIEF"
 assert_contains "$out" 'candidate: cursor:cursor-grok-4.6-medium  provider=cursor  scope=all_models  remaining=91%  spendPriority=-  runway=through_reset  -> eligible, unranked: spendPriority missing or non-numeric at all_models: not rankable: disclosed uncertainty' "a nonnumeric spendPriority remains eligible but unranked"
-assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'high'" "numeric evidence wins without mixed-type ordering"
+assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'medium'" "numeric evidence wins without mixed-type ordering"
 pass "nonnumeric spendPriority evidence is never ranked"
 
 # --- partial providers retain their known row evidence --------------------------
@@ -684,7 +684,7 @@ jq '(.providers[] | select(.provider == "cursor") | .quotaSemantics) |= (.status
 TYPESAFE_API_KEY=$KEY QUOTA_AXI_FIXTURE="$PARTIAL_UNKNOWN" run code out err "$BRIEF"
 assert_contains "$out" 'candidate: cursor:cursor-grok-4.6-medium  provider=cursor  scope=model:cursor-grok-4.6-medium  remaining=-%  spendPriority=-  runway=-  bounds=all_models:91%/through_reset,model:cursor-grok-4.6-medium:-%/unknown  -> eligible, unranked: quota row model:cursor-grok-4.6-medium unknown: not rankable: disclosed uncertainty' "an unknown exact-model row preserves partial known evidence without ranking"
 assert_contains "$out" '  note: 2 eligible candidate(s) unranked (cursor, kimi)' "clear result lists every provider with unranked uncertainty"
-assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'high'" "another measured candidate can clear"
+assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'medium'" "another measured candidate can clear"
 
 PARTIAL_EXHAUSTED="$TMP_ROOT/partial-exhausted.json"
 jq '(.providers[] | select(.provider == "cursor") | .quotaSemantics) |= (.status = "partial" | .effectiveAvailability += [
@@ -998,6 +998,9 @@ for bad in \
   '{"rules":[{"when":"x","use":{"harness":"codex"}}],"default":[{"harness":"claude","model":"opus"},{"harness":"claude","model":"opus"}]}|default must not contain duplicate harness, model, and effort profiles' \
   '{"rules":[{"when":"x","use":{"harness":"spaceship"}}]}|each use profile must name a verified harness' \
   '{"rules":[{"when":"x","use":{"harness":"grok","effort":"max"}}]}|each use profile effort must be supported by its harness and model' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","model":"claude-sonnet-5-5","effort":"high"}}]}|each use profile effort must be supported by its harness and model' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","model":"haiku","effort":"medium"}}]}|each use profile effort must be supported by its harness and model' \
+  '{"default":{"harness":"claude","model":"claude-haiku-5-5","effort":"medium"}}|each default profile effort must be supported by its harness and model' \
   '{"rules":[{"when":"x","use":{"harness":"opencode","model":"anthropic/claude-sonnet-4-5"}}]}|use profiles whose harness lacks one authoritative provider family require provider: opencode' \
   '{"rules":[{"when":"x","use":{"harness":"rovo"}}]}|use profiles whose harness lacks one authoritative provider family require provider: rovo' \
   '{"rules":[{"when":"x","use":{"harness":"codex"}}],"default":{"harness":"pi","model":"anthropic/claude-sonnet-5"}}|default profiles whose harness lacks one authoritative provider family require provider: pi'; do
@@ -1016,6 +1019,12 @@ sigpipe_err=$(PATH="$FAKEBIN:$BASE_PATH" FM_HOME="$HOME_DIR" TYPESAFE_API_KEY=$K
   bash -c 'trap "" PIPE; exec "$0" "$@"' "$TOOL" "$BRIEF" 2>&1 >/dev/null)
 [ "$(printf '%s\n' "$sigpipe_err" | wc -l | tr -d ' ')" -eq 1 ] || fail "provider errors must use one diagnostic when SIGPIPE is ignored: $sigpipe_err"
 assert_absent "$LOG/argv" "configuration errors never reach the network"
+# Sonnet up to medium and Haiku at low are within the family ceilings and select normally.
+reset_log
+printf '%s\n' '{"rules":[{"when":"x","use":[{"harness":"claude","model":"claude-sonnet-5-5","effort":"medium"},{"harness":"claude","model":"claude-haiku-5-5","effort":"low"},{"harness":"claude","model":"claude-opus-5-5","effort":"max"}]}]}' > "$RULES"
+TYPESAFE_API_KEY=$KEY run code out err "$BRIEF"
+case "$err" in *"malformed rules file"*) fail "family-ceiling efforts within limits were refused: $err" ;; esac
+pass "claude family ceilings accept allowed efforts"
 cp "$BASE_RULES" "$RULES"
 for removed in --json --rules --quota; do
   TYPESAFE_API_KEY=$KEY run code out err "$BRIEF" "$removed"

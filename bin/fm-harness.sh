@@ -535,15 +535,30 @@ validate_native_effort() {
   return 1
 }
 
+# Single owner of the Claude family effort ceilings: "<model substring> <family> <cap>".
+claude_effort_ceilings() {
+  printf '%s\n' 'sonnet Sonnet medium' 'haiku Haiku low'
+}
+
+# Print the ceilings as a JSON array for jq consumers (bootstrap, dispatch resolve).
+effort_ceilings_json() {
+  local match family cap sep=
+  printf '['
+  while read -r match family cap; do
+    printf '%s{"match":"%s","family":"%s","cap":"%s"}' "$sep" "$match" "$family" "$cap"
+    sep=,
+  done < <(claude_effort_ceilings)
+  printf ']\n'
+}
+
 validate_model_effort() {
-  local harness=${1:-} model=${2:-} effort=${3:-} family cap rank cap_rank lower
+  local harness=${1:-} model=${2:-} effort=${3:-} family='' cap='' rank cap_rank lower match fam c
   [ "$harness" = claude ] || return 0
   lower=$(printf '%s' "$model" | tr '[:upper:]' '[:lower:]')
-  case "$lower" in
-    *sonnet*) family=Sonnet cap=medium ;;
-    *haiku*) family=Haiku cap=low ;;
-    *) return 0 ;;
-  esac
+  while read -r match fam c; do
+    case "$lower" in *"$match"*) family=$fam cap=$c; break ;; esac
+  done < <(claude_effort_ceilings)
+  [ -n "$cap" ] || return 0
   case "$effort" in
     low) rank=1 ;;
     medium) rank=2 ;;
@@ -561,6 +576,7 @@ validate_model_effort() {
 
 case "${1:-}" in
   validate-model-effort) shift; validate_model_effort "$@" ;;
+  effort-ceilings) effort_ceilings_json ;;
   validate-native-effort) shift; validate_native_effort "$@" ;;
   ancestry)
     case "${2:-}" in
