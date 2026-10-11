@@ -353,9 +353,13 @@ test_cursor_reclassify_never_leaks_need_identity() {
   while [ "${#rule}" -lt 24 ]; do rule="$rule─"; done
   screen=$'tool output\n'"$rule"$' build output ─\n→ \n'"$rule"$'\n\n'
   out=$(
+    # shellcheck disable=SC2329
     fm_tmux_composer_cursor_row() { printf '6'; }
+    # shellcheck disable=SC2329
     fm_tmux_composer_capture() { printf '%s' "$screen"; }
+    # shellcheck disable=SC2329
     fm_tmux_composer_identity() { printf 'cursor\tidle'; }
+    # shellcheck disable=SC2329
     fm_tmux_pane_is_cursor() { return 0; }
     fm_tmux_composer_state fake:0
   )
@@ -363,9 +367,13 @@ test_cursor_reclassify_never_leaks_need_identity() {
     || fail "cursor reclassify must classify with the pane identity, got '$out'"
   [ "$out" != need-identity ] || fail "need-identity leaked out of the tmux adapter"
   out=$(
+    # shellcheck disable=SC2329
     fm_tmux_composer_cursor_row() { printf '6'; }
+    # shellcheck disable=SC2329
     fm_tmux_composer_capture() { printf '%s' "$screen"; }
+    # shellcheck disable=SC2329
     fm_tmux_composer_identity() { return 1; }
+    # shellcheck disable=SC2329
     fm_tmux_pane_is_cursor() { return 0; }
     fm_tmux_composer_state fake:0
   )
