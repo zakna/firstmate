@@ -21,6 +21,8 @@
 # whose commit_id is that exact head, from any author, and prints "review
 # comments: <n> inline on head <sha>". An unreadable count prints "unknown"; it
 # never refuses arming.
+# The recorded pr= also frees the task's place in a declared project capacity
+# (bin/fm-project-capacity-lib.sh).
 # Usage: fm-pr-check.sh <task-id> <pr-url>
 set -eu
 
