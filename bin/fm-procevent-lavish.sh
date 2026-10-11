@@ -553,7 +553,9 @@ cmd_silent() {
 # `NAME[N]:` header where `  - key: value` opens an item, `    key: value`
 # continues it, and a keyed block such as `target:` or `attachments[N]{...}:`
 # is kept verbatim under `_blocks` rather than as a prompt field. An item that
-# lacks any of uid, prompt, selector, tag, or text is flagged `_incomplete`;
+# lacks any of uid, prompt, selector, tag, or text, or holds a quoted value that
+# never closes, is flagged `_incomplete`, and an item beyond the declared count
+# is flagged `_surplus` rather than dropped;
 # its items are returned as decoded field hashes. decode_value turns the
 # JSON-style escapes of a quoted value into text the same way for both forms.
 # shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
@@ -576,8 +578,8 @@ PROMPT_ITEMS_PL='
       chomp $line;
       if ($list_form) {
         if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
-          last if @listed >= $want;
           push @listed, {};
+          $listed[-1]{_surplus} = 1 if @listed > $want;
           $listed[-1]{$1} = $2;
           $block = undef;
         } elsif (@listed && $line =~ /^    (\w+)(\[\d+\](?:\{[^}]*\})?)?:[ ]?(.*)$/) {
@@ -601,6 +603,10 @@ PROMPT_ITEMS_PL='
       $item->{_incomplete} = (grep { !exists $item->{$_} } qw(uid prompt selector tag text)) ? 1 : 0;
       for my $k (grep { !/^_/ } keys %$item) {
         my $v = $item->{$k};
+        if ($v =~ /^"/ && $v !~ /^"((?:[^"\\]|\\.)*)"\s*$/) {
+          $item->{_incomplete} = 1;
+          next;
+        }
         next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
         $item->{$k} = decode_value($1);
       }
@@ -668,7 +674,7 @@ cmd_choice_rows() {
     my @choices;
     for my $parsed (@parsed, @$items) {
       my %f = %$parsed;
-      next if $f{_incomplete};
+      next if $f{_incomplete} || $f{_surplus};
       next unless defined $f{tag} && $f{tag} eq "choice";
       my $prompt = $f{prompt};
       next unless defined $prompt && $prompt =~ /Context data:\s*(\{.*\})/s;
