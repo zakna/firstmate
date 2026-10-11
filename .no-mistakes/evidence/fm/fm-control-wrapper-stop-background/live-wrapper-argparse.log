@@ -1,0 +1,47 @@
+$ bin/fm-secondmate-restart.sh --bogus sm1
+error: unexpected argument '--bogus'
+Restart second mates onto the current instruction surface and launch-time
+wiring, persisting their open records first.
+
+Usage: fm-secondmate-restart.sh [--stop-background] <secondmate-id>... [--help]
+
+--stop-background is forwarded to every mate's relaunch, local and remote alike,
+and only when passed. Without it a Claude mate with background work refuses the
+rc=2
+
+$ bin/fm-secondmate-restart.sh --help
+Restart second mates onto the current instruction surface and launch-time
+wiring, persisting their open records first.
+
+Usage: fm-secondmate-restart.sh [--stop-background] <secondmate-id>... [--help]
+
+--stop-background is forwarded to every mate's relaunch, local and remote alike,
+and only when passed. Without it a Claude mate with background work refuses the
+relaunch and is reported unreached; with it the operator authorizes stopping
+rc=0
+
+$ bin/fm-remote-secondmate-relaunch.sh sm1 claude default default --bogus
+Relaunch a REMOTE secondmate onto a new harness, model, or effort, then
+republish this parent's own route record to match what the host confirmed.
+
+rc=2
+
+$ bin/fm-remote-secondmate-relaunch.sh sm1 claude default default --stop-background
+error: task sm1 is not a remotely placed secondmate; use bin/fm-control.sh sm1 relaunch instead
+rc=1
+
+$ bin/fm-remote-secondmate-control.sh relaunch sm1 claude default default --bogus
+error: remote home is not a seeded secondmate home
+rc=1
+
+$ bin/fm-remote-secondmate-control.sh relaunch sm1 claude default default x y
+Host-local lifecycle control for the remote secondmate home selected by fm-on.
+
+Usage:
+  fm-remote-secondmate-control.sh launch <id> <harness> <model|-> <effort|-> herdr [traceparent]
+  fm-remote-secondmate-control.sh relaunch <id> <harness> <model|default|-> <effort|default|-> [--stop-background]
+  fm-remote-secondmate-control.sh state <id>
+  fm-remote-secondmate-control.sh route <id>
+  fm-remote-secondmate-control.sh send <id> <message> [fire-and-forget]
+rc=2
+
