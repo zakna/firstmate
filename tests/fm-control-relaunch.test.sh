@@ -1421,6 +1421,8 @@ test_failed_relaunch_keeps_stopped_background_evidence() {
     || fail "the journal should record the failed phase, got '$(journal_field "$dir" rl40 phase)'"
   assert_grep "background-stopped=shell · sleep 900" "$dir/home/state/rl40.control-relaunch" \
     "the failed journal should keep the stopped background work"
+  [ "$(journal_field "$dir" rl40 background-stopped)" = "shell · sleep 900" ] \
+    || fail "the restored journal record should carry the background-stopped field"
   pass "fm-control relaunch: a failed relaunch keeps the evidence of the background work it stopped"
 }
 

@@ -784,6 +784,9 @@ RELAUNCH_AGENT_CONFIRMED=0
 # <work>" when that exit confirmed an exit dialog, so every later journal write
 # and failure report keeps the work it stopped.
 RELAUNCH_EXIT_RESULT=
+# The same work as its own "background-stopped=<work>" journal line, carried by
+# the exited, launching, and failed rollback records alike.
+RELAUNCH_BACKGROUND_LINE=
 RELAUNCH_TX=
 RELAUNCH_BRIEF=
 PRIOR_HARNESS=$HARNESS
@@ -889,7 +892,7 @@ relaunch_rollback() {
           ;;
       esac
       if [ "$RELAUNCH_AGENT_CONFIRMED" = 1 ]; then
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-agent-confirmed" "exit_result=$RELAUNCH_EXIT_RESULT" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-agent-confirmed" "exit_result=$RELAUNCH_EXIT_RESULT" ${RELAUNCH_BACKGROUND_LINE:+"$RELAUNCH_BACKGROUND_LINE"} || true
         echo "error: $ID's replacement is running on $TARGET_HARNESS, but transaction completion could not be persisted; its published record was retained for reconciliation" >&2
       elif [ "$RELAUNCH_META_PUBLISHED" = 1 ] \
          || { [ -n "$RELAUNCH_TX" ] \
@@ -899,10 +902,10 @@ relaunch_rollback() {
         # harness with no agent confirmed, which is exactly what recovery
         # reconciles. Rewriting it back to the old harness would be a second,
         # worse inaccuracy.
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" ${RELAUNCH_BACKGROUND_LINE:+"$RELAUNCH_BACKGROUND_LINE"} || true
         echo "error: $ID was relaunched on $TARGET_HARNESS but no running agent could be confirmed; its work is preserved at $WT" >&2
       else
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" ${RELAUNCH_BACKGROUND_LINE:+"$RELAUNCH_BACKGROUND_LINE"} || true
         echo "error: $ID's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at $WT" >&2
       fi
       ;;
@@ -1137,12 +1140,13 @@ do_relaunch() {
     *$'\n'*) exit_background=" ${exit_result#*$'\n'}"; exit_result=${exit_result%%$'\n'*} ;;
   esac
   RELAUNCH_EXIT_RESULT=$exit_result$exit_background
-  journal_write exited "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result$exit_background"
+  RELAUNCH_BACKGROUND_LINE=${exit_background:+${exit_background# }}
+  journal_write exited "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result$exit_background" ${RELAUNCH_BACKGROUND_LINE:+"$RELAUNCH_BACKGROUND_LINE"}
 
   # The launch owner (fm-spawn --relaunch) clears the previous incarnation's
   # per-task harness wiring before arming the new one, so nothing to do here.
   RELAUNCH_TX="${BASHPID:-$$}.$(date -u +%Y%m%dT%H%M%SZ).$RANDOM"
-  journal_write launching "${CHECKPOINT_LINES[@]}" "$note_line" "relaunch_tx=$RELAUNCH_TX" "exit_result=$exit_result$exit_background"
+  journal_write launching "${CHECKPOINT_LINES[@]}" "$note_line" "relaunch_tx=$RELAUNCH_TX" "exit_result=$exit_result$exit_background" ${RELAUNCH_BACKGROUND_LINE:+"$RELAUNCH_BACKGROUND_LINE"}
   spawn_args=("$ID" --relaunch --harness "$TARGET_HARNESS")
   [ "$TARGET_MODEL" = default ] || spawn_args+=(--model "$TARGET_MODEL")
   [ "$TARGET_EFFORT" = default ] || spawn_args+=(--effort "$TARGET_EFFORT")
