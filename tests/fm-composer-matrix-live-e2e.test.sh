@@ -9,6 +9,9 @@
 # the stub. This guard launches every INSTALLED verified harness idle in an
 # isolated tmux server and requires the real fm_tmux_composer_state to reach
 # `empty`, failing loudly with the harness name and version. It also proves:
+#   - a NAMED claude session's titled composer rule live: the real header
+#     must read as a titled rule that proves `empty` only under a claude
+#     identity;
 #   - the strict blank-row posture live: a plain shell pane with a blank
 #     cursor row must classify unknown and defer injection;
 #   - the zellij false-positive regression live (when zellij is installed): a
@@ -167,6 +170,81 @@ for h in claude codex opencode pi grok kimi muse; do
     note "harness absent, not verified here: $h"
   fi
 done
+
+# --- 1b. A NAMED claude session's titled composer rule ----------------------
+# `claude -n <name>` draws the name inside the composer's top rule
+# (`──── <name> ─`), the shape the titled-rule branch of bin/fm-composer-lib.sh
+# pairs only under a claude identity. Section 1 launches plain claude, so this
+# reads a real named session four ways: with no identity the classifier must
+# recognize the titled rule and ask for identity; under a claude identity
+# (herdr's native `agent get` reports it) the cursorless and cursor reads must
+# both prove `empty`; and under an absent identity it must not, so the case
+# cannot pass through some other shape. A Claude release that changes the
+# header surface fails here, naming the version.
+check_claude_titled_rule() {
+  local win=hx-claude-titled name="fm-live-titled-$$" version pane cy verdict='' i=0
+  local budget=${FM_COMPOSER_MATRIX_LIVE_POLLS:-45} caps_noid claude_idle
+  version=$(harness_version claude)
+  caps_noid=$(printf 'styled=1\ncursor=0\nidentity=1\nrows=0')
+  claude_idle=$(printf 'claude\tidle')
+  tmux -L "$SOCKET" new-window -d -t "$SESSION:" -n "$win" -c "$ROOT" -- claude -n "$name" \
+    || fail "claude ($version): could not launch a named session in the isolated tmux server"
+  while [ "$i" -lt "$budget" ]; do
+    if pane=$(fm_tmux_composer_capture "$SESSION:$win"); then
+      verdict=$(fm_composer_classify_screen "$caps_noid" "$pane")
+      [ "$verdict" = need-identity ] && break
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  if [ "$verdict" != need-identity ]; then
+    printf '# claude named-session pane tail at failure:\n' >&2
+    tmux -L "$SOCKET" capture-pane -p -t "$SESSION:$win" 2>/dev/null \
+      | grep '[^[:space:]]' | tail -8 | sed 's/^/#   /' >&2
+    FAILED=1
+    printf 'not ok - claude (%s): a named session never showed a titled composer rule (last verdict: %s)\n' \
+      "$version" "${verdict:-unreadable}" >&2
+    tmux -L "$SOCKET" kill-window -t "$SESSION:$win" 2>/dev/null || true
+    return 0
+  fi
+  CHECKED=$((CHECKED + 1))
+  pass "claude ($version): a named session's real top rule reads as a titled rule"
+  verdict=$(fm_composer_classify_screen "$caps_noid" "$pane" '' "$claude_idle")
+  if [ "$verdict" = empty ]; then
+    CHECKED=$((CHECKED + 1))
+    pass "claude ($version): the titled-rule composer read cursorless under a claude identity is empty"
+  else
+    FAILED=1
+    printf 'not ok - claude (%s): the titled-rule composer read cursorless under a claude identity classified %s, expected empty\n' \
+      "$version" "${verdict:-unreadable}" >&2
+  fi
+  cy=$(fm_tmux_composer_cursor_row "$SESSION:$win") || cy=
+  verdict=$(fm_composer_classify_screen "$(fm_tmux_composer_caps)" "$pane" "$cy" "$claude_idle")
+  if [ "$verdict" = empty ]; then
+    CHECKED=$((CHECKED + 1))
+    pass "claude ($version): the titled-rule composer read at the cursor under a claude identity is empty"
+  else
+    FAILED=1
+    printf 'not ok - claude (%s): the titled-rule composer read at cursor row %s under a claude identity classified %s, expected empty\n' \
+      "$version" "${cy:-none}" "${verdict:-unreadable}" >&2
+  fi
+  verdict=$(fm_composer_classify_screen "$caps_noid" "$pane" '' probe-absent)
+  if [ "$verdict" != empty ]; then
+    CHECKED=$((CHECKED + 1))
+    pass "claude ($version): without a claude identity the same pane is not proven empty (verdict: $verdict)"
+  else
+    FAILED=1
+    printf 'not ok - claude (%s): the titled-rule pane read empty with no identity, so the case no longer exercises the titled-rule branch\n' \
+      "$version" >&2
+  fi
+  tmux -L "$SOCKET" kill-window -t "$SESSION:$win" 2>/dev/null || true
+}
+
+if command -v claude >/dev/null 2>&1; then
+  check_claude_titled_rule
+else
+  note "harness absent, not verified here: claude named session (titled composer rule)"
+fi
 
 # --- 2. The strict blank-row posture, live ----------------------------------
 # A plain shell pane parked on a blank line between two rules (the audit's
