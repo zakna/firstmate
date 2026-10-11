@@ -1,0 +1,9 @@
+== [BASE] project files: AGENTS.md
+RITUAL.md
+== [BASE] brief Claim lines present: 0
+== [BASE] fm-spawn.sh ritual-ship proj claude --mode no-mistakes --yolo off
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.tRmXsA/projects/proj runs its own claim ritual (RITUAL.md) but /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tRmXsA/data/ritual-ship/brief.md # Task lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)
+== [BASE] exit=1
+== [BASE] launch-brief.md present: no
+== [BASE] task meta: 
+== [BASE] mentions of claim ritual in output: 1

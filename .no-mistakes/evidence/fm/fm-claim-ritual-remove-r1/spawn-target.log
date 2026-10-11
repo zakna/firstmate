@@ -1,0 +1,9 @@
+== [TARGET] project files: AGENTS.md
+RITUAL.md
+== [TARGET] brief Claim lines present: 0
+== [TARGET] fm-spawn.sh ritual-ship proj claude --mode no-mistakes --yolo off
+
+== [TARGET] exit=1
+== [TARGET] launch-brief.md present: yes
+== [TARGET] task meta: 
+== [TARGET] mentions of claim ritual in output: 0

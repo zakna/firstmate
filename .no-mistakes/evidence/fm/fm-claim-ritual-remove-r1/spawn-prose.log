@@ -1,0 +1,17 @@
+== [BASE-prose] project files: AGENTS.md
+== [BASE-prose] brief Claim lines present: 0
+== [BASE-prose] fm-spawn.sh ritual-ship proj claude --mode no-mistakes --yolo off
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.CZyeUr/projects/proj may run its own claim ritual (AGENTS.md describes one) and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.CZyeUr/data/ritual-ship/brief.md # Task lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; launching anyway (bin/fm-claim-ritual-lib.sh)
+== [BASE-prose] exit=1
+== [BASE-prose] launch-brief.md present: yes
+== [BASE-prose] task meta: 
+== [BASE-prose] mentions of claim ritual in output: 1
+
+== [TARGET-prose] project files: AGENTS.md
+== [TARGET-prose] brief Claim lines present: 0
+== [TARGET-prose] fm-spawn.sh ritual-ship proj claude --mode no-mistakes --yolo off
+
+== [TARGET-prose] exit=1
+== [TARGET-prose] launch-brief.md present: yes
+== [TARGET-prose] task meta: 
+== [TARGET-prose] mentions of claim ritual in output: 0

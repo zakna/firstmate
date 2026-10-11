@@ -1,0 +1,73 @@
+== [BASE] project files: AGENTS.md RITUAL.md 
+== [BASE] brief Claim lines present: 0
+== [BASE] meta before: kind=scout
+== [BASE] fm-promote.sh ritual-promote-r1 --mode direct-PR --yolo off
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.fcIeud/projects/proj runs its own claim ritual (RITUAL.md) but the Captain's intent promotion delivers from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.fcIeud/data/ritual-promote-r1/brief.md lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; the scout-time Firstmate spec is only context to the promoted worker, so copy the project's claim-recovery procedure and model requirement into ## Captain's intent before promotion (bin/fm-claim-ritual-lib.sh)
+== [BASE] exit=1
+== [BASE] meta after: kind=scout
+== [BASE] ship-instructions.md present: no
+== [BASE] mentions of claim ritual in output: 1
+
+== [TARGET] project files: AGENTS.md RITUAL.md 
+== [TARGET] brief Claim lines present: 0
+== [TARGET] meta before: kind=scout
+== [TARGET] fm-promote.sh ritual-promote-r1 --mode direct-PR --yolo off
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+promoted ritual-promote-r1 to ship mode=direct-PR yolo=off (teardown protection restored)
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.ceLD4v/data/ritual-promote-r1/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.ceLD4v bin/fm-send.sh ritual-promote-r1 "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.ceLD4v/data/ritual-promote-r1/ship-instructions.md)"
+== [TARGET] exit=0
+== [TARGET] meta after: kind=ship
+== [TARGET] ship-instructions.md present: yes
+== [TARGET] mentions of claim ritual in output: 0
+
+== [BASE-prose] project files: AGENTS.md 
+== [BASE-prose] brief Claim lines present: 0
+== [BASE-prose] meta before: kind=scout
+== [BASE-prose] fm-promote.sh ritual-promote-r1 --mode direct-PR --yolo off
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tkQPT7/projects/proj may run its own claim ritual (AGENTS.md describes one) and the Captain's intent promotion delivers from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tkQPT7/data/ritual-promote-r1/brief.md lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; promoting anyway (bin/fm-claim-ritual-lib.sh)
+promoted ritual-promote-r1 to ship mode=direct-PR yolo=off (teardown protection restored)
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tkQPT7/data/ritual-promote-r1/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tkQPT7 bin/fm-send.sh ritual-promote-r1 "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.tkQPT7/data/ritual-promote-r1/ship-instructions.md)"
+== [BASE-prose] exit=0
+== [BASE-prose] meta after: kind=ship
+== [BASE-prose] ship-instructions.md present: yes
+== [BASE-prose] mentions of claim ritual in output: 1
+
+== [TARGET-prose] project files: AGENTS.md 
+== [TARGET-prose] brief Claim lines present: 0
+== [TARGET-prose] meta before: kind=scout
+== [TARGET-prose] fm-promote.sh ritual-promote-r1 --mode direct-PR --yolo off
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+promoted ritual-promote-r1 to ship mode=direct-PR yolo=off (teardown protection restored)
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.g9aFv6/data/ritual-promote-r1/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.g9aFv6 bin/fm-send.sh ritual-promote-r1 "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.g9aFv6/data/ritual-promote-r1/ship-instructions.md)"
+== [TARGET-prose] exit=0
+== [TARGET-prose] meta after: kind=ship
+== [TARGET-prose] ship-instructions.md present: yes
+== [TARGET-prose] mentions of claim ritual in output: 0
