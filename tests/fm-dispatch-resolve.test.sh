@@ -1011,6 +1011,10 @@ TYPESAFE_API_KEY=$KEY run code out err "$BRIEF"
 expect_code 2 "$code" "multiple provider-less profiles exit 2"
 assert_contains "$err" "malformed rules file: $RULES - use profiles whose harness lacks one authoritative provider family require provider: opencode; use profiles whose harness lacks one authoritative provider family require provider: rovo; default profiles whose harness lacks one authoritative provider family require provider: pi" "all provider-less profiles are reported together across use and default"
 [ "$(printf '%s\n' "$err" | wc -l | tr -d ' ')" -eq 1 ] || fail "provider errors must use one diagnostic"
+# CI ignores SIGPIPE; the die path must still print exactly one diagnostic line.
+sigpipe_err=$(PATH="$FAKEBIN:$BASE_PATH" FM_HOME="$HOME_DIR" TYPESAFE_API_KEY=$KEY \
+  bash -c 'trap "" PIPE; exec "$0" "$@"' "$TOOL" "$BRIEF" 2>&1 >/dev/null)
+[ "$(printf '%s\n' "$sigpipe_err" | wc -l | tr -d ' ')" -eq 1 ] || fail "provider errors must use one diagnostic when SIGPIPE is ignored: $sigpipe_err"
 assert_absent "$LOG/argv" "configuration errors never reach the network"
 cp "$BASE_RULES" "$RULES"
 for removed in --json --rules --quota; do
