@@ -561,8 +561,70 @@ cmd_silent() {
 # shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
 PROMPT_ITEMS_PL='
   use Encode ();
+  sub capture_invalid {
+    my ($fh) = @_;
+    seek $fh, 0, 0;
+    my @lines = <$fh>;
+    seek $fh, 0, 0;
+    my (@stack, $bad);
+    my $close = sub {
+      my $b = pop @stack;
+      $bad = 1 if $b->{seen} != $b->{declared};
+    };
+    my $fields_ok = sub {
+      my ($text) = @_;
+      while (length $text) {
+        if ($text =~ s/^"(?:[^"\\]|\\.)*"//) {
+        } elsif ($text =~ /^"/) {
+          return 0;
+        } else {
+          $text =~ s/^[^,]*//;
+        }
+        last unless $text =~ s/^,//;
+      }
+      return 1;
+    };
+    for my $line (@lines) {
+      chomp $line;
+      next unless $line =~ /\S/;
+      my ($sp, $rest) = $line =~ /^( *)(.*)$/;
+      my $indent = length $sp;
+      $close->() while @stack && $indent <= $stack[-1]{indent};
+      if (@stack && $stack[-1]{kind} eq "tabular") {
+        $stack[-1]{seen}++;
+        $bad = 1 unless $fields_ok->($rest);
+        next;
+      }
+      my $is_item = $rest =~ s/^- //;
+      $stack[-1]{seen}++ if $is_item && @stack && $stack[-1]{kind} eq "list"
+        && $indent == $stack[-1]{indent} + 2;
+      my $cindent = $indent + ($is_item ? 2 : 0);
+      if ($rest =~ /^[\w.-]+\[(\d+)\]\{[^}]*\}:\s*$/) {
+        push @stack, { kind => "tabular", declared => $1, seen => 0, indent => $cindent };
+      } elsif ($rest =~ /^[\w.-]+\[(\d+)\]:\s*$/) {
+        push @stack, { kind => "list", declared => $1, seen => 0, indent => $cindent };
+      } elsif ($rest =~ /^[\w.-]+\[(\d+)\]: (.*)$/) {
+        my ($declared, $values) = ($1, $2);
+        $bad = 1 unless $fields_ok->($values);
+        my $count = 0;
+        my $v = $values;
+        while (length $v) {
+          $count++;
+          $v =~ s/^(?:"(?:[^"\\]|\\.)*"|[^,]*)//;
+          last unless $v =~ s/^,//;
+        }
+        $bad = 1 if $count != $declared;
+      } elsif ($rest =~ /^[\w.-]+: (.*)$/) {
+        my $value = $1;
+        $bad = 1 if $value =~ /^"/ && $value !~ /^"(?:[^"\\]|\\.)*"\s*$/;
+      }
+    }
+    $close->() while @stack;
+    return $bad ? 1 : 0;
+  }
   sub read_prompt_items {
     my ($fh, $sections) = @_;
+    my $invalid = capture_invalid($fh);
     my (@fields, $want, @rows, @listed, $list_form, $block);
     while (my $line = <$fh>) {
       if (!@fields && !$list_form) {
@@ -611,7 +673,7 @@ PROMPT_ITEMS_PL='
         $item->{$k} = decode_value($1);
       }
     }
-    return ($want, \@fields, \@rows, \@listed);
+    return ($want, \@fields, \@rows, \@listed, $invalid);
   }
   sub decode_value {
     my ($v) = @_;
@@ -650,9 +712,10 @@ cmd_choice_rows() {
     use strict; use warnings;
     my ($selection, $path) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my (undef, $fields, $rows, $items) = read_prompt_items($fh, "prompts");
+    my (undef, $fields, $rows, $items, $invalid) = read_prompt_items($fh, "prompts");
     my @fields = @$fields;
     close $fh;
+    exit 0 if $invalid;
     my @parsed;
     for my $row (@$rows) {
       $row =~ s/^\s+//;
@@ -765,12 +828,12 @@ cmd_read() {
     use strict; use warnings;
     my ($path, $lifecycle, $session_ended) = @ARGV;
     open my $fh, "<", $path or exit 1;
-    my ($want, $fields, $rows, $items) = read_prompt_items($fh, "prompts|feedback");
+    my ($want, $fields, $rows, $items, $invalid) = read_prompt_items($fh, "prompts|feedback");
     my @fields = @$fields;
     close $fh;
     $want = 0 unless defined $want;
     my @parsed;
-    my $malformed = 0;
+    my $malformed = $invalid ? 1 : 0;
     for my $item (@$items) {
       if ($item->{_incomplete}) { $malformed++; next; }
       push @parsed, $item;
