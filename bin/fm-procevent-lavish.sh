@@ -667,6 +667,7 @@ cmd_choice_rows() {
     my @choices;
     for my $parsed (@parsed, @$items) {
       my %f = %$parsed;
+      next if $f{_incomplete};
       next unless defined $f{tag} && $f{tag} eq "choice";
       my $prompt = $f{prompt};
       next unless defined $prompt && $prompt =~ /Context data:\s*(\{.*\})/s;
