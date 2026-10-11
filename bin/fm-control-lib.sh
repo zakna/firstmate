@@ -235,6 +235,83 @@ fm_control_exit_command() {  # <harness>
   esac
 }
 
+# A confirmation dialog the exit command can open INSTEAD of exiting: a
+# non-empty name when the adapter has one, read by fm_control_exit_dialog_block;
+# empty when it has none. Claude Code asks before stopping running background
+# work (a backgrounded shell or agent): `Background work is running`, a
+# `The following will stop when you exit:` task list, then
+# `1. Exit and stop tasks`, `2. Move to background and exit`, `3. Stay`, and an
+# `Enter to confirm · Esc to cancel` footer.
+# Escape is Stay and leaves the composer empty; Enter confirms the highlighted
+# option, which is option 1 when the dialog opens, and that exit also stops the
+# listed work.
+# Verified live on claude 2.1.296.
+fm_control_exit_dialog_signal() {  # <harness>
+  case "${1-}" in
+    claude) printf '%s' 'background-work' ;;
+    codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The exit dialog's rows, from its title through its last option, when the
+# complete dialog is the live bottom of a captured <screen>; status 1 when it
+# is not. Live means the `3. Stay` row is the last row, followed by nothing but
+# blank rows and the footer, and the title and `1. Exit and stop tasks` row sit
+# above it in the same block. The same rows in scrollback, above the composer,
+# or a lone option row in a transcript, are not the dialog.
+fm_control_exit_dialog_block() {  # <harness> <screen>
+  case "${1-}" in
+    claude)
+      printf '%s\n' "${2-}" | awk '
+        { row[NR] = $0 }
+        END {
+          n = NR
+          while (n > 0 && row[n] ~ /^[[:space:]]*$/) n--
+          if (n > 0 && row[n] ~ /^[[:space:]]*Enter to confirm · Esc to cancel[[:space:]]*$/) n--
+          while (n > 0 && row[n] ~ /^[[:space:]]*$/) n--
+          if (n < 1 || row[n] !~ /^[[:space:]]*(❯[[:space:]]*)?3\. Stay[[:space:]]*$/) exit 1
+          stop = 0
+          for (i = n - 1; i > 0; i--) {
+            if (row[i] ~ /^[[:space:]]*(❯[[:space:]]*)?1\. Exit and stop tasks[[:space:]]*$/) stop = 1
+            if (row[i] ~ /^[[:space:]]*Background work is running[[:space:]]*$/) break
+          }
+          if (i < 1 || !stop) exit 1
+          for (; i <= n; i++) print row[i]
+        }'
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+# The row proving the exit dialog's highlighted option is the one that stops
+# the background work and exits, so Enter may confirm it; an ERE over the rows
+# fm_control_exit_dialog_block printed; empty without a dialog.
+fm_control_exit_dialog_stop_row() {  # <harness>
+  case "${1-}" in
+    claude) printf '%s' '^[[:space:]]*❯[[:space:]]*1\. Exit and stop tasks[[:space:]]*$' ;;
+    codex|opencode|pi|pi-signed|omp|grok|kimi|cursor|gemini|muse|rovo|agy|devin) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The background work an exit dialog says will stop, one trimmed row per item,
+# read from the rows fm_control_exit_dialog_block printed: the rows between
+# Claude's `will stop when you exit:` heading and its first numbered option.
+fm_control_exit_dialog_tasks() {  # <harness> <dialog-rows>
+  case "${1-}" in
+    claude)
+      printf '%s\n' "${2-}" | awk '
+        /^[[:space:]]*The following will stop when you exit:[[:space:]]*$/ { on = 1; next }
+        on && /^[[:space:]]*(❯[[:space:]]*)?[0-9]+\. / { exit }
+        on {
+          sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, "")
+          if ($0 != "") print
+        }'
+      ;;
+  esac
+}
+
 # The launch argument that makes a RELAUNCH of <harness> RESUME an exact agent
 # session instead of starting a fresh one, printed only when <registered-agent>
 # is the label that session reference belongs to; nothing otherwise.

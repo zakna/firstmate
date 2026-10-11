@@ -70,6 +70,16 @@ verified_adapter_contract() {  # <harness> -> exit command, interrupt key, repea
 #   pane     optional capture-pane override, for an adapter whose busy verdict
 #            is read from the rendered tail.
 #   key-times  every named key with its wall-clock send time.
+#   claude-bg  optional Claude background-work model holding the dialog's task
+#            rows: /exit then Enter opens the "Background work is running"
+#            dialog instead of stopping the agent, Escape there is "Stay", and
+#            Enter there confirms option 1 and stops the agent.
+#            FM_FAKE_SWALLOW_ENTERS=<n> makes the first <n> Enters leave /exit
+#            unsubmitted in the composer. FM_FAKE_SLOW_DIALOG=<n> keeps /exit
+#            visible for <n> captures after its Enter before the dialog
+#            renders, and an Enter in that window confirms the dialog.
+#            FM_FAKE_DIALOG_STUCK keeps the dialog open after Escape, and
+#            FM_FAKE_ALTERNATE_CAPTURE_FAIL then fails every second capture.
 #   devin    optional Devin screen model, which capture-pane renders as the
 #            rows devin 3000.11.1 draws: `running`, `armed`, `cancelled`,
 #            `idle`, `primed`, or `picker`. Escape moves running->armed (the
@@ -113,6 +123,16 @@ devin_screen() {  # <running|armed|cancelled|idle|picker>
   esac
   printf '──── (bypass permissions on) ─\n%s\n────\nSWE-2 Medium\n' "$composer"
 }
+# The rows Claude Code 2.1.296 renders when /exit meets running background
+# work (live capture, with the task list read from claude-bg).
+claude_bg_dialog() {
+  printf '⏺ DONE\n\n✻ Crunched for 3s · done 11:18 AM · 1 shell still running\n\n'
+  printf '▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔\n   Background work is running\n\n'
+  printf '   The following will stop when you exit:\n\n'
+  sed 's/^/   /' "$D/claude-bg"
+  printf '\n   ❯ 1. Exit and stop tasks\n     2. Move to background and exit\n     3. Stay\n\n'
+  printf '   Enter to confirm · Esc to cancel\n'
+}
 case "${1:-}" in
   send-keys)
     shift
@@ -127,7 +147,11 @@ case "${1:-}" in
     payload=${1:-}
     if [ "$literal" = 1 ]; then
       printf '%s\n' "$payload" >> "$D/literal"
-      if [ -z "${FM_FAKE_NEVER_DIES:-}" ] \
+      if [ -f "$D/claude-bg" ] && [ "$payload" = /exit ]; then
+        : > "$D/exit-typed"
+      elif [ -f "$D/slow-exit" ] && [ "$payload" = /exit ]; then
+        : > "$D/exiting"
+      elif [ -z "${FM_FAKE_NEVER_DIES:-}" ] \
          && { [ "$payload" = /exit ] || [ "$payload" = /quit ]; }; then
         printf 'zsh' > "$D/command"
       fi
@@ -137,6 +161,37 @@ case "${1:-}" in
     else
       printf '%s\n' "$payload" >> "$D/keys"
       printf '%s %s\n' "$(perl -MTime::HiRes=time -e 'printf "%.3f", time')" "$payload" >> "$D/key-times"
+      if [ -f "$D/claude-bg" ]; then
+        if [ -f "$D/claude-processing" ] && [ "$payload" = Enter ]; then
+          # The first Enter's dialog is about to render; this Enter lands on
+          # it and confirms "Exit and stop tasks".
+          rm -f "$D/claude-processing" "$D/exit-typed"
+          : > "$D/background-killed"
+          printf 'zsh' > "$D/command"
+        elif [ -f "$D/claude-dialog" ]; then
+          case "$payload" in
+            # Escape is the dialog's "Stay": the agent keeps running.
+            Escape)
+              if [ -n "${FM_FAKE_DIALOG_STUCK:-}" ]; then : > "$D/escaped"; else rm -f "$D/claude-dialog"; fi
+              ;;
+            # Enter confirms the highlighted option 1, "Exit and stop tasks".
+            Enter) rm -f "$D/claude-dialog"; printf 'zsh' > "$D/command" ;;
+          esac
+        elif [ "$payload" = Enter ] && [ -f "$D/exit-typed" ]; then
+          rm -f "$D/exit-typed"
+          if [ -n "${FM_FAKE_SWALLOW_ENTERS:-}" ] \
+             && [ "$(grep -c '^Enter$' "$D/keys")" -le "$FM_FAKE_SWALLOW_ENTERS" ]; then
+            : > "$D/exit-typed"
+          elif [ -n "${FM_FAKE_SLOW_DIALOG:-}" ]; then
+            # Claude is still processing: /exit stays visible for that many
+            # captures before the dialog renders.
+            : > "$D/exit-typed"
+            printf '%s' "$FM_FAKE_SLOW_DIALOG" > "$D/claude-processing"
+          else
+            : > "$D/claude-dialog"
+          fi
+        fi
+      fi
       if [ "$payload" = Escape ] && [ -f "$D/devin" ]; then
         case "$(cat "$D/devin")" in
           running) printf armed > "$D/devin" ;;
@@ -165,16 +220,46 @@ case "${1:-}" in
           # A modelled Devin screen parks the cursor on its composer row.
           if [ -f "$D/devin" ]; then
             devin_screen "$(cat "$D/devin")" | awk '/^❭ /{ print NR - 1; exit }'
+          elif [ -f "$D/pane" ]; then
+            awk '/^❯ /{ print NR - 1; f = 1; exit } END { if (!f) print 1 }' "$D/pane"
           else
             printf '1\n'
           fi
           exit 0 ;;
-        *pane_current_command*) cat "$D/command"; printf '\n'; exit 0 ;;
+        *pane_current_command*)
+          # slow-exit holds the reads an exiting agent still answers alive.
+          if [ -f "$D/exiting" ]; then
+            n=$(cat "$D/slow-exit")
+            if [ "$n" -le 0 ]; then printf 'zsh' > "$D/command"; else printf '%s' "$((n - 1))" > "$D/slow-exit"; fi
+          fi
+          cat "$D/command"; printf '\n'; exit 0 ;;
         *pane_current_path*) cat "$D/cwd"; printf '\n'; exit 0 ;;
       esac
     done
     printf 'fakepane\n'; exit 0 ;;
   capture-pane)
+    if [ -f "$D/claude-processing" ]; then
+      n=$(cat "$D/claude-processing")
+      if [ "$n" -le 0 ]; then
+        rm -f "$D/claude-processing" "$D/exit-typed"
+        : > "$D/claude-dialog"
+      else
+        printf '%s' "$((n - 1))" > "$D/claude-processing"
+      fi
+    fi
+    if [ -f "$D/escaped" ] && [ -n "${FM_FAKE_ALTERNATE_CAPTURE_FAIL:-}" ]; then
+      # After Escape every second viewport read fails.
+      c=$(( $(cat "$D/capture-count" 2>/dev/null || printf 0) + 1 ))
+      printf '%s' "$c" > "$D/capture-count"
+      [ $((c % 2)) = 1 ] || exit 1
+    fi
+    if [ -f "$D/claude-dialog" ]; then claude_bg_dialog; exit 0; fi
+    if [ -f "$D/claude-bg" ]; then
+      # Claude's composer, holding /exit while that Enter is still unsubmitted.
+      if [ -f "$D/exit-typed" ]; then printf '────\n❯ /exit\n────\n'; else printf '────\n❯ \n────\n'; fi
+      printf '  ⏵⏵ auto mode on · 1 shell · ← for agents\n'
+      exit 0
+    fi
     if [ -f "$D/devin" ]; then devin_screen "$(cat "$D/devin")"; elif [ -f "$D/pane" ]; then cat "$D/pane"; else printf '╭────╮\n│    │\n╰────╯\n'; fi
     exit 0 ;;
   list-windows)
@@ -244,11 +329,16 @@ run_control() {
   local dir=$1; shift
   env PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" \
     FM_CONTROL_POLL=0.01 FM_CONTROL_SETTLE_WAIT=0.05 \
-    FM_CONTROL_EXIT_WAIT=0.05 FM_CONTROL_LAUNCH_WAIT=0.05 \
+    FM_CONTROL_LAUNCH_WAIT=0.05 \
     FM_FAKE_MUSE_LOG="${FM_FAKE_MUSE_LOG:-}" \
     FM_FAKE_MUSE_DISAPPEAR_BEFORE_ACK="${FM_FAKE_MUSE_DISAPPEAR_BEFORE_ACK:-}" \
     FM_FAKE_INTERRUPT_STOPS_AGENT="${FM_FAKE_INTERRUPT_STOPS_AGENT:-}" \
     FM_FAKE_DEVIN_PICKER_STUCK="${FM_FAKE_DEVIN_PICKER_STUCK:-}" \
+    FM_FAKE_SWALLOW_ENTERS="${FM_FAKE_SWALLOW_ENTERS:-}" \
+    FM_FAKE_SLOW_DIALOG="${FM_FAKE_SLOW_DIALOG:-}" \
+    FM_FAKE_DIALOG_STUCK="${FM_FAKE_DIALOG_STUCK:-}" \
+    FM_FAKE_ALTERNATE_CAPTURE_FAIL="${FM_FAKE_ALTERNATE_CAPTURE_FAIL:-}" \
+    FM_CONTROL_EXIT_WAIT="${FM_CONTROL_EXIT_WAIT:-0.05}" \
     "$CONTROL" "$@" 2>&1
 }
 
@@ -1068,6 +1158,169 @@ EOF
   pass "fm-control-lib: only a runtime's own recorded session has a relaunch resume form"
 }
 
+# Claude Code shows "Background work is running" on /exit while a background
+# shell runs, so an exit must neither time out against it nor pick an option
+# the caller did not authorize.
+claude_bg_case() {  # <name> -> case dir with a Claude agent running background work
+  local dir
+  dir=$(new_case "$1")
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf 'shell · sleep 900\n' > "$dir/fake/claude-bg"
+  printf '%s\n' "$dir"
+}
+
+enters_sent() {  # <case-dir>
+  grep -c '^Enter$' "$1/fake/keys" || true
+}
+
+test_claude_background_dialog_refuses_and_keeps_agent() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-refuse)
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "exit into Claude's background-work dialog should refuse without --stop-background"$'\n'"$out"
+  assert_contains "$out" "shell · sleep 900" "the refusal should name the background work that would stop"
+  assert_contains "$out" "--stop-background" "the refusal should name the flag that authorizes stopping it"
+  assert_not_contains "$out" "did not stop within" "the dialog must be recognized, not reported as a timeout"
+  [ "$(keys_sent "$dir")" = Escape ] \
+    || fail "the refusal should close the dialog with Escape (Stay) and nothing else, got: $(keys_sent "$dir")"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "no Enter may reach the dialog without --stop-background, got $(enters_sent "$dir") Enters"
+  [ ! -e "$dir/fake/claude-dialog" ] || fail "the refusal should leave the dialog closed"
+  [ "$(cat "$dir/fake/command")" = claude ] || fail "the agent must keep running after the refusal"
+  pass "fm-control exit: Claude's background-work dialog refuses, stays, and names the work"
+}
+
+test_claude_background_dialog_stop_background_exits() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-stop)
+  out=$(run_control "$dir" t1 exit --stop-background); rc=$?
+  expect_code 0 "$rc" "exit --stop-background should confirm option 1 and stop the agent"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  assert_contains "$out" "background-stopped=shell · sleep 900" "exit should name the background work it stopped"
+  [ -z "$(keys_sent "$dir")" ] || fail "confirming option 1 needs no key but Enter, got: $(keys_sent "$dir")"
+  [ "$(enters_sent "$dir")" = 2 ] \
+    || fail "exactly one Enter should confirm the dialog after the submitting Enter, got $(enters_sent "$dir")"
+  pass "fm-control exit --stop-background: Claude's dialog is confirmed with option 1"
+}
+
+test_claude_exit_sends_no_retry_enter() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-swallow)
+  out=$(FM_FAKE_SWALLOW_ENTERS=1 run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "an unsubmitted /exit should end as an unconfirmed exit"$'\n'"$out"
+  assert_contains "$out" "exit=unconfirmed" "the failure should report the unconfirmed exit"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "Claude's /exit gets its one submit Enter and no retry, got $(enters_sent "$dir") Enters"
+  [ "$(cat "$dir/fake/command")" = claude ] || fail "the agent must keep running"
+  pass "fm-control exit: Claude's /exit gets no retry Enter that could confirm its dialog"
+}
+
+test_claude_slow_dialog_is_never_confirmed_by_a_retry() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-slow)
+  out=$(FM_FAKE_SLOW_DIALOG=8 FM_CONTROL_EXIT_WAIT=1 run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "a slow dialog should still end in the Stay refusal"$'\n'"$out"
+  assert_contains "$out" "--stop-background" "the refusal should name the flag"
+  [ ! -e "$dir/fake/background-killed" ] \
+    || fail "a retried Enter confirmed 'Exit and stop tasks' without --stop-background"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "no Enter may follow the submit Enter while the dialog can still render, got $(enters_sent "$dir")"
+  [ "$(cat "$dir/fake/command")" = claude ] || fail "the agent must keep running"
+  pass "fm-control exit: a slow-rendering dialog is never confirmed by a retried Enter"
+}
+
+test_dialog_closure_needs_one_successful_capture() {
+  local dir out rc
+  dir=$(claude_bg_case claude-bg-stuck)
+  out=$(FM_FAKE_DIALOG_STUCK=1 FM_FAKE_ALTERNATE_CAPTURE_FAIL=1 run_control "$dir" t1 exit); rc=$?
+  expect_code 1 "$rc" "a dialog that stays open after Escape should refuse"$'\n'"$out"
+  assert_contains "$out" "still open after Escape" "a failed read must not count as the dialog closing"
+  assert_not_contains "$out" "Chose Stay" "the refusal must not claim Stay took effect"
+  pass "fm-control exit: dialog closure is proven from one successful capture"
+}
+
+test_claude_exit_dialog_text_in_transcript_is_not_the_dialog() {
+  local dir out rc
+  dir=$(new_case claude-bg-transcript)
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf '1\n' > "$dir/fake/slow-exit"
+  cat > "$dir/fake/pane" <<'EOF'
+bin/fm-control-lib.sh:249:    claude) printf '%s' 'Background work is running|[0-9]+\. Exit and stop tasks' ;;
++  printf '\n   ❯ 1. Exit and stop tasks\n     3. Stay\n'
+  - `❯ 1. Exit and stop tasks` row looks like typed composer text
+────
+❯ 
+────
+  ⏵⏵ auto mode on · ← for agents
+EOF
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 0 "$rc" "dialog words in the transcript are not an open exit dialog"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
+  [ -z "$(keys_sent "$dir")" ] || fail "no dialog opened, so no Escape may be sent, got: $(keys_sent "$dir")"
+  pass "fm-control exit: Claude's dialog words in the transcript are not its exit dialog"
+}
+
+# The dialog's exact rows sitting in scrollback, above the live composer, are
+# not an open dialog: only a complete dialog block at the bottom of the screen
+# is.
+scrollback_dialog_rows_case() {  # <name> -> case dir
+  local dir
+  dir=$(new_case "$1")
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf '1\n' > "$dir/fake/slow-exit"
+  cat > "$dir/fake/pane" <<'EOF'
+   Background work is running
+
+   The following will stop when you exit:
+
+   shell · sleep 900
+
+   ❯ 1. Exit and stop tasks
+     2. Move to background and exit
+     3. Stay
+
+   Enter to confirm · Esc to cancel
+⏺ That is the dialog Claude shows on /exit.
+────
+❯ 
+────
+  ⏵⏵ auto mode on · ← for agents
+EOF
+  printf '%s\n' "$dir"
+}
+
+test_claude_dialog_rows_in_scrollback_get_no_key() {
+  local dir out rc
+  dir=$(scrollback_dialog_rows_case claude-bg-scrollback)
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 0 "$rc" "dialog rows in scrollback are not an open exit dialog"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  [ -z "$(keys_sent "$dir")" ] || fail "no dialog is open, so no Escape may be sent, got: $(keys_sent "$dir")"
+  dir=$(scrollback_dialog_rows_case claude-bg-scrollback-stop)
+  out=$(run_control "$dir" t1 exit --stop-background); rc=$?
+  expect_code 0 "$rc" "dialog rows in scrollback are not an open exit dialog"$'\n'"$out"
+  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "no dialog is open, so no confirming Enter may follow the submit Enter, got $(enters_sent "$dir")"
+  pass "fm-control exit: Claude's dialog rows in scrollback get no Escape and no confirming Enter"
+}
+
+test_stop_background_is_rejected_on_interrupt() {
+  local dir out rc
+  dir=$(new_case stop-bg-interrupt)
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  out=$(run_control "$dir" t1 interrupt --stop-background); rc=$?
+  expect_code 1 "$rc" "--stop-background should be refused on interrupt"
+  assert_contains "$out" "--stop-background applies to 'exit' and 'relaunch' only" "the refusal should say where the flag applies"
+  [ -z "$(keys_sent "$dir")" ] || fail "a refused flag must send nothing"
+  pass "fm-control: --stop-background applies to exit and relaunch only"
+}
+
 test_exit_types_each_harness_verified_command
 test_interrupt_sends_each_harness_verified_key
 test_devin_interrupt_invalidates_busy
@@ -1105,6 +1358,14 @@ test_muse_interrupt_confirms_adapter_acknowledgement
 test_interrupt_revalidates_agent_after_acknowledgement_wait
 test_exit_accepts_agent_stopped_by_busy_interrupt
 test_agent_that_does_not_stop_fails_closed
+test_claude_background_dialog_refuses_and_keeps_agent
+test_claude_background_dialog_stop_background_exits
+test_claude_exit_sends_no_retry_enter
+test_claude_slow_dialog_is_never_confirmed_by_a_retry
+test_dialog_closure_needs_one_successful_capture
+test_claude_exit_dialog_text_in_transcript_is_not_the_dialog
+test_claude_dialog_rows_in_scrollback_get_no_key
+test_stop_background_is_rejected_on_interrupt
 test_grok_interrupt_without_acknowledgement_reports_unconfirmed
 test_grok_idle_footer_does_not_confirm_cancellation
 test_secondmate_control_command_carries_no_marker

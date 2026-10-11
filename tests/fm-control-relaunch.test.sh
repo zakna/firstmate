@@ -78,6 +78,9 @@ case "${1:-}" in
       printf '%s\n' "$payload" >> "$D/literal"
       case "$payload" in
         /exit|/quit)
+          # claude-bg models Claude's background-work dialog: /exit only
+          # opens it, and Enter there confirms "Exit and stop tasks".
+          if [ -f "$D/claude-bg" ]; then : > "$D/exit-typed"; exit 0; fi
           printf 'zsh' > "$D/command"
           [ -z "${FM_FAKE_EXIT_TRANSPORT_FAIL_AFTER_STOP:-}" ] || exit 1
           ;;
@@ -88,6 +91,12 @@ case "${1:-}" in
       esac
     else
       printf '%s\n' "$payload" >> "$D/keys"
+      if [ "$payload" = Enter ] && [ -f "$D/claude-dialog" ]; then
+        rm -f "$D/claude-dialog"
+        [ -n "${FM_FAKE_STOP_HANGS:-}" ] || printf 'zsh' > "$D/command"
+      elif [ "$payload" = Enter ] && [ -f "$D/exit-typed" ]; then
+        rm -f "$D/exit-typed"; : > "$D/claude-dialog"
+      fi
       case "$payload" in
         'export GOTMPDIR='*)
           if [ -n "${FM_FAKE_TRACE_PREPARE:-}" ]; then
@@ -122,6 +131,11 @@ case "${1:-}" in
     if [ -n "${FM_FAKE_RECAP_CAPTURE_SIGNAL:-}" ] && [ "${*: -1}" = -2000 ]; then
       kill -"$FM_FAKE_RECAP_CAPTURE_SIGNAL" "$PPID"
       /bin/sleep 0.2
+    fi
+    if [ -f "$D/claude-dialog" ]; then
+      printf '   Background work is running\n   The following will stop when you exit:\n   shell · sleep 900\n'
+      printf '   ❯ 1. Exit and stop tasks\n     2. Move to background and exit\n     3. Stay\n'
+      exit 0
     fi
     if [ -s "$D/composer" ]; then
       printf '╭────╮\n│ %s  │\n╰────╯\n' "$(cat "$D/composer")"
@@ -1392,6 +1406,47 @@ test_launch_failure_keeps_the_prior_record_and_reports_it() {
   pass "fm-control relaunch: a launch failure after the stop keeps the prior record and reports the real state"
 }
 
+test_failed_relaunch_keeps_stopped_background_evidence() {
+  local dir out rc
+  dir=$(new_case rollback-bg rl40)
+  add_ship_task "$dir" rl40 claude
+  : > "$dir/fake/claude-bg"
+  # The launch owner refuses after the old agent and its background work stopped.
+  printf '%s' "$dir/proj" > "$dir/fake/cwd"
+  out=$(run_control "$dir" rl40 relaunch --stop-background --note "carry this forward"); rc=$?
+  expect_code 1 "$rc" "a failed launch should fail closed"$'\n'"$out"
+  assert_contains "$out" "background-stopped=shell · sleep 900" \
+    "the failure should name the background work the exit stopped"
+  [ "$(journal_field "$dir" rl40 phase)" = "failed:launching" ] \
+    || fail "the journal should record the failed phase, got '$(journal_field "$dir" rl40 phase)'"
+  assert_grep "background-stopped=shell · sleep 900" "$dir/home/state/rl40.control-relaunch" \
+    "the failed journal should keep the stopped background work"
+  pass "fm-control relaunch: a failed relaunch keeps the evidence of the background work it stopped"
+}
+
+test_unconfirmed_stop_reports_background_stop_as_attempted() {
+  local dir out rc
+  dir=$(new_case rollback-bg-stopping rl41)
+  add_ship_task "$dir" rl41 claude
+  : > "$dir/fake/claude-bg"
+  # Enter confirms "Exit and stop tasks", but the agent outlasts the exit wait
+  # and is still alive, so nothing proves its background work stopped.
+  out=$(FM_FAKE_STOP_HANGS=1 run_control "$dir" rl41 relaunch --stop-background --note "carry this forward"); rc=$?
+  expect_code 1 "$rc" "an unconfirmed stop should fail closed"$'\n'"$out"
+  [ "$(cat "$dir/fake/command")" = claude ] || fail "the fake agent should still be running"
+  [ "$(journal_field "$dir" rl41 phase)" = "failed:stopping" ] \
+    || fail "the journal should record the failed phase, got '$(journal_field "$dir" rl41 phase)'"
+  [ "$(journal_field "$dir" rl41 background-stop-attempted)" = "shell · sleep 900" ] \
+    || fail "the failed stop's journal should record the background work whose stop was attempted"
+  assert_no_grep "background-stopped=" "$dir/home/state/rl41.control-relaunch" \
+    "an agent still alive must not be journaled as having stopped its background work"
+  assert_not_contains "$out" "background-stopped=" \
+    "an agent still alive must not be reported as having stopped its background work"
+  assert_contains "$out" "background-stop-attempted=shell · sleep 900" \
+    "the failure should name the background work whose stop was only attempted"
+  pass "fm-control relaunch: a confirmed exit dialog whose agent stays alive reports the stop as attempted, not done"
+}
+
 test_prepublication_failure_keeps_concurrent_durable_metadata() {
   local dir control_pid link_out rc i=0
   dir=$(new_case rollback-race rl30)
@@ -2510,6 +2565,8 @@ test_missing_instructions_refuse_before_stopping_anything
 test_checkpoint_refusal_leaves_the_record_byte_identical
 test_checkpoint_refuses_uninspectable_head_and_status
 test_launch_failure_keeps_the_prior_record_and_reports_it
+test_failed_relaunch_keeps_stopped_background_evidence
+test_unconfirmed_stop_reports_background_stop_as_attempted
 test_prepublication_failure_keeps_concurrent_durable_metadata
 test_post_publication_launch_failure_keeps_the_new_record
 test_stop_transport_failure_reconciles_a_dead_agent

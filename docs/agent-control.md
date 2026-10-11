@@ -37,6 +37,12 @@ A recorded `harness=` is not always an exact adapter name: a task launched from 
 | `relaunch` | Replace the running agent with a new one in the same worktree - and the same endpoint whenever that endpoint still exists - on the exact recorded adapter or an explicitly chosen harness, model, and effort. | The new agent is alive on the endpoint the task's record now names, and that record names the harness that is actually running. |
 
 An exit that delivers lifecycle input but cannot prove the agent stopped fails with `exit=unconfirmed`, reports the observed agent state and any interrupt cancellation claim, and never claims that nothing changed.
+Claude Code answers its exit command with a `Background work is running` dialog while a background shell or agent runs.
+`exit` and `relaunch` then choose Stay, keep the agent running, and refuse with the listed background work, so the caller decides whether that work is disposable.
+`--stop-background` is that decision: only with it is the dialog's `Exit and stop tasks` option confirmed, and the stopped work is reported as `background-stopped=`.
+Claude's exit command gets exactly one Enter and no retry, because a later Enter could land on the dialog and confirm it.
+The dialog counts as open only when one screen read shows it complete at the bottom of the screen, so its rows left in scrollback never get a key.
+A relaunch that fails after confirming that option still names the work in its error and its journal: as `background-stopped=` once the old agent is proven dead, and as `background-stop-attempted=` while it is not, because a delivered Enter proves only the key.
 Interrupt never rewrites busy state as proof of its own success.
 Claude exposes no lifecycle acknowledgement for a manual interrupt, so delivery succeeds with `cancel=unconfirmed` and its adapter-owned busy state remains as observed.
 Devin emits no lifecycle hook for cancellation either, so after an armed interrupt the control plane invalidates the interrupted turn's busy record to `unknown` with `cancel=unconfirmed`; that invalidation is a conservative loss of knowledge, never a fabricated idle.
@@ -193,3 +199,4 @@ The empirical basis for each adapter's value is the `harness-adapters` skill's v
 - `tests/fm-control-relaunch.test.sh` - the relaunch transaction: identity preservation, harness switching, the progress note, checkpoint refusals, rollback after a failed launch, and the endpoint-absence proof both verbs share - the Herdr reclaim of a destroyed endpoint, and tmux refusing one it cannot prove absent.
 - `tests/fm-predecessor-recap.test.sh` - the predecessor recap: a transcript present, absent, stale, same-second, foreign, from another root, or without a proven start or recorded root; truncation, the byte bound, and the bounded transcript tail; redaction; and the terminal fallback.
 - `tests/fm-control-herdr-smoke.test.sh` - the second state-verified backend against the real herdr binary, on an isolated throwaway lab session.
+- `tests/fm-control-exit-dialog-live-e2e.test.sh` - opt-in with `FM_CONTROL_EXIT_DIALOG_LIVE=1`: real Claude Code's background-work exit dialog, refused without `--stop-background` and confirmed with it; the measured record is `docs/verification/runtime-backends.md` "Claude exit dialog for running background work".

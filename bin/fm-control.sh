@@ -3,9 +3,9 @@
 # lifecycle verbs addressed to an exact task id.
 #
 # Usage: fm-control.sh <task-id> interrupt
-#        fm-control.sh <task-id> exit
+#        fm-control.sh <task-id> exit [--stop-background]
 #        fm-control.sh <task-id> relaunch [--harness <name>] [--model <name>]
-#                                         [--effort <level>]
+#                                         [--effort <level>] [--stop-background]
 #                                         (--note <text> | --note-file <path>)
 #
 # Why this exists, and how it differs from fm-send.sh. bin/fm-send.sh is the
@@ -36,7 +36,16 @@
 #              every uncommitted change. Interrupts first when the task reads
 #              busy, then submits the harness's exit command. Postcondition:
 #              the backend's recovery-grade classifier reports the agent gone.
-#              Already-stopped is success (idempotent). An endpoint that reads
+#              Already-stopped is success (idempotent). When the exit command
+#              opens the harness's exit dialog instead (Claude's "Background
+#              work is running", fm_control_exit_dialog_signal), exit REFUSES:
+#              it chooses Stay, the agent keeps running, and the error names
+#              the background work that would stop. --stop-background is the
+#              caller's confirmation that this work is disposable; only then
+#              is the dialog's "Exit and stop tasks" option confirmed. That
+#              harness's exit command gets exactly one Enter, because any
+#              later Enter could land on the dialog and confirm it unasked.
+#              An endpoint that reads
 #              `missing` is put through the control plane's per-backend absence
 #              proof (fm_control_endpoint_absence_verdict) before anything is
 #              claimed about it, because `missing` also covers an endpoint that
@@ -238,6 +247,7 @@ MODEL_SET=0
 EFFORT_SET=0
 NOTE=
 NOTE_SET=0
+STOP_BACKGROUND=0
 control_want_value=
 for control_arg in "$@"; do
   if [ -n "$control_want_value" ]; then
@@ -265,6 +275,7 @@ for control_arg in "$@"; do
     --model=*) NEW_MODEL=${control_arg#--model=}; MODEL_SET=1 ;;
     --effort) control_want_value=effort ;;
     --effort=*) NEW_EFFORT=${control_arg#--effort=}; EFFORT_SET=1 ;;
+    --stop-background) STOP_BACKGROUND=1 ;;
     --note) control_want_value=note ;;
     --note=*) NOTE=${control_arg#--note=}; NOTE_SET=1 ;;
     --note-file) control_want_value=note_file ;;
@@ -285,6 +296,8 @@ if [ "$VERB" != relaunch ]; then
   [ "$HARNESS_SET" = 0 ] && [ "$MODEL_SET" = 0 ] && [ "$EFFORT_SET" = 0 ] && [ "$NOTE_SET" = 0 ] \
     || die "--harness, --model, --effort, and --note apply to 'relaunch' only"
 fi
+[ "$VERB" != interrupt ] || [ "$STOP_BACKGROUND" = 0 ] \
+  || die "--stop-background applies to 'exit' and 'relaunch' only"
 [ "$HARNESS_SET" = 0 ] || [ -n "$NEW_HARNESS" ] || die "--harness requires a non-empty value"
 [ "$MODEL_SET" = 0 ] || [ -n "$NEW_MODEL" ] || die "--model requires a non-empty value"
 [ "$EFFORT_SET" = 0 ] || [ -n "$NEW_EFFORT" ] || die "--effort requires a non-empty value"
@@ -558,6 +571,7 @@ retire_busy_incarnation() {
 # `already-stopped`, `endpoint-gone`, or `stopped`.
 do_exit() {
   local state cmd hazard verdict composer_state cancel absence interrupt_result=not-needed
+  local dialog retries background=
   require_state_verified_backend exit
   state=$(agent_state)
   case "$state" in
@@ -641,17 +655,111 @@ do_exit() {
   # authoritative proof is the agent-state wait below. The retried Enter still
   # matters, because a slash command opens a completion popup on some TUIs that
   # swallows the first Enter.
-  verdict=$(fm_backend_send_text_submit "$BACKEND" "$T" "$cmd" "$EXIT_RETRIES" "$POLL" 1.2 "$LABEL") \
+  # An adapter whose exit command can open an exit dialog gets exactly one
+  # Enter and no retry: no screen read can prove the dialog will not render
+  # between that read and the next key, so a retried Enter could confirm the
+  # dialog's highlighted "Exit and stop tasks" unasked. On Herdr that row even
+  # classifies as pending composer text, which is what the backend's own retry
+  # acts on.
+  dialog=$(fm_control_exit_dialog_signal "$HARNESS")
+  retries=$EXIT_RETRIES
+  [ -z "$dialog" ] || retries=1
+  verdict=$(fm_backend_send_text_submit "$BACKEND" "$T" "$cmd" "$retries" "$POLL" 1.2 "$LABEL") \
     || die "the exit command could not be sent to task $ID on $BACKEND"
   [ "$verdict" != send-failed ] \
     || die "the exit command could not be sent to task $ID on $BACKEND"
-  state=$(wait_agent_state "$EXIT_WAIT" dead) || {
-    die "exit-delivered $ID interrupt=$interrupt_result exit-command=delivered agent-state=$state exit=unconfirmed; the agent did not stop within ${EXIT_WAIT}s"
-  }
+  if [ -n "$dialog" ]; then
+    background=$(await_exit_through_dialog) || return $?
+  else
+    state=$(wait_agent_state "$EXIT_WAIT" dead) || {
+      die "exit-delivered $ID interrupt=$interrupt_result exit-command=delivered agent-state=$state exit=unconfirmed; the agent did not stop within ${EXIT_WAIT}s"
+    }
+  fi
   # The incarnation is over: retire its busy wiring so no stale record or
   # orphaned generation survives the agent that produced it.
   retire_busy_incarnation
   printf 'stopped'
+  [ -z "$background" ] || printf '\nbackground-stopped=%s' "$background"
+}
+
+# rendered_exit_dialog: print the exit dialog's rows when one successful
+# viewport read shows the complete dialog as the live bottom of the screen
+# (fm_control_exit_dialog_block); status 1 otherwise.
+rendered_exit_dialog() {
+  local screen
+  screen=$(fm_backend_visible_capture "$BACKEND" "$T" "$LABEL" 2>/dev/null) || return 1
+  fm_control_exit_dialog_block "$HARNESS" "$screen"
+}
+
+# await_exit_through_dialog: wait for the agent to stop after its exit
+# command, handling the exit dialog when it opens. It sends no Enter of its
+# own. Prints the background work an authorized dialog stopped, joined with
+# "; ", or nothing when no dialog opened.
+await_exit_through_dialog() {
+  local elapsed=0 state seen=0 background='' block
+  while :; do
+    state=$(agent_state)
+    if [ "$state" = dead ]; then
+      printf '%s' "$background"
+      return 0
+    fi
+    if [ "$seen" = 0 ] && block=$(rendered_exit_dialog); then
+      seen=1
+      background=$(confirm_exit_dialog "$block") || return $?
+    fi
+    awk -v e="$elapsed" -v t="$EXIT_WAIT" 'BEGIN{exit !(e < t)}' || break
+    sleep "$POLL"
+    elapsed=$(awk -v e="$elapsed" -v p="$POLL" 'BEGIN{printf "%.3f", e + p}')
+  done
+  if [ "$seen" = 1 ]; then
+    die "task $ID's $HARNESS agent confirmed 'Exit and stop tasks' for its background work ($background) but did not stop within ${EXIT_WAIT}s; agent-state=$state exit=unconfirmed"
+  fi
+  die "exit-delivered $ID interrupt=$interrupt_result exit-command=delivered agent-state=$state exit=unconfirmed; the agent did not stop within ${EXIT_WAIT}s"
+}
+
+# confirm_exit_dialog <dialog-rows>: the exit dialog is on screen, as the rows
+# one read returned. With --stop-background, confirm its highlighted "Exit and
+# stop tasks" option and print the work it stops. Without it, choose Stay with
+# Escape and refuse, naming the work, so the caller decides whether it is
+# disposable.
+confirm_exit_dialog() {  # <dialog-rows>
+  local block=$1 tasks stop_row
+  tasks=$(fm_control_exit_dialog_tasks "$HARNESS" "$block" | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')
+  [ -n "$tasks" ] || tasks="unlisted background work"
+  if [ "$STOP_BACKGROUND" = 1 ]; then
+    stop_row=$(fm_control_exit_dialog_stop_row "$HARNESS")
+    if ! printf '%s\n' "$block" | grep -Eq -- "$stop_row"; then
+      fm_backend_send_key "$BACKEND" "$T" Escape "$LABEL" || true
+      die "task $ID's $HARNESS exit dialog is open but 'Exit and stop tasks' is not its highlighted option, so Enter would choose something else; sent Escape (Stay) and nothing was stopped. Background work: $tasks"
+    fi
+    fm_backend_send_key "$BACKEND" "$T" Enter "$LABEL" \
+      || die "task $ID's $HARNESS exit dialog is open and the Enter that confirms 'Exit and stop tasks' was not delivered; close it with Escape (Stay) or Enter before any other action. Background work: $tasks"
+    [ "$RELAUNCH_ACTIVE" != 1 ] || printf '%s\n' "$tasks" > "$BACKGROUND_STOPPED_FILE" || true
+    printf '%s' "$tasks"
+    return 0
+  fi
+  fm_backend_send_key "$BACKEND" "$T" Escape "$LABEL" \
+    || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and the Escape that chooses Stay was not delivered, so its exit dialog is still open; close it with Escape, never Enter, which stops that work"
+  wait_exit_dialog_gone "$SETTLE_WAIT" \
+    || die "task $ID's $HARNESS agent has background work its exit would stop ($tasks), and its exit dialog is still open after Escape; close it with Escape, never Enter, which stops that work"
+  die "task $ID's $HARNESS agent has background work its exit would stop: $tasks. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh $ID $VERB' directly with the same options plus --stop-background; otherwise let it finish first"
+}
+
+# wait_exit_dialog_gone <timeout>: poll until one successful viewport read no
+# longer shows the live exit dialog. An unreadable viewport is not proof the
+# dialog closed, so the read that proves closure is the same one that was
+# tested.
+wait_exit_dialog_gone() {  # <timeout>
+  local elapsed=0 screen
+  while :; do
+    if screen=$(fm_backend_visible_capture "$BACKEND" "$T" "$LABEL" 2>/dev/null) \
+       && ! fm_control_exit_dialog_block "$HARNESS" "$screen" >/dev/null; then
+      return 0
+    fi
+    awk -v e="$elapsed" -v t="$1" 'BEGIN{exit !(e < t)}' || return 1
+    sleep "$POLL"
+    elapsed=$(awk -v e="$elapsed" -v p="$POLL" 'BEGIN{printf "%.3f", e + p}')
+  done
 }
 
 # --- transactional relaunch -------------------------------------------------
@@ -667,8 +775,15 @@ JOURNAL="$STATE/$ID.control-relaunch"
 META_PRIOR="$JOURNAL.meta-prior"
 BRIEF_PRIOR="$JOURNAL.brief-prior"
 NOTE_FILE="$JOURNAL.note"
+# Written by the relaunch's own exit the moment Enter confirms the exit dialog,
+# so a stop that fails afterwards still names the work it stopped.
+BACKGROUND_STOPPED_FILE="$JOURNAL.background-stopped"
 RELAUNCH_META_PUBLISHED=0
 RELAUNCH_AGENT_CONFIRMED=0
+# The old agent's exit result once it stopped, carrying " background-stopped=
+# <work>" when that exit confirmed an exit dialog, so every later journal write
+# and failure report keeps the work it stopped.
+RELAUNCH_EXIT_RESULT=
 RELAUNCH_TX=
 RELAUNCH_BRIEF=
 PRIOR_HARNESS=$HARNESS
@@ -712,7 +827,7 @@ journal_write() {  # <phase> [extra-line]...
 }
 
 relaunch_rollback() {
-  local state
+  local state stopped
   [ "$RELAUNCH_ACTIVE" = 1 ] || return 0
   [ "$RELAUNCH_PHASE" != complete ] || return 0
   RELAUNCH_ACTIVE=0
@@ -728,16 +843,29 @@ relaunch_rollback() {
       ;;
     stopping)
       state=$(agent_state 2>/dev/null || printf unknown)
+      stopped=
+      # A delivered confirming Enter proves only the key, so the work counts
+      # as stopped only once the agent is proven dead; otherwise it was
+      # attempted.
+      if [ -s "$BACKGROUND_STOPPED_FILE" ]; then
+        if [ "$state" = dead ]; then
+          stopped="background-stopped=$(cat "$BACKGROUND_STOPPED_FILE")"
+          echo "error: the old agent's exit dialog was confirmed and the agent stopped, stopping its background work: $stopped" >&2
+        else
+          stopped="background-stop-attempted=$(cat "$BACKGROUND_STOPPED_FILE")"
+          echo "error: the old agent's exit dialog was confirmed but the agent is '$state', so its background work was not proven stopped: $stopped" >&2
+        fi
+      fi
       case "$state" in
         alive)
           if [ -n "$RELAUNCH_BRIEF" ] && [ -f "$BRIEF_PRIOR" ]; then
             cp -p "$BRIEF_PRIOR" "$RELAUNCH_BRIEF" 2>/dev/null || true
           fi
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-alive" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-alive" ${stopped:+"$stopped"} || true
           echo "error: relaunch of $ID failed while stopping the old agent, which is still running; its original instructions were restored" >&2
           ;;
         dead)
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept-agent-dead" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept-agent-dead" ${stopped:+"$stopped"} || true
           echo "error: $ID's agent stopped but relaunch did not reach replacement launch; no agent is running, and its work plus progress note are preserved at $WT" >&2
           ;;
         *)
@@ -749,14 +877,19 @@ relaunch_rollback() {
           if [ -n "$RELAUNCH_BRIEF" ] && [ -f "$BRIEF_PRIOR" ]; then
             cp -p "$BRIEF_PRIOR" "$RELAUNCH_BRIEF" 2>/dev/null || true
           fi
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-state-$state" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-state-$state" ${stopped:+"$stopped"} || true
           echo "error: relaunch of $ID failed while stopping the old agent and its state is '$state', so it was not proven stopped; its original instructions were restored and the durable record was retained for recovery" >&2
           ;;
       esac
       ;;
     exited|launching)
+      case "$RELAUNCH_EXIT_RESULT" in
+        *' background-stopped='*)
+          echo "error: the old agent's exit also stopped its background work: background-stopped=${RELAUNCH_EXIT_RESULT#* background-stopped=}" >&2
+          ;;
+      esac
       if [ "$RELAUNCH_AGENT_CONFIRMED" = 1 ]; then
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-agent-confirmed" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-agent-confirmed" "exit_result=$RELAUNCH_EXIT_RESULT" || true
         echo "error: $ID's replacement is running on $TARGET_HARNESS, but transaction completion could not be persisted; its published record was retained for reconciliation" >&2
       elif [ "$RELAUNCH_META_PUBLISHED" = 1 ] \
          || { [ -n "$RELAUNCH_TX" ] \
@@ -766,10 +899,10 @@ relaunch_rollback() {
         # harness with no agent confirmed, which is exactly what recovery
         # reconciles. Rewriting it back to the old harness would be a second,
         # worse inaccuracy.
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-record-kept" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=none-new-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" || true
         echo "error: $ID was relaunched on $TARGET_HARNESS but no running agent could be confirmed; its work is preserved at $WT" >&2
       else
-        journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept" || true
+        journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept" "exit_result=$RELAUNCH_EXIT_RESULT" || true
         echo "error: $ID's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at $WT" >&2
       fi
       ;;
@@ -960,7 +1093,7 @@ record_note() {
 }
 
 do_relaunch() {
-  local exit_result state note_line
+  local exit_result exit_background='' state note_line
   local -a spawn_args
 
   require_state_verified_backend relaunch
@@ -997,14 +1130,19 @@ do_relaunch() {
   record_note
   journal_write noted "${CHECKPOINT_LINES[@]}" "$note_line"
 
+  rm -f "$BACKGROUND_STOPPED_FILE"
   journal_write stopping "${CHECKPOINT_LINES[@]}" "$note_line"
   exit_result=$(do_exit)
-  journal_write exited "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result"
+  case "$exit_result" in
+    *$'\n'*) exit_background=" ${exit_result#*$'\n'}"; exit_result=${exit_result%%$'\n'*} ;;
+  esac
+  RELAUNCH_EXIT_RESULT=$exit_result$exit_background
+  journal_write exited "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result$exit_background"
 
   # The launch owner (fm-spawn --relaunch) clears the previous incarnation's
   # per-task harness wiring before arming the new one, so nothing to do here.
   RELAUNCH_TX="${BASHPID:-$$}.$(date -u +%Y%m%dT%H%M%SZ).$RANDOM"
-  journal_write launching "${CHECKPOINT_LINES[@]}" "$note_line" "relaunch_tx=$RELAUNCH_TX"
+  journal_write launching "${CHECKPOINT_LINES[@]}" "$note_line" "relaunch_tx=$RELAUNCH_TX" "exit_result=$exit_result$exit_background"
   spawn_args=("$ID" --relaunch --harness "$TARGET_HARNESS")
   [ "$TARGET_MODEL" = default ] || spawn_args+=(--model "$TARGET_MODEL")
   [ "$TARGET_EFFORT" = default ] || spawn_args+=(--effort "$TARGET_EFFORT")
@@ -1039,9 +1177,9 @@ do_relaunch() {
   }
   RELAUNCH_AGENT_CONFIRMED=1
 
-  journal_write complete "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result"
+  journal_write complete "${CHECKPOINT_LINES[@]}" "$note_line" "exit_result=$exit_result$exit_background"
   RELAUNCH_ACTIVE=0
-  echo "relaunched $ID harness=$TARGET_HARNESS from=$PRIOR_RECORDED_HARNESS model=$TARGET_MODEL effort=$TARGET_EFFORT backend=$BACKEND endpoint=$T worktree=$WT"
+  echo "relaunched $ID harness=$TARGET_HARNESS from=$PRIOR_RECORDED_HARNESS model=$TARGET_MODEL effort=$TARGET_EFFORT backend=$BACKEND endpoint=$T worktree=$WT$exit_background"
 }
 
 # --- verbs ------------------------------------------------------------------
@@ -1065,7 +1203,11 @@ case "$VERB" in
     ;;
   exit)
     result=$(do_exit)
-    echo "$result $ID harness=$HARNESS backend=$BACKEND endpoint=$T worktree=$WT"
+    background=
+    case "$result" in
+      *$'\n'*) background=" ${result#*$'\n'}"; result=${result%%$'\n'*} ;;
+    esac
+    echo "$result $ID harness=$HARNESS backend=$BACKEND endpoint=$T worktree=$WT$background"
     ;;
   relaunch)
     do_relaunch
