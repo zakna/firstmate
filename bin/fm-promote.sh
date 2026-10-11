@@ -17,9 +17,11 @@
 # is not relabeled as the ship spec. Promotion refuses leftover `{TASK}` /
 # `{FIRSTMATE_SPEC}` placeholders and a `## Captain's intent` line opening with
 # a Captain label or address (bin/fm-dod-lib.sh). It also refuses a scout whose
-# project runs its own claim ritual when the `## Captain's intent` it delivers
-# lacks the `Claim recovery:` and `Claim model:` lines (bin/fm-claim-ritual-lib.sh),
-# the same refusal bin/fm-spawn.sh applies to a first ship launch. It warns, and still
+# project has a dedicated claim-ritual file when the `## Captain's intent` it
+# delivers lacks the `Claim recovery:` and `Claim model:` lines, and only warns
+# when the project's AGENTS.md or CLAUDE.md merely describes a claim ritual
+# (bin/fm-claim-ritual-lib.sh), the same rule bin/fm-spawn.sh applies to a
+# first ship launch. It warns, and still
 # promotes, when the scout-time `## Firstmate spec` hands the worker its own
 # gate responses (bin/fm-gate-delegation-lib.sh). A pre-subsection scout
 # brief contributes only Task lines explicitly marked as captain words to intent,
@@ -239,6 +241,9 @@ if [ -n "$PROMOTE_PROJECT" ] && RITUAL_FILE=$(fm_claim_ritual_detect "$PROMOTE_P
     echo "error: $PROMOTE_PROJECT runs its own claim ritual (${RITUAL_FILE#"$PROMOTE_PROJECT"/}) but the Captain's intent promotion delivers from $SCOUT_BRIEF lacks: $RITUAL_MISSING; the scout-time Firstmate spec is only context to the promoted worker, so copy the project's claim-recovery procedure and model requirement into ## Captain's intent before promotion (bin/fm-claim-ritual-lib.sh)" >&2
     exit 1
   fi
+elif [ -n "$PROMOTE_PROJECT" ] && RITUAL_FILE=$(fm_claim_ritual_prose_detect "$PROMOTE_PROJECT") &&
+  RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$INTENT_BODY"); then
+  echo "warning: $PROMOTE_PROJECT may run its own claim ritual (${RITUAL_FILE#"$PROMOTE_PROJECT"/} describes one) and the Captain's intent promotion delivers from $SCOUT_BRIEF lacks: $RITUAL_MISSING; promoting anyway (bin/fm-claim-ritual-lib.sh)" >&2
 fi
 
 # The promoted worker must receive the same delivery contract an ordinary ship
