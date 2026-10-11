@@ -28,6 +28,9 @@
 #            is printed as its own field even when a selector is also present
 #            and even when that comment matches the element text, so typed
 #            words are never dropped. Choice Context data is not a comment.
+#            Both the tabular and the expanded list form of a result are read;
+#            a list-form item's nested block, such as `target:`, is printed
+#            verbatim as `| nested` lines after that item.
 #            Captain-supplied body lines are visibly prefixed so they cannot
 #            forge structural labels. Empty message and annotation sections
 #            are reported explicitly.
