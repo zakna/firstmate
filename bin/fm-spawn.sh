@@ -2360,6 +2360,9 @@ if [ "$KIND" = secondmate ] && [ -z "$ARG3" ]; then
     fi
   fi
 fi
+# A Sonnet or Haiku model above its allowed effort is refused before any
+# provisioning (bin/fm-harness.sh validate-model-effort owns the limits).
+"$SCRIPT_DIR/fm-harness.sh" validate-model-effort "$HARNESS" "$MODEL" "$EFFORT" || exit 1
 # Ultra is an explicit native capability, never a Pi thinking-level alias.
 # Validate the fully resolved profile before worktree or endpoint provisioning.
 if [ "$EFFORT" = ultra ]; then

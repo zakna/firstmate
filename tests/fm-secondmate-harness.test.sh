@@ -829,7 +829,7 @@ test_spawn_explicit_model_overrides_secondmate_harness_token() {
   sm="$w/sm"
   launchlog="$w/launch.log"
   mkdir -p "$w/home/config"
-  printf 'claude opus high\n' > "$w/home/config/secondmate-harness"
+  printf 'claude opus medium\n' > "$w/home/config/secondmate-harness"
   make_seeded_home "$sm" sm
 
   spawn_secondmate_capture "$w" sm "$sm" "$launchlog" --model sonnet >/dev/null 2>&1
@@ -837,7 +837,7 @@ test_spawn_explicit_model_overrides_secondmate_harness_token() {
   meta="$w/home/state/sm.meta"
   [ "$(meta_field "$meta" model)" = sonnet ] \
     || fail "explicit-model: meta model not sonnet (got '$(meta_field "$meta" model)'), explicit flag did not win over file token"
-  [ "$(meta_field "$meta" effort)" = high ] || fail "explicit-model: file's effort token should still apply"
+  [ "$(meta_field "$meta" effort)" = medium ] || fail "explicit-model: file's effort token should still apply"
   launch=$(cat "$launchlog")
   assert_contains "$launch" "--model 'sonnet'" "explicit-model: launch did not use the explicit --model"
   assert_not_contains "$launch" "--model 'opus'" "explicit-model: launch leaked the file's model token"
