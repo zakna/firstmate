@@ -880,7 +880,7 @@ test_stop_background_is_forwarded_only_when_passed() {
   # Local leg: a stub control plane records the exact relaunch argv.
   local_relaunch_argv "" "sm1 relaunch"
   local_relaunch_argv "--stop-background" "sm1 relaunch --stop-background"
-  pass "T13 --stop-background is forwarded to local and remote relaunches only when passed"
+  pass "T17 --stop-background is forwarded to local and remote relaunches only when passed"
 }
 
 test_persist_gates_and_asks_only_for_open_records
