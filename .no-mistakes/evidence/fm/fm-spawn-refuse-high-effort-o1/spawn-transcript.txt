@@ -1,0 +1,52 @@
+$ fm-spawn.sh t1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model claude-sonnet-5-5 --effort high
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'claude-sonnet-5-5' (Sonnet) cannot start at effort 'high'; the allowed maximum for Sonnet is medium
+exit=
+
+$ fm-spawn.sh t2 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model sonnet --effort max
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'sonnet' (Sonnet) cannot start at effort 'max'; the allowed maximum for Sonnet is medium
+exit=
+
+$ fm-spawn.sh t3 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model claude-haiku-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'claude-haiku-5-5' (Haiku) cannot start at effort 'medium'; the allowed maximum for Haiku is low
+exit=
+
+$ fm-spawn.sh t4 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model haiku --effort xhigh
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'haiku' (Haiku) cannot start at effort 'xhigh'; the allowed maximum for Haiku is low
+exit=
+
+$ fm-spawn.sh t5 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --mode local-only --yolo off --harness claude --model claude-sonnet-5-5 --effort xhigh
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'claude-sonnet-5-5' (Sonnet) cannot start at effort 'xhigh'; the allowed maximum for Sonnet is medium
+exit=
+
+--- allowed profiles (expected to pass the effort check and fail later on missing brief/session) ---
+$ fm-spawn.sh t6 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model claude-sonnet-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: task t6 has no brief at inaccessible data path /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/data/t6/brief.md
+exit=
+
+$ fm-spawn.sh t7 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model claude-haiku-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: task t7 has no brief at inaccessible data path /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/data/t7/brief.md
+exit=
+
+$ fm-spawn.sh t8 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/projects/demo --scout --harness claude --model claude-opus-5-5 --effort max
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: task t8 has no brief at inaccessible data path /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X/data/t8/brief.md
+exit=
+
+--- secondmate via config/secondmate-harness 'claude sonnet high' ---
+$ fm-spawn.sh sm1 --secondmate
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L2wh5X
+error: model 'sonnet' (Sonnet) cannot start at effort 'high'; the allowed maximum for Sonnet is medium
+exit=
+
+--- state after refusals ---
+total 0
+drwxr-xr-x@ 2 olivier  staff   64 Oct 11 14:06 .
+drwx------@ 7 olivier  staff  224 Oct 11 14:06 ..
+/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.L2wh5X/projects/demo c892c0a [main]

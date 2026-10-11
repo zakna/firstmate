@@ -1,0 +1,4 @@
+model=claude-sonnet-5-5 effort=high exit=1
+model=claude-haiku-5-5 effort=medium exit=1
+model=claude-sonnet-5-5 effort=medium exit=1
+model=claude-haiku-5-5 effort=low exit=1
