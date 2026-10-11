@@ -1738,6 +1738,21 @@ clear_pause_tracking() {  # <window-key>
   clear_stale_hash_tracking "$key"
 }
 
+# The busy-pane reset: a busy pane means real work resumed, so pause tracking is
+# cleared - except the re-surface throttle of a verified captain-held transfer
+# that still stands. A steer the held worker answers does not change who the
+# hold waits on, and dropping that throttle would make the next quiet pane a
+# fresh first sighting instead of a sight already inside the long cadence.
+clear_busy_pause_tracking() {  # <window-key> <task>
+  local key=$1
+  if status_is_captain_held "$(status_declared_wait_line "$STATE/$2.status")"; then
+    rm -f "$STATE/.paused-$key" "$STATE/.paused-rechecked-$key"
+    clear_stale_hash_tracking "$key"
+  else
+    clear_pause_tracking "$key"
+  fi
+}
+
 # Reconcile a declared pause or captain-held status with authoritative crew state.
 # Prints working, paused, or none. After fm-crew-state has fallen back to stopped,
 # unknown, or a parked run, paused classification is recovered only for a
@@ -1923,7 +1938,11 @@ captain_call_stale_bound() {  # <window-key> <task>
 # its hash (a clock, a token counter), and each new hash re-enters this path, so
 # without that bound one wait re-alarms firstmate for its whole duration.
 # The FIRST sight still wakes, keeping the inspect-an-inconclusive-state intent,
-# and the throttle is read BEFORE anything is queued and advanced only by a wake
+# except under a verified captain-held transfer younger than PAUSE_RESURFACE_SECS:
+# that hold already names who owes the answer, so its first sight takes the same
+# long cadence handle_paused_stale gives it, and a steer the held worker answers
+# cannot turn the next quiet pane into a short-cadence alarm.
+# The throttle is read BEFORE anything is queued and advanced only by a wake
 # that really fires - a throttle written by the wake it should have prevented, or
 # read after that wake was already appended, bounds nothing.
 # Both records of an ordinary crew wait bound it (see task_captain_call_open
@@ -1956,8 +1975,11 @@ surface_nonterminal_stale() {  # <window> <hash>
     STALE_WAIT_DECLARATION=$(stale_wait_declaration "$task")
     if captain_held_silenced "$last"; then
       throttled=0
-    else
-      stale_wait_throttled "$key" "$STALE_WAIT_DECLARATION" && throttled=0
+    elif stale_wait_throttled "$key" "$STALE_WAIT_DECLARATION"; then
+      throttled=0
+    elif [ ! -e "$STATE/.paused-resurfaced-$key" ] \
+      && [ "$(age_of "$STATE/$task.status")" -lt "$PAUSE_RESURFACE_SECS" ]; then
+      throttled=0
     fi
   elif captain_call_stale_bound "$key" "$task"; then
     bounded=0
@@ -3203,7 +3225,7 @@ EOF
         # recorded it, or the re-surface throttle it depends on would be erased and
         # the pause would re-surface every poll instead of once per long cadence.
         if [ "$paused_bound" -ne 0 ] && [ -e "$pf" ] && { [ "$n" -ge 2 ] || ! status_is_paused_or_captain_held "$(status_declared_wait_line "$STATE/$(window_to_task "$w" "$STATE").status")"; }; then
-          clear_pause_tracking "$key"
+          clear_busy_pause_tracking "$key" "$task"
         fi
       fi
     else
@@ -3234,7 +3256,7 @@ EOF
       elif [ "$paused_bound" -ne 0 ] && [ -e "$pf" ]; then
         # Same rule as the stable-hash branch: never clear pause bookkeeping the
         # declared-pause cadence recorded on this very poll.
-        clear_pause_tracking "$key"
+        clear_busy_pause_tracking "$key" "$task"
       fi
     fi
   done < <(recorded_windows)

@@ -2843,7 +2843,12 @@ test_live_declared_wait_churn_honors_the_resurface_throttle() {
     throttle="$state/.paused-resurfaced-$key"
 
     # First sight of a parked-but-live worker must still surface: the state is
-    # inconclusive and firstmate has to look at it.
+    # inconclusive and firstmate has to look at it. A verified captain-held
+    # transfer surfaces first only once it is older than the re-surface window
+    # (test_steered_captain_held_worker_stays_on_the_long_cadence), so that hold
+    # is aged past it here.
+    [ "$name" = paused-pipeline-churn ] || set_mtime "$(( $(date +%s) - 2000 ))" "$statusf"
+    sig=$(seen_sig "$statusf"); printf '%s' "$sig" > "$state/.seen-parked_status"
     text='parked, elapsed 1s'
     printf '%s' "$text" > "$capture_file"
     printf '%s' "$(hash_text "$text")" > "$state/.hash-$key"
@@ -2910,6 +2915,55 @@ test_live_declared_wait_churn_honors_the_resurface_throttle() {
     [ "$bare" -eq 1 ] || fail "[$name] elapsed re-surface changed the wake identity: $(cat "$state/.wake-queue")"
   done
   pass "a parked live worker surfaces once, absorbs pane churn for the whole re-surface window, then re-surfaces when it elapses"
+}
+
+# --- a steered worker already held for the captain: no fresh first sight -----
+# 2026-09-23: supervision steered or peeked at a worker whose status already
+# carried a verified captain-held transfer. The steer made the pane busy, which
+# cleared the hold's stale bookkeeping, and the next quiet pane was a fresh first
+# sighting on the short cadence - a wake every 2-3 minutes for half an hour.
+# The contract pinned here: a verified hold takes the long cadence from its first
+# sighting, whether the hold is younger than one re-surface window and never
+# surfaced, or older and already rechecked inside the current window.
+test_steered_captain_held_worker_stays_on_the_long_cadence() {
+  local spec name back dir state fakebin out capture_file statusf window key sig wakes throttle
+  for spec in 'young-hold|0' 'rechecked-hold|2000'; do
+    name=${spec%%|*}; back=${spec#*|}
+    dir=$(make_case "steered-$name"); state="$dir/state"; fakebin="$dir/fakebin"
+    out="$dir/watch.out"; capture_file="$dir/pane.txt"; statusf="$state/held.status"
+    window="test:fm-held"
+    printf 'window=%s\nkind=ship\nharness=grok\nbackend=tmux\n' "$window" > "$state/held.meta"
+    printf 'captain-held [key=route]: tracked by held-decision-route\n' > "$statusf"
+    [ "$back" -eq 0 ] || set_mtime "$(( $(date +%s) - back ))" "$statusf"
+    sig=$(seen_sig "$statusf"); printf '%s' "$sig" > "$state/.seen-held_status"
+    key=$(printf '%s' "$window" | tr ':/.' '___')
+    throttle="$state/.paused-resurfaced-$key"
+    printf 'held, idle' > "$capture_file"
+    printf '%s' "$(hash_text 'held, idle')" > "$state/.hash-$key"
+    printf '1\n' > "$state/.count-$key"
+    printf '%s' "$(hash_text 'held, idle')" > "$state/.stale-$key"
+    if [ "$back" -ne 0 ]; then
+      # The long-cadence recheck already fired for this hold inside the window.
+      : > "$state/.paused-$key"
+      printf 'declared:%s' "$(bash -c '. "$1"; fm_wake_signal_sig "$2"' _ \
+        "$ROOT/bin/fm-wake-lib.sh" "$statusf")" > "$throttle"
+    fi
+
+    # The steer: the worker answers it, so the pane is busy for a while.
+    printf 'answering the steer\nCtrl+c:cancel' > "$capture_file"
+    parked_watch_round "$state" "$fakebin" "$out" "$capture_file" "$window" absorb \
+      || fail "[$name] watcher exited while a held worker answered a steer"
+
+    # Then quiet again: a new stale hash on a task whose hold still stands.
+    printf 'steer answered, idle' > "$capture_file"
+    parked_watch_round "$state" "$fakebin" "$out" "$capture_file" "$window" absorb \
+      || fail "[$name] a steered worker already held for the captain surfaced as a fresh first sighting"
+    wakes=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w { n++ } END { print n + 0 }' \
+      "$state/.wake-queue" 2>/dev/null || echo 0)
+    [ "$wakes" -eq 0 ] \
+      || fail "[$name] a steered worker already held for the captain produced $wakes short-cadence wake(s)"
+  done
+  pass "a steered worker already held for the captain stays on the long recheck cadence when it goes quiet"
 }
 
 test_live_paused_until_controls_recheck_time() {
@@ -6803,6 +6857,7 @@ test_exited_declared_pause_is_bounded_but_live_gate_surfaces
 test_own_work_wait_keeps_first_alert_then_long_cadence
 test_absorbed_replacement_wait_does_not_inherit_the_old_throttle
 test_live_declared_wait_churn_honors_the_resurface_throttle
+test_steered_captain_held_worker_stays_on_the_long_cadence
 test_live_paused_until_controls_recheck_time
 test_wedge_threshold_defers_to_a_declared_wait_under_a_working_verdict
 test_wedge_threshold_keeps_a_wait_past_a_default_key_answer
