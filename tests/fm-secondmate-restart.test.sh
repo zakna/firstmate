@@ -847,6 +847,42 @@ test_already_current_unprovable_mate_stays_on_the_nudge_path() {
   pass "T16 an already-current mate with an unprovable runtime keeps the honest nudge path"
 }
 
+local_relaunch_argv() {  # <restart-flag-or-empty> <expected-control-argv>
+  local dir out bin
+  dir=$(new_case stopbg-local)
+  add_local_mate "$dir" sm1
+  arm_answer "$dir" sm1
+  bin="$dir/bin"
+  cp -R "$ROOT/bin" "$bin"
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s/control.log"\nexit 0\n' "$dir" > "$bin/fm-control.sh"
+  chmod +x "$bin/fm-control.sh"
+  out=$(env PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" FM_SPAWN_NO_GUARD=1 \
+    FM_SECONDMATE_PERSIST_POLL=1 FM_SECONDMATE_PERSIST_WAIT=30 "$bin/fm-secondmate-restart.sh" ${1:+"$1"} sm1 2>&1)
+  [ "$(cat "$dir/control.log" 2>/dev/null)" = "$2" ] \
+    || fail "local relaunch argv wrong (want '$2'): $(cat "$dir/control.log" 2>/dev/null)"$'\n'"$out"
+}
+
+# --- --stop-background is forwarded to local and remote relaunches only when passed
+test_stop_background_is_forwarded_only_when_passed() {
+  local dir out rc
+  dir=$(new_case stopbg)
+  setup_remote_case "$dir" sm2 ok
+  export FM_FAKE_ANSWER_STATUS="$dir/home/state/sm2.status"
+  out=$(run_restart "$dir" sm2); rc=$?
+  expect_code 0 "$rc" "plain remote restart"$'\n'"$out"
+  grep -q 'stop-background' "$dir/ssh.log" && fail "flag sent without the operator passing it: $(cat "$dir/ssh.log")"
+  out=$(run_restart "$dir" --stop-background sm2); rc=$?
+  unset FM_FAKE_ANSWER_STATUS
+  expect_code 0 "$rc" "remote restart with --stop-background"$'\n'"$out"
+  grep -q '^fm-remote-secondmate-control.sh relaunch sm2 .* --stop-background$' "$dir/ssh.log" \
+    || fail "remote relaunch did not carry --stop-background"$'\n'"$(cat "$dir/ssh.log")"
+
+  # Local leg: a stub control plane records the exact relaunch argv.
+  local_relaunch_argv "" "sm1 relaunch"
+  local_relaunch_argv "--stop-background" "sm1 relaunch --stop-background"
+  pass "T13 --stop-background is forwarded to local and remote relaunches only when passed"
+}
+
 test_persist_gates_and_asks_only_for_open_records
 test_persist_precedes_restart
 test_arrived_answer_precedes_deadline_check
@@ -866,5 +902,6 @@ test_unpublished_worker_result_is_accounted_for
 test_result_published_while_reaping_is_honored
 test_already_current_mate_restarts_end_to_end
 test_already_current_unprovable_mate_stays_on_the_nudge_path
+test_stop_background_is_forwarded_only_when_passed
 
 echo "# all fm-secondmate-restart tests passed"

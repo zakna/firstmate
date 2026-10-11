@@ -2,7 +2,12 @@
 # Restart second mates onto the current instruction surface and launch-time
 # wiring, persisting their open records first.
 #
-# Usage: fm-secondmate-restart.sh <secondmate-id>... [--help]
+# Usage: fm-secondmate-restart.sh [--stop-background] <secondmate-id>... [--help]
+#
+# --stop-background is forwarded to every mate's relaunch, local and remote alike,
+# and only when passed. Without it a Claude mate with background work refuses the
+# relaunch and is reported unreached; with it the operator authorizes stopping
+# that work (bin/fm-control.sh owns the semantics).
 #
 # This is the executable half of /updatefirstmate's reload step. A running agent
 # holds AGENTS.md and every skill it has loaded frozen from launch, and no
@@ -100,9 +105,11 @@ PERSIST_POLL=${FM_SECONDMATE_PERSIST_POLL:-5}
 case "$PERSIST_WAIT" in ''|*[!0-9]*) echo "error: FM_SECONDMATE_PERSIST_WAIT must be a non-negative integer: $PERSIST_WAIT" >&2; exit 2 ;; esac
 case "$PERSIST_POLL" in ''|*[!0-9]*|0) echo "error: FM_SECONDMATE_PERSIST_POLL must be a positive integer: $PERSIST_POLL" >&2; exit 2 ;; esac
 
+STOP_BACKGROUND=0
 IDS=()
 for arg in "$@"; do
   case "$arg" in
+    --stop-background) STOP_BACKGROUND=1; continue ;;
     -*) echo "error: unexpected argument '$arg'" >&2; usage >&2; exit 2 ;;
   esac
   # /updatefirstmate's action line names each mate by its fm-<id> selector; the
@@ -164,15 +171,17 @@ report_unreached() {  # <id> <reason>
 
 restart_mate() {  # <array-index>
   local i=$1 id restart_out restart_rc restart_reason ran_on
+  local -a stop_flag=()
   id=${IDS[$i]}
+  [ "$STOP_BACKGROUND" -eq 0 ] || stop_flag=(--stop-background)
   if [ "${PLACEMENT[i]}" = remote ]; then
     restart_out=$(FM_HOME="$FM_HOME" FM_STATE_OVERRIDE="$STATE" \
       "$SCRIPT_DIR/fm-remote-secondmate-relaunch.sh" \
-      "$id" "${HARNESS[i]}" "${MODEL[i]:-default}" "${EFFORT[i]:-default}" < /dev/null 2>&1)
+      "$id" "${HARNESS[i]}" "${MODEL[i]:-default}" "${EFFORT[i]:-default}" ${stop_flag[@]+"${stop_flag[@]}"} < /dev/null 2>&1)
     restart_rc=$?
   else
     restart_out=$(FM_HOME="$FM_HOME" FM_STATE_OVERRIDE="$STATE" \
-      "$SCRIPT_DIR/fm-control.sh" "$id" relaunch 2>&1)
+      "$SCRIPT_DIR/fm-control.sh" "$id" relaunch ${stop_flag[@]+"${stop_flag[@]}"} 2>&1)
     restart_rc=$?
   fi
   if [ "$restart_rc" -eq 0 ]; then
