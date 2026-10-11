@@ -1469,6 +1469,20 @@ test_top_level_fixing_done_log_stays_working() {
   pass "top-level fixing is not overridden by a stale done log"
 }
 
+test_merged_green_reading_drops_status_log_held_disclosure() {
+  reset_fakes
+  local d; d=$(new_case merged-held)
+  make_repo_on_branch "$d/wt" fm/feat-mh
+  make_fakebin "$d" >/dev/null
+  fm_write_meta "$d/state/feat-mh.meta" "window=fm:fm-feat-mh" "worktree=$d/wt" "kind=ship"
+  printf 'done [at=2]: PR https://github.com/o/r/pull/204 checks green; held: review pending on head abc\n' > "$d/state/feat-mh.status"
+  FM_FAKE_AXI_STATUS="$(run_passed fm/feat-mh)"
+  local out; out=$(run_crew_state "$d" feat-mh)
+  assert_contains "$out" "run passed: PR merged" "merged reading is reported: $out"
+  assert_not_contains "$out" "held:" "a merged reading drops the pre-merge hold: $out"
+  pass "merged green reading drops the status-log held disclosure"
+}
+
 # (d) terminal run-step is authoritative
 test_terminal_passed() {
   reset_fakes
@@ -5768,6 +5782,7 @@ test_ci_fixing_after_green_stays_working
 test_top_level_fixing_ci_running_after_green_stays_working
 test_top_level_fixing_done_log_stays_working
 test_terminal_passed
+test_merged_green_reading_drops_status_log_held_disclosure
 test_terminal_passed_with_override
 test_terminal_passed_with_skips
 test_terminal_passed_uses_matching_retirement_receipt_without_forge

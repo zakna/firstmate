@@ -773,9 +773,11 @@ EOF
 }
 
 # A worker's `done: ...; held: <why>` disclosure must stay visible beside a
-# green run-step reading, or the merge authority can miss it.
+# green run-step reading, or the merge authority can miss it. A merged reading
+# drops it: a hold only matters before merge.
 append_log_held_disclosure() {
   [ "$LOG_VERB" = "done" ] || return 0
+  case "$RUN_DETAIL" in *"PR merged"*) return 0 ;; esac
   local note
   note=$(status_line_note "$LOG_LINE")
   case "$note" in
