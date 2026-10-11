@@ -1,0 +1,40 @@
+=== Sonnet/high rejected
+crew-dispatch.json: {"rules":[{"when":"big feature","use":{"harness":"claude","model":"claude-sonnet-5-5","effort":"high"}}]}
+--- fm-bootstrap.sh (CREW_DISPATCH lines):
+CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: claude:high
+--- fm-dispatch-resolve.sh (TYPESAFE_API_KEY=dummy, network blocked via bogus https_proxy):
+env: timeout: No such file or directory
+exit=
+
+=== Haiku/medium default rejected
+crew-dispatch.json: {"rules":[{"when":"x","use":{"harness":"codex"}}],"default":{"harness":"claude","model":"claude-haiku-5-5","effort":"medium"}}
+--- fm-bootstrap.sh (CREW_DISPATCH lines):
+CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: claude:medium
+--- fm-dispatch-resolve.sh (TYPESAFE_API_KEY=dummy, network blocked via bogus https_proxy):
+env: timeout: No such file or directory
+exit=
+
+=== Sonnet/max in array rejected
+crew-dispatch.json: {"rules":[{"when":"x","use":[{"harness":"codex"},{"harness":"claude","model":"SONNET","effort":"max"}]}]}
+--- fm-bootstrap.sh (CREW_DISPATCH lines):
+CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: claude:max
+--- fm-dispatch-resolve.sh (TYPESAFE_API_KEY=dummy, network blocked via bogus https_proxy):
+env: timeout: No such file or directory
+exit=
+
+=== Within ceilings accepted
+crew-dispatch.json: {"rules":[{"when":"a","use":[{"harness":"claude","model":"claude-sonnet-5-5","effort":"medium"},{"harness":"claude","model":"claude-haiku-5-5","effort":"low"},{"harness":"claude","model":"claude-opus-5-5","effort":"max"}]}]}
+--- fm-bootstrap.sh (CREW_DISPATCH lines):
+(no CREW_DISPATCH diagnostic)
+--- fm-dispatch-resolve.sh (TYPESAFE_API_KEY=dummy, network blocked via bogus https_proxy):
+env: timeout: No such file or directory
+exit=
+
+=== Non-claude harness with sonnet model unaffected
+crew-dispatch.json: {"rules":[{"when":"a","use":{"harness":"pi","model":"anthropic/claude-sonnet-5","effort":"high"}}]}
+--- fm-bootstrap.sh (CREW_DISPATCH lines):
+(no CREW_DISPATCH diagnostic)
+--- fm-dispatch-resolve.sh (TYPESAFE_API_KEY=dummy, network blocked via bogus https_proxy):
+env: timeout: No such file or directory
+exit=
+

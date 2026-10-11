@@ -1,0 +1,71 @@
+=== fm-dispatch-resolve.sh: Sonnet/high rule
+rules: {"rules":[{"when":"big feature","use":{"harness":"claude","model":"claude-sonnet-5-5","effort":"high"}}]}
+--- BASE ddf1fd3:
+dispatch-resolve: error (http 000 after 10 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 10 ms: 
+exit=
+--- CHANGE afb2926:
+error: malformed rules file: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L4irEx/config/crew-dispatch.json - each use profile effort must be supported by its harness and model
+exit=
+
+=== fm-dispatch-resolve.sh: Haiku/medium default
+rules: {"rules":[{"when":"x","use":{"harness":"codex"}}],"default":{"harness":"claude","model":"claude-haiku-5-5","effort":"medium"}}
+--- BASE ddf1fd3:
+dispatch-resolve: error (http 000 after 8 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 8 ms: 
+exit=
+--- CHANGE afb2926:
+error: malformed rules file: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L4irEx/config/crew-dispatch.json - each default profile effort must be supported by its harness and model
+exit=
+
+=== fm-dispatch-resolve.sh: SONNET/max in array
+rules: {"rules":[{"when":"x","use":[{"harness":"codex"},{"harness":"claude","model":"SONNET","effort":"max"}]}]}
+--- BASE ddf1fd3:
+dispatch-resolve: error (http 000 after 9 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 9 ms: 
+exit=
+--- CHANGE afb2926:
+error: malformed rules file: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.L4irEx/config/crew-dispatch.json - each use profile effort must be supported by its harness and model
+exit=
+
+=== fm-dispatch-resolve.sh: Within ceilings (sonnet/medium, haiku/low, opus/max)
+rules: {"rules":[{"when":"a","use":[{"harness":"claude","model":"claude-sonnet-5-5","effort":"medium"},{"harness":"claude","model":"claude-haiku-5-5","effort":"low"},{"harness":"claude","model":"claude-opus-5-5","effort":"max"}]}]}
+--- BASE ddf1fd3:
+dispatch-resolve: error (http 000 after 8 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 8 ms: 
+exit=
+--- CHANGE afb2926:
+dispatch-resolve: error (http 000 after 8 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 8 ms: 
+exit=
+
+=== fm-dispatch-resolve.sh: Claude no model, effort max
+rules: {"rules":[{"when":"a","use":{"harness":"claude","effort":"max"}}]}
+--- BASE ddf1fd3:
+dispatch-resolve: error (http 000 after 8 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 8 ms: 
+exit=
+--- CHANGE afb2926:
+dispatch-resolve: error (http 000 after 10 ms: )
+dispatch-resolve:
+  status: error
+  reason: http 000 after 10 ms: 
+exit=
+
+=== fm-bootstrap.sh BASE vs CHANGE: Sonnet/high
+--- <base>/bin
+(no CREW_DISPATCH diagnostic - accepted)
+--- <change>/bin
+CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: claude:high
