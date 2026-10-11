@@ -4779,6 +4779,26 @@ reconcile_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCHOICE" 2>&1
   || fail "reconciles dropped the reconcile of a list-form capture: $reconcile_out"
 pass "answers and reconciles key the choices of an expanded list-form capture"
 
+# A list item cut off after its choice fields but before `text` is a truncated
+# capture: it must not feed a decision or a reconcile request.
+LISTCUT="$TMP_ROOT/list-form-choice-cut.result"
+cat > "$LISTCUT" <<'EOF_CUT'
+session:
+  status: feedback
+prompts[1]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-cut\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main > form"
+    tag: choice
+EOF_CUT
+cut_out=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$LISTCUT" 2>&1) \
+  || fail "answers failed on a truncated list-form choice: $cut_out"
+[ -z "$cut_out" ] || fail "answers fed a decision from a truncated list-form item: $cut_out"
+cut_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCUT" 2>&1) \
+  || fail "reconciles failed on a truncated list-form choice: $cut_out"
+[ -z "$cut_out" ] || fail "reconciles fed a request from a truncated list-form item: $cut_out"
+pass "answers and reconciles skip a truncated list-form item"
+
 # --- regression: list-form items are validated, nested data and escapes kept --
 # A list item cut off right after it opens must not count as presented, a
 # nested block under an item (an image attachment record) must reach the
