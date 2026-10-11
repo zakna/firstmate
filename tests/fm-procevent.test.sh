@@ -4779,4 +4779,50 @@ reconcile_out=$("$ROOT/bin/fm-procevent-lavish.sh" reconciles "$LISTCHOICE" 2>&1
   || fail "reconciles dropped the reconcile of a list-form capture: $reconcile_out"
 pass "answers and reconciles key the choices of an expanded list-form capture"
 
+# --- regression: list-form items are validated, nested data and escapes kept --
+# A list item cut off right after it opens must not count as presented, a
+# nested block under an item (an image attachment record) must reach the
+# handler, and a quoted value's \uXXXX escapes must decode instead of losing
+# their backslash. All text below is neutral placeholder.
+TRUNCRES="$TMP_ROOT/list-form-truncated.result"
+printf 'session:\n  status: feedback\nprompts[1]:\n  - uid: "1"\n' > "$TRUNCRES"
+trunc_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$TRUNCRES" 2>&1) \
+  || fail "read failed on a truncated list form: $trunc_out"
+assert_contains "$trunc_out" "complete: no" "read certified a list item cut off after its first field as complete"
+assert_not_contains "$trunc_out" "presented_items: 1" "read counted an incomplete list item as presented"
+
+ATTRES="$TMP_ROOT/list-form-attachment.result"
+cat > "$ATTRES" <<'EOF_ATT'
+session:
+  status: feedback
+prompts[1]:
+  - uid: ""
+    prompt: ""
+    selector: ""
+    tag: message
+    text: ""
+    attachments[1]{id,path,mime}:
+      "placeholder-id","/placeholder/state/attachments/image.png","image/png"
+EOF_ATT
+att_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$ATTRES" 2>&1) \
+  || fail "read failed on a list form with an attachment: $att_out"
+assert_contains "$att_out" "/placeholder/state/attachments/image.png" "read dropped the nested attachment path of a list-form message"
+
+ESCRES="$TMP_ROOT/list-form-escape.result"
+cat > "$ESCRES" <<'EOF_ESC'
+session:
+  status: feedback
+prompts[1]:
+  - uid: "1"
+    prompt: "caf\u00e9 and \u001b[0m"
+    selector: ""
+    tag: b
+    text: Placeholder element
+EOF_ESC
+esc_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$ESCRES" 2>&1) \
+  || fail "read failed on a list form with unicode escapes: $esc_out"
+assert_contains "$esc_out" "café and " "read lost the decoded unicode escape of a list-form value"
+assert_not_contains "$esc_out" "u00e9" "read turned a list-form unicode escape into literal text"
+pass "list-form items are validated and keep nested data and unicode escapes"
+
 printf '\nall procevent tests passed\n'
