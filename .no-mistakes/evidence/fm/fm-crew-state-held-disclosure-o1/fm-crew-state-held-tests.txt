@@ -1,0 +1,10 @@
+ok - green ci reading keeps the status-log held disclosure
+ok - checks-passed: terminal green reading keeps the status-log held disclosure
+ok - failed: terminal green reading keeps the status-log held disclosure
+ok - cancelled: terminal green reading keeps the status-log held disclosure
+ok - passed: terminal green reading keeps the status-log held disclosure
+ok - completed: terminal green reading keeps the status-log held disclosure
+ok - merged green reading drops the status-log held disclosure
+ok - terminal passed run is authoritative
+ok - ci-monitoring run with checks already green surfaces done
+SELECTED-OK

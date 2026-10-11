@@ -1,0 +1,66 @@
+===== BASE 8694c272 (before change) =====
+$ fm-crew-state.sh x   # scenario=ci-monitoring-green
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2
+
+$ fm-crew-state.sh x   # scenario=checks-passed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR ready for review
+
+$ fm-crew-state.sh x   # scenario=failed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/203
+
+$ fm-crew-state.sh x   # scenario=cancelled
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/203
+
+$ fm-crew-state.sh x   # scenario=passed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run passed: PR open
+
+$ fm-crew-state.sh x   # scenario=completed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run completed
+
+$ fm-crew-state.sh x   # scenario=passed-merged
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run passed: PR merged
+
+$ fm-crew-state.sh x   # scenario=no-held-ci-green
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green
+  -> state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2
+
+===== CHANGE f4841c3e (after change) =====
+$ fm-crew-state.sh x   # scenario=ci-monitoring-green
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2 · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=checks-passed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR ready for review · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=failed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/203 · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=cancelled
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/203 · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=passed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run passed: PR open · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=completed
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run completed · held: review pending on head abc
+
+$ fm-crew-state.sh x   # scenario=passed-merged
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green; held: review pending on head abc
+  -> state: done · source: run-step · run passed: PR merged
+
+$ fm-crew-state.sh x   # scenario=no-held-ci-green
+  status-log tip: done [at=2]: PR https://github.com/o/r/pull/203 checks green
+  -> state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2
+
