@@ -1,0 +1,27 @@
+## Project has RITUAL.md
+$ fm-spawn.sh t-bare ... (ship)
+error: /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/projects/proj runs its own claim ritual (RITUAL.md) but /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/home/data/t-bare/brief.md # Task lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)
+=> NO launch brief rendered
+
+$ fm-spawn.sh t-half ... (ship)
+error: /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/projects/proj runs its own claim ritual (RITUAL.md) but /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/home/data/t-half/brief.md # Task lacks: Claim model: <the exact model the ritual requires, or none required>; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)
+=> NO launch brief rendered
+
+$ fm-spawn.sh t-full ... (ship)
+(no claim-ritual message)
+=> launch brief rendered
+
+$ fm-spawn.sh t-empty ... (ship)
+error: /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/projects/proj runs its own claim ritual (RITUAL.md) but /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/home/data/t-empty/brief.md # Task lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)
+=> NO launch brief rendered
+
+## Project has only AGENTS.md with PR 43 wording
+$ fm-spawn.sh t-prose ... (ship)
+warning: /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/projects/proj may run its own claim ritual (AGENTS.md describes one) and /private$TMPDIR/fm-task-delivery.dNHIoi/transcript/home/data/t-prose/brief.md # Task lacks: Claim recovery: <the project's recovery procedure for an abandoned claim>; Claim model: <the exact model the ritual requires, or none required>; launching anyway (bin/fm-claim-ritual-lib.sh)
+=> launch brief rendered
+
+## AGENTS.md with harmless/product claim wording
+$ fm-spawn.sh t-harmless ... (ship)
+(no claim-ritual message)
+=> launch brief rendered
+
