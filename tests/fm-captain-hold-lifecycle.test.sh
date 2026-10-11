@@ -837,24 +837,29 @@ test_archived_answered_call_still_satisfies_the_gate() {
   pass "an archived captain call with a recorded answer still satisfies the gate"
 }
 
-# The scout's own task can be the owner of its calls (decision_keys names the
-# scout itself); archiving that closed row must not strand teardown either.
+# A scout that owns its own call holds it as a separate task bound to the
+# scout with --origin (the origin is never its own inventory entry); archiving
+# that answered row must not strand teardown either.
 test_archived_self_owned_call_still_satisfies_the_gate() {
-  local home id
+  local home id call
   home=$(make_home archived-self)
   id=sample-self-scout
+  call=sample-self-call
   mkdir -p "$home/data/$id"
   tasks_in "$home" add "$id" "Self-owned call" --kind scout --repo sample --start >/dev/null \
     || fail "could not create the self-owned origin"
   write_origin_meta "$home" "$id"
   printf 'done: report complete\n' > "$home/state/$id.status"
-  run_captain "$home" hold "$id" --reason "captain choice pending" >/dev/null \
-    || fail "could not hold the scout's own task"
-  run_captain "$home" complete "$id" "$id" >/dev/null || fail "completion failed for the self-owned call"
+  run_captain "$home" hold "$call" --origin "$id" --title "Scout's own call" --reason "captain choice pending" --repo sample >/dev/null \
+    || fail "could not hold the scout's own call for its origin"
+  run_captain "$home" complete "$id" "$call" >/dev/null || fail "completion failed for the self-owned call"
   printf 'Captain chose.\n' > "$home/choice.txt"
-  run_captain "$home" answer "$id" --decision-file "$home/choice.txt" >/dev/null \
+  run_captain "$home" answer "$call" --decision-file "$home/choice.txt" >/dev/null \
     || fail "answer could not close the self-owned call"
   tasks_in "$home" prune --keep 0 >/dev/null || fail "could not prune the done section"
+  if tasks_in "$home" show "$call" >/dev/null 2>&1; then
+    fail "the fixture did not move the answered self-owned call to the done archive"
+  fi
   run_captain "$home" verify "$id" >/dev/null \
     || fail "verify refused a self-owned call that was archived with its answer"
   pass "an archived self-owned captain call with a recorded answer still satisfies the gate"

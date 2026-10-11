@@ -970,8 +970,8 @@ test_exit_refuses_an_open_background_picker() {
 test_exit_refuses_the_confirming_enter() {
   local dir out rc enters
   dir=$(new_case confirm-picker)
-  add_task "$dir" t1 claude
-  alive_as "$dir" claude
+  add_task "$dir" t1 opencode
+  alive_as "$dir" opencode
   exit_picker_screen > "$dir/fake/after-enter"
   out=$(env FM_FAKE_NEVER_DIES=1 PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" \
     FM_FAKE_DIR="$dir/fake" FM_CONTROL_POLL=0.01 FM_CONTROL_EXIT_WAIT=0.05 \
@@ -983,17 +983,19 @@ test_exit_refuses_the_confirming_enter() {
   [ "$(literals "$dir")" = /exit ] || fail "the exit command should still be typed, got '$(literals "$dir")'"
   enters=$(grep -c '^Enter$' "$dir/fake/keys" || true)
   [ "$enters" -eq 1 ] || fail "only the submitting Enter should be sent, got $enters"
-  pass "fm-control exit: the Enter that opens the background-task picker is not followed by a confirming Enter"
+  pass "fm-control exit: without an exit-dialog handler, the Enter that opens the background-task picker is not followed by a confirming Enter"
 }
 
 # The submit reads a cleared composer before the picker renders, so it reports
 # delivery and no read inside it sees the picker. Exit's own read after the
-# stop wait times out must still name the dialog.
+# stop wait times out must still name the dialog. Like the confirming-Enter
+# case above, this runs on a harness without an exit-dialog handler: Claude's
+# own picker is answered by the exit-dialog tests (Stay, or --stop-background).
 test_exit_names_a_picker_that_renders_after_the_submit() {
   local dir out rc enters
   dir=$(new_case late-picker)
-  add_task "$dir" t1 claude
-  alive_as "$dir" claude
+  add_task "$dir" t1 opencode
+  alive_as "$dir" opencode
   exit_picker_screen > "$dir/fake/after-enter"
   printf '1' > "$dir/fake/after-enter-late"
   out=$(env FM_FAKE_NEVER_DIES=1 PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" \
@@ -1008,7 +1010,7 @@ test_exit_names_a_picker_that_renders_after_the_submit() {
     "a recognised picker must not fall back to the generic timeout message"
   enters=$(grep -c '^Enter$' "$dir/fake/keys" || true)
   [ "$enters" -eq 1 ] || fail "only the submitting Enter should be sent, got $enters"
-  pass "fm-control exit: a picker that renders after the submit returned is named when the stop wait times out"
+  pass "fm-control exit: without an exit-dialog handler, a picker that renders after the submit returned is named when the stop wait times out"
 }
 
 test_idle_agent_is_not_interrupted() {
