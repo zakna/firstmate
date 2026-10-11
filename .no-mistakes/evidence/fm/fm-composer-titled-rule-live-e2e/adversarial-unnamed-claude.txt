@@ -1,0 +1,14 @@
+# claude named-session pane tail at failure:
+#    ▐▛███▛█   Claude Code v2.1.296
+#   ▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+#    ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M4PCE59TZZNJ396TCPDBZ0YA
+#   ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#   ❯ Try "fix typecheck errors"
+#   ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#     ➜  worktrees/0b1ab7dd6182/01M4PCE59TZZNJ396TCPDBZ0YA ctx --  Opus medium
+#     ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
+not ok - claude (2.1.296 (Claude Code)): a named session never showed a titled composer rule (last verdict: need-identity, without a claude identity: empty)
+ok - strict posture live: a blank shell row classifies unknown and injection defers
+ok - zellij (zellij 0.45.1): unrelated pane change never confirms delivery (verdict: unknown)
+not ok - live composer-matrix guard observed failures above
+exit=1
