@@ -1,27 +1,8 @@
-=== relaunch (no --stop-background) ===
-rc=1
-error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG29954x22260. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg relaunch' directly with the same options plus --stop-background; otherwise let it finish first
+RELAUNCH-REFUSAL-OUTPUT:
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG83750x1456. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg relaunch' directly with the same options plus --stop-background; otherwise let it finish first
 error: relaunch of xdlg failed while stopping the old agent, which is still running; its original instructions were restored
-meta unchanged after refusal
---- pane after refusal ---
-
-
-
-
-
-
-
-
-
-                                                                                                    ◐ medium · /effort
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-❯
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  ➜  T/fm-control-exit-dialog.eouuSt/wt (xdlg) ctx 29793/1000000  Haiku medium | 5h [░░░░░░] 1% →15:10 | 7d [░░░░░░] …
-  ⏵⏵ bypass permissions on · 1 shell · ← for agents
-ok - live relaunch refuses at dialog and keeps agent + work
-=== relaunch --stop-background ===
-rc=1
+ok - live relaunch refusal keeps agent and work
+RELAUNCH-STOP-OUTPUT (rc=0):
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ●  WATCHER DOWN - SUPERVISION IS OFF
 ●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
@@ -29,79 +10,95 @@ rc=1
 ●  This is a supervision warning only; the guarded operation WILL still run.
 ●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-error: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/data/xdlg/brief.md must contain nonempty ## Captain's intent and ## Firstmate spec subsections (or a nonempty legacy # Task body) before spawn
-error: the replacement agent for xdlg could not be launched on claude
-error: the old agent's exit also stopped its background work: background-stopped=shell · sleep 1801 # FMEXITDIALOG29954x22260
-error: xdlg's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
-bg shell stopped
---- state files ---
-xdlg.control-relaunch
-xdlg.control-relaunch.background-stopped
-xdlg.control-relaunch.brief-prior
-xdlg.control-relaunch.meta-prior
-xdlg.control-relaunch.note
-xdlg.meta
-## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/data/xdlg/launch-brief.md records no ship branch; defaulting to legacy branch fm/xdlg
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/data/xdlg/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+relaunched xdlg harness=claude from=claude model=default effort=default backend=herdr endpoint=fm-lab-control-exit-dialog-83750:w1:p2 worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/wt background-stopped=shell · sleep 1801 # FMEXITDIALOG83750x1456
+ok - live relaunch --stop-background stopped background work
+JOURNAL:
 v1
 task=xdlg
-phase=failed:launching
-ts=2026-10-11T08:12:43Z
+phase=complete
+ts=2026-10-11T08:40:27Z
 backend=herdr
-endpoint=fm-lab-control-exit-dialog-29954:w1:p2
-worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
+endpoint=fm-lab-control-exit-dialog-83750:w1:p2
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/wt
 kind=ship
 from_harness=claude
 from_model=default
 from_effort=default
 to_harness=claude
-to_model=haiku
+to_model=default
 to_effort=default
-rollback=prior-record-kept
-exit_result=stopped background-stopped=shell · sleep 1801 # FMEXITDIALOG29954x22260
-## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.background-stopped
-shell · sleep 1801 # FMEXITDIALOG29954x22260
-## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.brief-prior
-# brief for xdlg
-## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.meta-prior
-window=fm-lab-control-exit-dialog-29954:w1:p2
+worktree_head=f31f1eab6ebb2a3a9bd5fcf81a370f45c99776dc
+worktree_dirty=no
+note_file=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.control-relaunch.note
+exit_result=stopped background-stopped=shell · sleep 1801 # FMEXITDIALOG83750x1456
+META:
+window=fm-lab-control-exit-dialog-83750:w1:p2
 endpoint_task_id=xdlg
-worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
-project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/proj
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/wt
+project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/proj
 harness=claude
 kind=ship
 mode=no-mistakes
 yolo=off
+branch=fm/xdlg
+tasktmp=/tmp/fm-xdlg
 model=default
 effort=default
+claude_root=/Users/olivier/.claude
+busy_gen=g1791708019.95041.6132
+spawn_gen=s1791708020.93198.17098
 backend=herdr
-herdr_session=fm-lab-control-exit-dialog-29954
+herdr_session=fm-lab-control-exit-dialog-83750
 herdr_workspace_id=w1
 herdr_tab_id=w1:t2
 herdr_pane_id=w1:p2
-## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.note
-live dialog test
---- meta after ---
-window=fm-lab-control-exit-dialog-29954:w1:p2
-endpoint_task_id=xdlg
-worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
-project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/proj
-harness=claude
-kind=ship
-mode=no-mistakes
-yolo=off
-model=default
-effort=default
-backend=herdr
-herdr_session=fm-lab-control-exit-dialog-29954
-herdr_workspace_id=w1
-herdr_tab_id=w1:t2
-herdr_pane_id=w1:p2
---- pane after ---
-CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+control_relaunch_tx=90425.20261011T084017Z.11941
+NEW AGENT STATE: alive
+SCREEN:
+  asks, and I'm waiting.
 
-➜  wt git:xdlg CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+✻ Cogitated for 12s · done 10:40 AM
 
-Resume this session with:
-claude --resume 3940ae49-6887-47c9-bda8-6c1c9076edf6
 
-➜  wt git:xdlg
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.luyPkr/wt (xdlg) ctx 31215/1000000  Opus medium | 5h [░░░░░░] 8% →15:10 | 7d [█░░░░░] 9…
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
+ok - live relaunch --stop-background completed with replacement agent alive
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-rebase: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-applypatch: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-auto-gc: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-merge-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/post-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/sendemail-validate: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/applypatch-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/prepare-commit-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/post-checkout: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/post-applypatch: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/post-rewrite: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/commit-msg: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-push: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/post-merge: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks/pre-commit: Permission denied
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state/xdlg.git-hooks: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home/state: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr/home: Directory not empty
+rm: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.luyPkr: Directory not empty
