@@ -4879,6 +4879,52 @@ assert_contains "$surplus_out" "complete: no" "read called a list holding more i
 assert_contains "$surplus_out" "placeholder second message" "read hid a surplus list-form message"
 pass "read does not certify unterminated or surplus list-form items"
 
+# --- one strict whole-capture rule, table-driven over every nesting level -----
+# Every block at every depth must hold exactly the rows its header declares and
+# every quoted value must close; otherwise the whole capture is incomplete and
+# feeds no decision. The first row is the intact capture and must stay accepted.
+STRICT_BASE='session:
+  status: feedback
+prompts[2]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-call\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main"
+    tag: choice
+    text: "Placeholder call: yes"
+  - uid: ""
+    prompt: placeholder message
+    selector: ""
+    tag: message
+    text: ""
+    attachments[2]{id,path,mime}:
+      "a1","/placeholder/one.png","image/png"
+      "a2","/placeholder/two.png","image/png"
+next_step: "placeholder"
+'
+strict_case() {  # <name> <capture> <yes|no>
+  local name=$1 capture=$2 want=$3 f="$TMP_ROOT/strict-$1.result" out ans
+  printf '%s' "$capture" > "$f"
+  out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$f" 2>&1) || fail "strict case $name: read failed: $out"
+  ans=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$f" 2>&1) || fail "strict case $name: answers failed: $ans"
+  assert_contains "$out" "complete: $want" "strict case $name: wrong completeness verdict"
+  if [ "$want" = yes ]; then
+    [ -n "$ans" ] || fail "strict case $name: an intact capture lost its decision"
+  else
+    [ -z "$ans" ] || fail "strict case $name: an incomplete capture fed a decision: $ans"
+  fi
+}
+strict_case intact "$STRICT_BASE" yes
+strict_case top-count-short "${STRICT_BASE/prompts\[2\]/prompts[3]}" no
+strict_case top-count-surplus "${STRICT_BASE/prompts\[2\]/prompts[1]}" no
+strict_case nested-count-short "${STRICT_BASE/attachments\[2\]/attachments[3]}" no
+strict_case nested-count-surplus "${STRICT_BASE/attachments\[2\]/attachments[1]}" no
+strict_case nested-quote "${STRICT_BASE/\"image\/png\"$'\n'next_step/\"image\/png$'\n'next_step}" no
+strict_case top-quote "${STRICT_BASE/next_step: \"placeholder\"/next_step: \"placeholder}" no
+strict_case cut-before-nested-rows "$(printf '%s' "$STRICT_BASE" | sed -n '1,/attachments\[2\]/p')"$'\n' no
+strict_case cut-after-first-nested-row "$(printf '%s' "$STRICT_BASE" | sed -n '1,/"a1"/p')"$'\n' no
+strict_case cut-after-first-item "$(printf '%s' "$STRICT_BASE" | sed -n '1,/text: "Placeholder call: yes"/p')"$'\n' no
+pass "a capture is complete only when every block and quoted value at every depth is intact"
+
 TABESC="$TMP_ROOT/tabular-escape.result"
 cat > "$TABESC" <<'EOF_TABESC'
 session:
