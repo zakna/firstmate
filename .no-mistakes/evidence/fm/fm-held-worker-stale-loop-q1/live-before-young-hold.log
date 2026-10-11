@@ -1,0 +1,24 @@
+### case=young-hold code=af557939
+status: captain-held [key=route]: tracked by held-decision-route  (age 0s)
+1 quiet worker (initial sight)     stale-wakes-so-far=1  busy=state=idle
+2 worker busy answering steer      stale-wakes-so-far=1  busy=state=busy
+3 quiet again after steer          stale-wakes-so-far=2  busy=state=idle
+--- wake queue (all rows) ---
+1791708457	1	stale	fleet:fm-held	stale: fleet:fm-held
+1791708470	2	stale	fleet:fm-held	stale: fleet:fm-held
+--- watcher stdout/stderr (tail) ---
+stale: fleet:fm-held
+stale: fleet:fm-held
+--- pause bookkeeping ---
+.count-fleet_fm-held
+.paused-fleet_fm-held
+.paused-rechecked-fleet_fm-held
+.paused-resurfaced-fleet_fm-held
+.stale-fleet_fm-held
+--- pane (last 6 lines) ---
+ ▝▝   ▝▝   /private/tmp/fmpre.c0cK
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ steer answered
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  private/tmp/fmpre.c0cK ctx --  Opus medium
+  ⏵⏵ auto mode on (shift+tab to cycle)

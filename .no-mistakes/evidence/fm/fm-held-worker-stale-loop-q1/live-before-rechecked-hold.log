@@ -1,0 +1,9 @@
+### case=rechecked-hold code=af557939
+status: captain-held [key=route]: tracked by held-decision-route  (age 2000s)
+1 quiet worker (initial sight)     stale-wakes-so-far=1  busy=state=idle
+2 worker busy answering steer      stale-wakes-so-far=1  busy=state=busy
+3 quiet again after steer          stale-wakes-so-far=2  busy=state=idle
+--- wake queue (all rows) ---
+1791708531	1	stale	fleet:fm-held	stale: fleet:fm-held
+1791708548	2	stale	fleet:fm-held	stale: fleet:fm-held
+--- watcher stdout/stderr (tail) ---

@@ -1,0 +1,9 @@
+== after fix (aa0d6a0) ==
+ok - a steered worker already held for the captain stays on the long recheck cadence when it goes quiet
+exit=0 (test_steered_captain_held_worker_stays_on_the_long_cadence)
+ok - a parked live worker surfaces once, absorbs pane churn for the whole re-surface window, then re-surfaces when it elapses
+exit=0 (test_live_declared_wait_churn_honors_the_resurface_throttle)
+ok - a captain-held item is never rechecked while the away-posture record exists, and the recheck returns once the record is archived
+exit=0 (test_captain_held_never_rechecked_while_away_record_exists)
+ok - a live captain-held pane is absorbed on first sight while the away-posture record exists
+exit=0 (test_live_captain_held_first_sight_silenced_by_away_record)

@@ -1,0 +1,3 @@
+== before fix (572ce62e, test only) ==
+not ok - [young-hold] a steered worker already held for the captain surfaced as a fresh first sighting
+exit=
