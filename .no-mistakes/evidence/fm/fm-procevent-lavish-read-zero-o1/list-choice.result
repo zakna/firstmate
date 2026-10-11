@@ -1,0 +1,23 @@
+cat > "$LISTCHOICE" <<'EOF_LIST'
+session:
+  file: /placeholder/board.html
+  status: feedback
+prompts[3]:
+  - uid: "1"
+    prompt: "Placeholder call: yes\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-call\",\n  \"selection\": \"yes\",\n  \"note\": \"\"\n}"
+    selector: "main > form:nth-of-type(1)"
+    tag: choice
+    text: "Placeholder call: yes"
+  - uid: "2"
+    prompt: "Reconcile first\n\nContext data:\n{\n  \"schema\": \"fm-bearings-answer.v1\",\n  \"question\": \"placeholder-reconcile\",\n  \"selection\": \"reconcile\",\n  \"note\": \"placeholder detail\"\n}"
+    selector: "main > form:nth-of-type(2)"
+    tag: choice
+    text: Reconcile
+  - uid: "3"
+    prompt: placeholder cell comment
+    selector: "main > table > tbody > tr:nth-of-type(2)"
+    tag: td
+    text: Placeholder cell
+    target:
+      type: table-cell
+      selector: "main > table > tbody > tr:nth-of-type(2)"

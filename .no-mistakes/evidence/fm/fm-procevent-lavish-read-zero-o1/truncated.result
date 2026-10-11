@@ -1,0 +1,32 @@
+session:
+  file: /Users/olivier/projects/firstmate/data/captain-training-program-s1/program.html
+  status: feedback
+prompts[8]:
+  - uid: "1"
+    prompt: "19/11/1981 84,25 i have a whittings can you connect to my apple health ?  103 cm waist"
+    selector: "main > div:nth-of-type(2) > ol > li:nth-of-type(1) > b"
+    tag: b
+    text: What are your age and your weight today?
+  - uid: "3"
+    prompt: "righ knee i hacve an injury some tearing on the outside tendon that has healed but was injured 3 times in a row , i have also a lower trapezius chronic pain seem te muscle is constantly spasmed i have a slight scoliosis c shape my face is slightly bent right when i look in the mirror"
+    selector: "body > main > div:nth-of-type(2) > ol > li:nth-of-type(2)"
+    tag: li
+    text: "Do you have pain or an old injury in the back, knees or shoulders, or a medical condition? This changes the exercise choice."
+  - uid: "4"
+    prompt: "i can train tuesday , thursday , saturday  lenght is as much as needed"
+    selector: "body > main > div:nth-of-type(2) > ol > li:nth-of-type(3)"
+    tag: li
+    text: "How many days per week and how many minutes per visit can you train? The default is 3 days, 50 to 60 minutes."
+  - uid: "5"
+    prompt: aspple watch an iphone
+    selector: "main > div:nth-of-type(2) > ol > li:nth-of-type(4) > b"
+    tag: b
+    text: "Do you wear an Apple Watch or another wearable, and is your phone an iPhone?"
+  - uid: "6"
+    prompt: plan myself
+    selector: "main > div:nth-of-type(2) > ol > li:nth-of-type(5) > b"
+    tag: b
+    text: "Do you prefer to follow this plan yourself, or to let the gym load it into the app"
+  - uid: "7"
+    prompt: what is this ?
+    selector: "div:nth-of-type(3) > div:nth-of-type(2) > ul > li:nth-of-type(3) > b"

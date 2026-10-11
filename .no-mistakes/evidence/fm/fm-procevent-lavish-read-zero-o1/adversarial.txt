@@ -1,0 +1,35 @@
+== FIXED read truncated.result ==
+exit=0
+declared_items: 8
+presented_items: 5
+malformed_items: 1
+complete: no
+annotation_count: 5
+session_ending_message_count: 0
+END LAVISH RESULT (5 of 8)
+== FIXED read surplus.result ==
+exit=0
+declared_items: 6
+presented_items: 8
+malformed_items: 0
+complete: no
+annotation_count: 7
+session_ending_message_count: 1
+END LAVISH RESULT (8 of 6)
+== BASE answers list-choice.result ==
+exit=0
+$
+== FIXED answers list-choice.result ==
+exit=0
+placeholder-call^Iyes^IPlaceholder call: yes$
+== BASE reconciles list-choice.result ==
+exit=0
+$
+== FIXED reconciles list-choice.result ==
+exit=0
+placeholder-reconcile^Iplaceholder detail$
+== tabular capture (prompts[7]{uid,prompt,selector,tag,text}:) ==
+base and fixed read output IDENTICAL
+declared_items: 7
+presented_items: 7
+complete: yes
