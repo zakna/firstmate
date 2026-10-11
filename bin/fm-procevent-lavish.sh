@@ -548,14 +548,16 @@ cmd_silent() {
 # tabular form is a `NAME[N]{field,...}:` header followed by N indented CSV
 # rows, returned raw for the caller to split. The expanded list form is a
 # `NAME[N]:` header where `  - key: value` opens an item, `    key: value`
-# continues it, and anything indented deeper (a nested `target:` block) belongs
-# to the item but is not a prompt field; its items are returned as decoded
-# field hashes.
+# continues it, and a keyed block such as `target:` or `attachments[N]{...}:`
+# is kept verbatim under `_blocks` rather than as a prompt field. An item that
+# lacks any of uid, prompt, selector, tag, or text is flagged `_incomplete`;
+# its items are returned as decoded field hashes.
 # shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
 PROMPT_ITEMS_PL='
+  use Encode ();
   sub read_prompt_items {
     my ($fh, $sections) = @_;
-    my (@fields, $want, @rows, @listed, $list_form);
+    my (@fields, $want, @rows, @listed, $list_form, $block);
     while (my $line = <$fh>) {
       if (!@fields && !$list_form) {
         if ($line =~ /^(?:$sections)\[(\d+)\]:\s*$/) {
@@ -573,8 +575,18 @@ PROMPT_ITEMS_PL='
           last if @listed >= $want;
           push @listed, {};
           $listed[-1]{$1} = $2;
-        } elsif (@listed && $line =~ /^    (\w+):[ ]?(.*)$/) {
-          $listed[-1]{$1} = $2;
+          $block = undef;
+        } elsif (@listed && $line =~ /^    (\w+)(\[\d+\](?:\{[^}]*\})?)?:[ ]?(.*)$/) {
+          my ($key, $shape, $value) = ($1, $2, $3);
+          if (defined $shape || $value eq "") {
+            $block = [substr $line, 4];
+            push @{$listed[-1]{_blocks}}, $block;
+          } else {
+            $listed[-1]{$key} = $value;
+            $block = undef;
+          }
+        } elsif ($block && $line =~ /^      \S/) {
+          push @$block, substr $line, 4;
         }
         next;
       }
@@ -582,10 +594,18 @@ PROMPT_ITEMS_PL='
       push @rows, $line;
     }
     for my $item (@listed) {
-      for my $v (values %$item) {
+      $item->{_incomplete} = (grep { !exists $item->{$_} } qw(uid prompt selector tag text)) ? 1 : 0;
+      for my $k (grep { !/^_/ } keys %$item) {
+        my $v = $item->{$k};
         next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
         $v = $1;
-        $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
+        $v =~ s{\\(?:u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|(.))}{
+          defined $1 ? Encode::encode("UTF-8", chr(0x10000 + ((hex($1) - 0xD800) << 10) + (hex($2) - 0xDC00)))
+          : defined $3 ? (hex($3) < 0x20 || hex($3) == 0x7f || (hex($3) >= 0xD800 && hex($3) <= 0xDFFF)
+              ? "\\u" . lc($3) : Encode::encode("UTF-8", chr(hex($3))))
+          : $4 eq "n" ? "\n" : $4 eq "t" ? "\t" : $4 eq "r" ? "\r" : $4
+        }ge;
+        $item->{$k} = $v;
       }
     }
     return ($want, \@fields, \@rows, \@listed);
@@ -736,8 +756,12 @@ cmd_read() {
     my @fields = @$fields;
     close $fh;
     $want = 0 unless defined $want;
-    my @parsed = @$items;
+    my @parsed;
     my $malformed = 0;
+    for my $item (@$items) {
+      if ($item->{_incomplete}) { $malformed++; next; }
+      push @parsed, $item;
+    }
     for my $row (@$rows) {
       $row =~ s/^\s+//;
       my @vals;
@@ -780,6 +804,12 @@ cmd_read() {
         push @annotations, $f;
       }
     }
+    sub emit_nested {
+      my ($f) = @_;
+      for my $block (@{$f->{_blocks} || []}) {
+        print "| nested $_\n" for @$block;
+      }
+    }
     sub emit_body {
       my ($text) = @_;
       $text = "" unless defined $text;
@@ -800,6 +830,7 @@ cmd_read() {
           ? $messages[$i]{prompt}
           : (defined $messages[$i]{text} ? $messages[$i]{text} : "");
         emit_body($body);
+        emit_nested($messages[$i]);
       }
       print "END $message_label\n";
     } else {
@@ -836,6 +867,7 @@ cmd_read() {
           print "prompt:\n";
           emit_body($comment);
         }
+        emit_nested($f);
       }
       print "END ANNOTATIONS\n";
     } else {
