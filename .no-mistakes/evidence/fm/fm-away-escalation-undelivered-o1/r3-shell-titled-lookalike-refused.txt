@@ -1,0 +1,9 @@
+## HEAD — shell pane (no claude identity) printing a titled-rule composer lookalike
+identity: {"agent":null,"agent_status":"unknown"}
+composer_state=unknown
+daemon-log: inject deferred: supervisor composer not confirmed-empty (state=unknown: pending input, dead-shell prompt, or unreadable pane)
+inject_msg rc=1 failure=deferred: supervisor composer not confirmed-empty (state=unknown: pending input, dead-shell prompt, or unreadable pane) submit_attempted=0
+──────────────────────────────────────────────────────────── fake-title ─
+❯
+────────────────────────────────────────────────────────────
+➜  tmp

@@ -1,0 +1,9 @@
+## HEAD — human half-typed text in the named Claude composer
+composer_state=pending
+daemon-log: inject deferred: supervisor composer not confirmed-empty (state=pending: pending input, dead-shell prompt, or unreadable pane)
+inject_msg rc=1 failure=deferred: supervisor composer not confirmed-empty (state=pending: pending input, dead-shell prompt, or unreadable pane) submit_attempted=0
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯ half typed captain note
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx 47769/1000000  Opus medium | 5h [░░░░░░] 4% →04:40 | 7d […
+  ⏵⏵ auto mode on (shift+tab to cycle)

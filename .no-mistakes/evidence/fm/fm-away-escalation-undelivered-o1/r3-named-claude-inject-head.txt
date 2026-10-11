@@ -1,0 +1,3 @@
+## HEAD 3d03736b — inject_msg into named Claude primary (claude -n away-esc-lab) on Herdr lab fm-lab-titled3-44811-9098
+composer_state=empty
+inject_msg rc=0 failure=<none> submit_attempted=1

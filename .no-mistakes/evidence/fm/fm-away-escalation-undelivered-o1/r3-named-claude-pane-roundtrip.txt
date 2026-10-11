@@ -1,0 +1,10 @@
+  '/private/tmp/fm-drive-state.IsIF2z/operational-inbox/1791677000-3915ffb9d4e94845.msg' and handle its contents as
+  Firstmate operational input.
+  Thought for 5s, listed 1 directory
+⏺ ACK-LAB3
+✻ Baked for 8s · done 2:03 AM
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx 47769/1000000  Opus medium | 5h [░░░░░░] 4% →04:40 | 7d […
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

@@ -1,0 +1,14 @@
+  '/private/tmp/fm-drive-state.0lRlYV/operational-inbox/1791676965-67b2ea0f51ea3e77.msg' and handle its contents as
+  Firstmate operational input.
+  Thought for 3s, read 1 file, listed 1 directory, ran 1 shell command
+⏺ Captain, I couldn't handle that message because it no longer exists. The whole folder it was in,
+  /private/tmp/fm-drive-state.0lRlYV/, is gone, and there are no other fm-drive-state.* folders under /private/tmp.
+  That usually means the process that wrote it has exited and its temporary files were cleaned up.
+  I haven't acted on anything, since I don't know what the message said. If it still matters, please resend it or tell
+  me what it was about.
+✻ Crunched for 9s · done 2:02 AM
+──────────────────────────────────────────────────────────────────────────────────────────────────────── away-esc-lab ─
+❯
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4M223RAVX4YA3K6X8A89E6Q ctx 46953/1000000  Opus medium | 5h [░░░░░░] 4% →04:40 | 7d […
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

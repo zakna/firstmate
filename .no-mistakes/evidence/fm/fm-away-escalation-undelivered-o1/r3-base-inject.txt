@@ -1,0 +1,4 @@
+## BASE 883c308e — same inject_msg into the same named Claude pane
+composer_state=unknown
+daemon-log: inject deferred: supervisor composer not confirmed-empty (state=unknown: pending input, dead-shell prompt, or unreadable pane)
+inject_msg rc=1 failure=deferred: supervisor composer not confirmed-empty (state=unknown: pending input, dead-shell prompt, or unreadable pane) submit_attempted=0
