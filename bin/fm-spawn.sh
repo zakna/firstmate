@@ -23,12 +23,7 @@
 #   placeholders, an empty Task, an incomplete pair of Task subsections, or a
 #   `## Captain's intent` line opening with a Captain label or address. It
 #   warns, and still launches, when a `## Firstmate spec` (or legacy Task)
-#   hands the worker its own gate responses (bin/fm-gate-delegation-lib.sh). A
-#   first ship launch into a project with a dedicated claim-ritual file
-#   (RITUAL.md and close variants, at the root or in docs/) is refused unless
-#   the brief's Task carries `Claim recovery:` and `Claim model:` lines; an
-#   AGENTS.md or CLAUDE.md that only describes a claim ritual draws a warning
-#   and still launches (bin/fm-claim-ritual-lib.sh).
+#   hands the worker its own gate responses (bin/fm-gate-delegation-lib.sh).
 #   Every ship or scout spawn renders `launch-brief.md`; for a no-mistakes ship
 #   it also carries the current `--intent` contract and the extracted captain
 #   intent. A legacy mixed Task is accepted there only under bin/fm-dod-lib.sh's
@@ -630,8 +625,6 @@ fm_backlog_directory_present "$STATE" "state directory" || {
 . "$SCRIPT_DIR/fm-dod-lib.sh"
 # shellcheck source=bin/fm-gate-delegation-lib.sh
 . "$SCRIPT_DIR/fm-gate-delegation-lib.sh"
-# shellcheck source=bin/fm-claim-ritual-lib.sh
-. "$SCRIPT_DIR/fm-claim-ritual-lib.sh"
 # shellcheck source=bin/fm-trace-context-lib.sh
 . "$SCRIPT_DIR/fm-trace-context-lib.sh"
 # shellcheck source=bin/fm-remote-readiness-lib.sh
@@ -2981,15 +2974,6 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   if ADDRESS_LINE=$(fm_brief_intent_address_line "$BRIEF"); then
     echo "error: $BRIEF ## Captain's intent has an operator-address line: $ADDRESS_LINE; write the captain's actual words without a Captain label or address before spawn, since the heading already records provenance" >&2
     exit 1
-  fi
-  if [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ] && RITUAL_FILE=$(fm_claim_ritual_detect "$PROJ_ABS"); then
-    if RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$(fm_brief_heading_body "$BRIEF" "# Task")"); then
-      echo "error: $PROJ_ABS runs its own claim ritual (${RITUAL_FILE#"$PROJ_ABS"/}) but $BRIEF # Task lacks: $RITUAL_MISSING; copy the project's claim-recovery procedure and model requirement into the brief before spawn (bin/fm-claim-ritual-lib.sh)" >&2
-      exit 1
-    fi
-  elif [ "$KIND" = ship ] && [ "$RELAUNCH" -eq 0 ] && RITUAL_FILE=$(fm_claim_ritual_prose_detect "$PROJ_ABS") &&
-    RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$(fm_brief_heading_body "$BRIEF" "# Task")"); then
-    echo "warning: $PROJ_ABS may run its own claim ritual (${RITUAL_FILE#"$PROJ_ABS"/} describes one) and $BRIEF # Task lacks: $RITUAL_MISSING; launching anyway (bin/fm-claim-ritual-lib.sh)" >&2
   fi
   if DELEGATION_PHRASE=$(fm_gate_delegation_brief_match "$BRIEF"); then
     echo "warning: $BRIEF ## Firstmate spec hands gate responses to the worker: \"$DELEGATION_PHRASE\"; $FM_GATE_DELEGATION_RULE; launching anyway" >&2
