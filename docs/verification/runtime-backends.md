@@ -1237,6 +1237,7 @@ ok - fm-control exit: a slow-rendering dialog is never confirmed by a retried En
 ok - fm-control exit: dialog closure is proven from one successful capture
 ok - fm-control exit: Claude's dialog words in the transcript are not its exit dialog
 ok - fm-control relaunch: a failed relaunch keeps the evidence of the background work it stopped
+ok - fm-control relaunch: a confirmed exit dialog whose agent stays alive reports the stop as attempted, not done
 ok - fm-control: --stop-background applies to exit and relaunch only
 ```
 

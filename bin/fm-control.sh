@@ -834,10 +834,18 @@ relaunch_rollback() {
     stopping)
       state=$(agent_state 2>/dev/null || printf unknown)
       stopped=
-      [ ! -s "$BACKGROUND_STOPPED_FILE" ] \
-        || stopped="background-stopped=$(cat "$BACKGROUND_STOPPED_FILE")"
-      [ -z "$stopped" ] \
-        || echo "error: the old agent's exit dialog was confirmed, stopping its background work: $stopped" >&2
+      # A delivered confirming Enter proves only the key, so the work counts
+      # as stopped only once the agent is proven dead; otherwise it was
+      # attempted.
+      if [ -s "$BACKGROUND_STOPPED_FILE" ]; then
+        if [ "$state" = dead ]; then
+          stopped="background-stopped=$(cat "$BACKGROUND_STOPPED_FILE")"
+          echo "error: the old agent's exit dialog was confirmed and the agent stopped, stopping its background work: $stopped" >&2
+        else
+          stopped="background-stop-attempted=$(cat "$BACKGROUND_STOPPED_FILE")"
+          echo "error: the old agent's exit dialog was confirmed but the agent is '$state', so its background work was not proven stopped: $stopped" >&2
+        fi
+      fi
       case "$state" in
         alive)
           if [ -n "$RELAUNCH_BRIEF" ] && [ -f "$BRIEF_PRIOR" ]; then
