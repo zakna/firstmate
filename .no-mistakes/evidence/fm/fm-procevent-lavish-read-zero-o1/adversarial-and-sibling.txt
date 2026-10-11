@@ -1,0 +1,37 @@
+### Adversarial: list form declaring 3 items but holding only 2 (fix)
+prompts[3]:
+  - uid: "1"
+  - uid: "3"
+declared_items: 3
+presented_items: 2
+malformed_items: 0
+complete: no
+END LAVISH RESULT (2 of 3)
+exit=0
+
+### answers on list-form choice capture: base vs fix
+base:
+exit=0
+fix:
+q-call	yes	Call: yes
+exit=0
+
+### reconciles on list-form choice capture: base vs fix
+base:
+exit=0
+fix:
+q-rec	detail
+exit=0
+
+### answers on real 8-prompt capture (no choice rows expected, must not error)
+exit=0
+
+### Regression: tabular-form real captures .2 and .3 (fix)
+declared_items: 3
+presented_items: 3
+complete: yes
+annotation_count: 2
+declared_items: 1
+presented_items: 1
+complete: yes
+annotation_count: 0
