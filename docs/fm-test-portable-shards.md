@@ -82,7 +82,7 @@ It downloads the `fm-test-timing-portable-serial-*` artifacts of the last three 
 The pull request is never merged by the workflow, and a push made with the workflow token does not start CI, so close and reopen it (or push to its branch) to get the required checks before merging.
 
 The refresh script owns the rule: each script's hint becomes its slowest passing `duration_ms` across the inputs.
-A script with no passing sample keeps its current hint, and a hint for a script no longer in the serial lane is dropped.
+A gate-skipped run is not a sample, so a script with no passing, non-skipped sample keeps its current hint, and a hint for a script no longer in the serial lane is dropped.
 Only the serial table is rewritten, because the serial shards are packed from it at run time.
 The parallel lanes keep stored memberships, so refreshed values alone would not rebalance them; update `portable_parallel_weight_hints` and the lane lists by hand when that set changes.
 

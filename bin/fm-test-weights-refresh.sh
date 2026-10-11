@@ -6,8 +6,8 @@
 #
 # Inputs are the `fm-test-timing-portable-serial-*` JSON artifacts that
 # `fm-test-run.sh --json` writes (the same data as the FM_TEST_END
-# duration_ms= markers). Each script's new hint is the slowest exit-0
-# duration across all inputs, the convention docs/fm-test-portable-shards.md
+# duration_ms= markers). Each script's new hint is the slowest exit-0,
+# non-gate-skipped duration across all inputs, the convention docs/fm-test-portable-shards.md
 # records. A script with no passing sample keeps its current hint; a script
 # in the serial lane with no hint at all and no sample stays unhinted, and a
 # hint for a script no longer in the lane is dropped.
@@ -45,7 +45,7 @@ for f in "$@"; do [ -f "$f" ] || die "timing file not found: $f"; done
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/fm-weights-refresh.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 
-jq -r '.scripts[]? | select(.exit == 0) | [.path, .duration_ms] | @tsv' "$@" \
+jq -r '.scripts[]? | select(.exit == 0 and (.gate_skip | not)) | [.path, .duration_ms] | @tsv' "$@" \
   | awk -F'\t' 'NF == 2 && ($2 + 0) > m[$1] { m[$1] = $2 + 0 } END { for (p in m) print p, m[p] }' \
   | LC_ALL=C sort >"$tmp/samples"
 

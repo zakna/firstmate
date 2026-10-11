@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Contract tests for bin/fm-test-weights-refresh.sh: it rewrites only the
 # portable-serial hint table of a runner copy from timing JSON, using the
-# slowest passing sample per script, and is idempotent.
+# slowest passing, non-skipped sample per script, and is idempotent.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -21,16 +21,18 @@ serial_hint() {  # <runner-file> <path>
 }
 
 test_refresh_uses_slowest_passing_sample_and_is_idempotent() {
-  local tmp target a b before_parallel
+  local tmp target a b w before_parallel
   tmp=$(fm_test_tmproot fm-weights-refresh) || fail "tmproot"
   target="$tmp/fm-test-run.sh"
   cp "$RUNNER" "$target"
   a="tests/fm-ask-user-authority.test.sh"
   b="tests/fm-backend.test.sh"
+  w="tests/fm-pi-windows-shell-invocation.test.sh"
   before_parallel=$(sed -n '/^portable_parallel_weight_hints() {/,/^EOF$/p' "$target" | wc -l)
 
-  jq -n --arg a "$a" --arg b "$b" '{scripts:[
+  jq -n --arg a "$a" --arg b "$b" --arg w "$w" '{scripts:[
     {path:$a,exit:0,duration_ms:1000},
+    {path:$w,exit:0,gate_skip:true,duration_ms:3},
     {path:$b,exit:0,duration_ms:5000},
     {path:$b,exit:1,duration_ms:999999}]}' >"$tmp/one.json"
   jq -n --arg b "$b" '{scripts:[{path:$b,exit:0,duration_ms:7000}]}' >"$tmp/two.json"
@@ -40,6 +42,7 @@ test_refresh_uses_slowest_passing_sample_and_is_idempotent() {
   assert_equals "1000" "$(serial_hint "$target" "$a")" "fast script takes its sample"
   assert_equals "7000" "$(serial_hint "$target" "$b")" "slowest passing sample wins, failed sample ignored"
   assert_equals "$before_parallel" "$(sed -n '/^portable_parallel_weight_hints() {/,/^EOF$/p' "$target" | wc -l)" "parallel table untouched"
+  assert_equals "$(serial_hint "$RUNNER" "$w")" "$(serial_hint "$target" "$w")" "gate-skipped run is not a sample"
   assert_equals "$(serial_hint "$RUNNER" "tests/fm-backend-orca.test.sh")" "$(serial_hint "$target" "tests/fm-backend-orca.test.sh")" "script with no sample keeps its hint"
   bash -n "$target" || fail "rewritten runner must still parse"
 
