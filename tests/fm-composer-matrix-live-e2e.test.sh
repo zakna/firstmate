@@ -175,14 +175,16 @@ done
 # `claude -n <name>` draws the name inside the composer's top rule
 # (`──── <name> ─`), the shape the titled-rule branch of bin/fm-composer-lib.sh
 # pairs only under a claude identity. Section 1 launches plain claude, so this
-# reads a real named session four ways: with no identity the classifier must
-# recognize the titled rule and ask for identity; under a claude identity
-# (herdr's native `agent get` reports it) the cursorless and cursor reads must
-# both prove `empty`; and under an absent identity it must not, so the case
-# cannot pass through some other shape. A Claude release that changes the
-# header surface fails here, naming the version.
+# reads a real named session three ways. The titled rule is recognized only
+# when, with no identity, the classifier asks for identity and, under an absent
+# identity, does not prove `empty`: a plain untitled rule also asks for
+# identity but proves `empty` once the identity is absent, so the conjunction
+# names the titled shape alone. Then under a claude identity (herdr's native
+# `agent get` reports it) the cursorless and cursor reads must both prove
+# `empty`. A Claude release that changes the header surface fails here, naming
+# the version.
 check_claude_titled_rule() {
-  local win=hx-claude-titled name="fm-live-titled-$$" version pane cy verdict='' i=0
+  local win=hx-claude-titled name="fm-live-titled-$$" version pane cy verdict='' absent='' i=0
   local budget=${FM_COMPOSER_MATRIX_LIVE_POLLS:-45} caps_noid claude_idle
   version=$(harness_version claude)
   caps_noid=$(printf 'styled=1\ncursor=0\nidentity=1\nrows=0')
@@ -192,23 +194,26 @@ check_claude_titled_rule() {
   while [ "$i" -lt "$budget" ]; do
     if pane=$(fm_tmux_composer_capture "$SESSION:$win"); then
       verdict=$(fm_composer_classify_screen "$caps_noid" "$pane")
-      [ "$verdict" = need-identity ] && break
+      if [ "$verdict" = need-identity ]; then
+        absent=$(fm_composer_classify_screen "$caps_noid" "$pane" '' probe-absent)
+        [ "$absent" != empty ] && break
+      fi
     fi
     i=$((i + 1))
     sleep 1
   done
-  if [ "$verdict" != need-identity ]; then
+  if [ "$verdict" != need-identity ] || [ "$absent" = empty ]; then
     printf '# claude named-session pane tail at failure:\n' >&2
     tmux -L "$SOCKET" capture-pane -p -t "$SESSION:$win" 2>/dev/null \
       | grep '[^[:space:]]' | tail -8 | sed 's/^/#   /' >&2
     FAILED=1
-    printf 'not ok - claude (%s): a named session never showed a titled composer rule (last verdict: %s)\n' \
-      "$version" "${verdict:-unreadable}" >&2
+    printf 'not ok - claude (%s): a named session never showed a titled composer rule (last verdict: %s, without a claude identity: %s)\n' \
+      "$version" "${verdict:-unreadable}" "${absent:-unread}" >&2
     tmux -L "$SOCKET" kill-window -t "$SESSION:$win" 2>/dev/null || true
     return 0
   fi
   CHECKED=$((CHECKED + 1))
-  pass "claude ($version): a named session's real top rule reads as a titled rule"
+  pass "claude ($version): a named session's real top rule reads as a titled rule (without a claude identity: $absent)"
   verdict=$(fm_composer_classify_screen "$caps_noid" "$pane" '' "$claude_idle")
   if [ "$verdict" = empty ]; then
     CHECKED=$((CHECKED + 1))
@@ -227,15 +232,6 @@ check_claude_titled_rule() {
     FAILED=1
     printf 'not ok - claude (%s): the titled-rule composer read at cursor row %s under a claude identity classified %s, expected empty\n' \
       "$version" "${cy:-none}" "${verdict:-unreadable}" >&2
-  fi
-  verdict=$(fm_composer_classify_screen "$caps_noid" "$pane" '' probe-absent)
-  if [ "$verdict" != empty ]; then
-    CHECKED=$((CHECKED + 1))
-    pass "claude ($version): without a claude identity the same pane is not proven empty (verdict: $verdict)"
-  else
-    FAILED=1
-    printf 'not ok - claude (%s): the titled-rule pane read empty with no identity, so the case no longer exercises the titled-rule branch\n' \
-      "$version" >&2
   fi
   tmux -L "$SOCKET" kill-window -t "$SESSION:$win" 2>/dev/null || true
 }

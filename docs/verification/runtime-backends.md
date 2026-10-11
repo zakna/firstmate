@@ -788,10 +788,9 @@ The live guard `FM_COMPOSER_MATRIX_LIVE=1 tests/fm-composer-matrix-live-e2e.test
 On 2026-10-11 on macOS arm64 (Darwin 25.6.0), tmux 3.7c, it printed:
 
 ```text
-ok - claude (2.1.296 (Claude Code)): a named session's real top rule reads as a titled rule
+ok - claude (2.1.296 (Claude Code)): a named session's real top rule reads as a titled rule (without a claude identity: unknown)
 ok - claude (2.1.296 (Claude Code)): the titled-rule composer read cursorless under a claude identity is empty
 ok - claude (2.1.296 (Claude Code)): the titled-rule composer read at the cursor under a claude identity is empty
-ok - claude (2.1.296 (Claude Code)): without a claude identity the same pane is not proven empty (verdict: unknown)
 ```
 
 ### 2026-09-15 codex-cli 0.154.0 idle starfield and status footer through Herdr
