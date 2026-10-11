@@ -508,12 +508,12 @@ test_claude_threads_model_and_effort() {
   rec=$(make_spawn_case profile-claude claude "$id")
   read_case_record "$rec"
 
-  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --model sonnet --effort high)
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" --model sonnet --effort medium)
   status=$?
   expect_code 0 "$status" "claude spawn with profile flags should succeed"
-  assert_meta_profile "$HOME_DIR/state/$id.meta" claude sonnet high
+  assert_meta_profile "$HOME_DIR/state/$id.meta" claude sonnet medium
   launch=$(cat "$LAUNCH_LOG")
-  assert_contains "$launch" "$CLAUDE_CONTROL_CHANNEL_FLAG --model 'sonnet' --effort 'high'" \
+  assert_contains "$launch" "$CLAUDE_CONTROL_CHANNEL_FLAG --model 'sonnet' --effort 'medium'" \
     "claude launch did not thread model and effort flags"
   assert_not_contains "$launch" "--tui-mode" "non-Pi launches must not receive Pi's TUI mode override"
   pass "claude receives --model and --effort profile flags"
