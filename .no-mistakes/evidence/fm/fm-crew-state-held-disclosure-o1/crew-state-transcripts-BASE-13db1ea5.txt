@@ -1,0 +1,25 @@
+### monitored CI green + held:
+status log tip: done [at=2]: PR https://github.com/o/r/pull/2 checks green; held: review pending on head abc
+--- fm-crew-state output:
+state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2
+
+### ADVERSARIAL monitored green, no held: in log
+status log tip: done [at=2]: PR https://github.com/o/r/pull/2 checks green
+--- fm-crew-state output:
+state: done · source: run-step · checks green: PR ready for review (still monitoring for merge/close): https://github.com/o/r/pull/2
+
+### terminal failed (orphan ci monitor) reclassified held-green + held:
+status log tip: done [at=2]: PR https://github.com/o/r/pull/3 checks green; held: review pending on head abc
+--- fm-crew-state output:
+state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/203
+
+### terminal passed, PR open + held:
+status log tip: done [at=2]: PR https://github.com/o/r/pull/3 checks green; held: review pending on head abc
+--- fm-crew-state output:
+state: done · source: run-step · run passed: PR open
+
+### terminal passed, PR merged + held: (commit 8aff6c6a drops it)
+status log tip: done [at=2]: PR https://github.com/o/r/pull/4 checks green; held: review pending on head abc
+--- fm-crew-state output:
+state: done · source: run-step · run passed: PR merged
+
