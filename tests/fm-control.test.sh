@@ -1263,6 +1263,52 @@ EOF
   pass "fm-control exit: Claude's dialog words in the transcript are not its exit dialog"
 }
 
+# The dialog's exact rows sitting in scrollback, above the live composer, are
+# not an open dialog: only a complete dialog block at the bottom of the screen
+# is.
+scrollback_dialog_rows_case() {  # <name> -> case dir
+  local dir
+  dir=$(new_case "$1")
+  add_task "$dir" t1 claude
+  alive_as "$dir" claude
+  printf '1\n' > "$dir/fake/slow-exit"
+  cat > "$dir/fake/pane" <<'EOF'
+   Background work is running
+
+   The following will stop when you exit:
+
+   shell · sleep 900
+
+   ❯ 1. Exit and stop tasks
+     2. Move to background and exit
+     3. Stay
+
+   Enter to confirm · Esc to cancel
+⏺ That is the dialog Claude shows on /exit.
+────
+❯ 
+────
+  ⏵⏵ auto mode on · ← for agents
+EOF
+  printf '%s\n' "$dir"
+}
+
+test_claude_dialog_rows_in_scrollback_get_no_key() {
+  local dir out rc
+  dir=$(scrollback_dialog_rows_case claude-bg-scrollback)
+  out=$(run_control "$dir" t1 exit); rc=$?
+  expect_code 0 "$rc" "dialog rows in scrollback are not an open exit dialog"$'\n'"$out"
+  assert_contains "$out" "stopped t1 harness=claude" "exit should report the stop"
+  [ -z "$(keys_sent "$dir")" ] || fail "no dialog is open, so no Escape may be sent, got: $(keys_sent "$dir")"
+  dir=$(scrollback_dialog_rows_case claude-bg-scrollback-stop)
+  out=$(run_control "$dir" t1 exit --stop-background); rc=$?
+  expect_code 0 "$rc" "dialog rows in scrollback are not an open exit dialog"$'\n'"$out"
+  assert_not_contains "$out" "background-stopped=" "no dialog opened, so no background work was stopped"
+  [ "$(enters_sent "$dir")" = 1 ] \
+    || fail "no dialog is open, so no confirming Enter may follow the submit Enter, got $(enters_sent "$dir")"
+  pass "fm-control exit: Claude's dialog rows in scrollback get no Escape and no confirming Enter"
+}
+
 test_stop_background_is_rejected_on_interrupt() {
   local dir out rc
   dir=$(new_case stop-bg-interrupt)
@@ -1318,6 +1364,7 @@ test_claude_exit_sends_no_retry_enter
 test_claude_slow_dialog_is_never_confirmed_by_a_retry
 test_dialog_closure_needs_one_successful_capture
 test_claude_exit_dialog_text_in_transcript_is_not_the_dialog
+test_claude_dialog_rows_in_scrollback_get_no_key
 test_stop_background_is_rejected_on_interrupt
 test_grok_interrupt_without_acknowledgement_reports_unconfirmed
 test_grok_idle_footer_does_not_confirm_cancellation
