@@ -1,0 +1,28 @@
+# Real capture lavish-54cd6a11a119825a.1.result (header: prompts[8]:); prompt text redacted (personal data)
+## BASE 5116eb1: bin/fm-procevent-lavish.sh read
+declared_items: 0
+presented_items: 0
+complete: yes
+annotation_count: 0
+ANNOTATIONS: (none)
+END LAVISH RESULT (0 of 0)
+## TARGET 246a196: bin/fm-procevent-lavish.sh read
+END CAPTAIN MESSAGE
+declared_items: 8
+presented_items: 8
+complete: yes
+annotation_count: 7
+ANNOTATIONS
+END ANNOTATIONS
+END LAVISH RESULT (8 of 8)
+annotation/message lines presented: 21
+## answers (base / target)
+       0
+       0
+## reconciles (target)
+       0
+## ADVERSARIAL: real capture truncated just after item 5 opens (first 26 lines)
+declared_items: 8
+presented_items: 4
+complete: no
+END LAVISH RESULT (4 of 8)

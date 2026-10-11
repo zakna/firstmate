@@ -1,0 +1,20 @@
+== target
+ok - read presents every prompt of an expanded list-form capture
+ok - answers and reconciles key the choices of an expanded list-form capture
+ok - answers and reconciles skip a truncated list-form item
+ok - list-form items are validated and keep nested data and unicode escapes
+ok - tabular values decode unicode escapes like the list form
+
+all procevent tests passed
+rc=0
+== base
+complete: yes
+lifecycle: feedback
+session_ended: (unset)
+annotation_count: 0
+session_ending_message_count: 0
+
+ANNOTATIONS: (none)
+END LAVISH RESULT (0 of 0)
+rc=0
+base run: not ok - read lost the declared item count of the list form (missing: 'declared_items: 3')
