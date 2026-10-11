@@ -1,6 +1,10 @@
-### truncated capture (prompts[8] header, 7 items)
+--- truncated to 26 of       52 lines
+declared_items: 8
+presented_items: 4
+malformed_items: 2
+complete: no
+--- truncated to 49 of       52 lines
 declared_items: 8
 presented_items: 7
-malformed_items: 0
+malformed_items: 1
 complete: no
-END LAVISH RESULT (7 of 8)
