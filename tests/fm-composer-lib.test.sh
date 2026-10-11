@@ -219,6 +219,47 @@ test_matrix_claude_arrow_statusline_footer() {
   pass "matrix: claude's arrow statusline is footer furniture, not a composer holding text"
 }
 
+test_matrix_claude_titled_rule_composer() {
+  # Real claude on herdr 0.9.3 (captured 2026-10-10 from an away-mode
+  # supervisor pane, session name scrubbed): a named session draws its name IN
+  # the composer's top rule. Only the closing rule then read as a separator,
+  # an unpaired separator below the `❯` row refused every read as `unknown`,
+  # and the away-mode daemon deferred every escalation until the captain came
+  # back. The titled rule must pair with the closing rule.
+  local rule='' top footer screen typed claude_idle
+  claude_idle=$(printf 'claude\tidle')
+  for _ in $(seq 1 111); do rule="$rule─"; done
+  top="$rule"$' demo-session ─'
+  footer=$'\n  ➜  ~/repo (main) ctx 234612/1000000  Opus high | 5h [░░░░░░] 0% →13:40\n  ⏵⏵ auto mode on · 1 shell · ← for agents'
+  screen=$'transcript line\n'"$top"$'\n❯\n'"$rule──────────────"$footer
+  assert_screen "claude idle under a titled rule on herdr" empty "$CAPS_STYLED" "$screen" '' "$claude_idle"
+  # The protection this must NOT remove: typed text under the same title.
+  typed=$'transcript line\n'"$top"$'\n❯ fix the login bug\n'"$rule──────────────"$footer
+  assert_screen "claude typed under a titled rule" pending "$CAPS_STYLED" "$typed" '' "$claude_idle"
+  # A rule whose "title" is a prompt row is never a separator.
+  screen=$'transcript line\n'"$rule"$' ❯ draft ─\n❯\n'"$rule──────────────"$footer
+  [ "$(fm_composer_classify_screen "$CAPS_STYLED" "$screen" '' "$claude_idle")" != empty ] \
+    || fail "a prompt glyph inside a rule must not prove a composer pair"
+  pass "matrix: claude's session-titled top rule pairs with its closing rule"
+}
+
+test_matrix_titled_rule_needs_claude_identity() {
+  # Any tool can print `──── <label> ─` (PR review finding on #37): a titled
+  # rule over a lone `❯` and a solid rule must prove a composer ONLY when the
+  # live identity names claude. Every other identity, an absent probe, and a
+  # backend with no identity capability keep the pre-titled-rule refusal.
+  local rule='' screen
+  while [ "${#rule}" -lt 24 ]; do rule="$rule─"; done
+  screen=$'tool output\n'"$rule"$' build output ─\n❯\n'"$rule"
+  assert_screen "titled rule under claude" empty "$CAPS_STYLED" "$screen" '' "$(printf 'claude\tworking')"
+  assert_screen "titled rule under codex" unknown "$CAPS_STYLED" "$screen" '' "$(printf 'codex\tidle')"
+  assert_screen "titled rule with no identity probe" unknown "$CAPS_STYLED" "$screen" '' probe-absent
+  assert_screen "titled rule on zellij (no identity)" unknown "$CAPS_STYLED_NOID" "$screen"
+  assert_screen "titled rule on cmux/orca (no identity)" unknown "$CAPS_PLAIN" "$screen"
+  assert_screen "titled rule asks an identity-capable backend" need-identity "$CAPS_STYLED" "$screen"
+  pass "matrix: a titled rule pairs as a separator only under a claude identity"
+}
+
 test_composer_footer_demotion_needs_a_proven_pair() {
   # The demotion is bounded in three directions, and each bound is a case
   # where a lower glyph row IS the live composer.
@@ -969,6 +1010,8 @@ test_idle_placeholder_case_mode_is_explicit
 test_real_text_is_pending
 test_matrix_claude_bare_nbsp_row
 test_matrix_claude_arrow_statusline_footer
+test_matrix_claude_titled_rule_composer
+test_matrix_titled_rule_needs_claude_identity
 test_composer_footer_demotion_needs_a_proven_pair
 test_composer_footer_zone_is_shape_independent
 test_composer_footer_zone_refuses_rather_than_allows

@@ -3410,14 +3410,16 @@ fm_backend_herdr_send_text_submit() {  # <target> <text> <retries> <enter-sleep>
   identity=$(fm_backend_herdr_agent_identity_raw "$FM_BACKEND_HERDR_SESSION" "$FM_BACKEND_HERDR_PANE") || identity=
   if [ "${identity%%$'\t'*}" = claude ]; then
     proof=1
-    content=$(fm_backend_herdr_composer_content "$target") \
+    # The proven claude identity also lets a named session's titled top rule
+    # pair as the composer separator, exactly as the composer guard reads it.
+    content=$(FM_COMPOSER_SCAN_TITLED_RULES=1 fm_backend_herdr_composer_content "$target") \
       || { printf 'send-failed'; return 0; }
     [ -z "${content//[$' \t\r\n\v\f']/}" ] || { printf 'send-failed'; return 0; }
   fi
   fm_backend_herdr_send_literal "$target" "$text" || { printf 'send-failed'; return 0; }
   sleep "$settle"
   if [ "$proof" = 1 ]; then
-    if ! content=$(fm_backend_herdr_composer_content "$target") \
+    if ! content=$(FM_COMPOSER_SCAN_TITLED_RULES=1 fm_backend_herdr_composer_content "$target") \
       || ! fm_backend_herdr_composer_payload_shown "$text" "$content"; then
       if fm_backend_herdr_composer_clear "$target" "$text"; then
         printf 'send-failed'

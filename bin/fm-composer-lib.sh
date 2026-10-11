@@ -77,6 +77,12 @@
 #                different, self-proving thing: real claude 2.x draws exactly
 #                that (`─` rule, `❯`+NBSP, `─` rule), so the glyph inside the
 #                pair carries the shape and no identity is needed.
+#                A NAMED claude session titles its top rule instead
+#                (`──── <name> ─`, a space-padded name with no `─` and no
+#                leading prompt glyph, closed by one `─`). Any tool can print
+#                such a row, so a titled rule pairs as a separator only when
+#                the live identity names claude; otherwise it is ordinary
+#                text, and an identity-capable caller is asked for identity.
 #
 # THE COMPOSER FOOTER ZONE (task firstmate-doorbell-vals-pending-p1): a
 # harness draws its own furniture BELOW the composer - a user statusLine, a
@@ -762,6 +768,31 @@ _fm_composer_pi_separator_row() {  # <trimmed-row>
   return 1
 }
 
+# _fm_composer_titled_rule_row: claude's titled top rule (see `separated` in
+# THE SHAPE CATALOGUE). The width floor is a literal prefix test so it is
+# byte-exact in every locale.
+_fm_composer_titled_rule_row() {  # <trimmed-row>
+  local row=$1 title glyph
+  case "$row" in
+    ────────*) ;;
+    *) return 1 ;;
+  esac
+  case "$row" in
+    *' ─') ;;
+    *) return 1 ;;
+  esac
+  title=${row#"${row%%[!─]*}"}
+  title=${title%"${title##*[!─]}"}
+  case "$title" in
+    ' '*' ') ;;
+    *) return 1 ;;
+  esac
+  case "$title" in *─*) return 1 ;; esac
+  fm_composer_normalize_trim_var title
+  [ -n "$title" ] || return 1
+  ! fm_composer_leading_prompt_glyph_var glyph "$title"
+}
+
 # Row-scan results are returned through FM_COMPOSER_SCAN_* globals (bash 3.2
 # has no nameref); they are internal to this owner.
 _fm_composer_scan_screen() {  # <plain-screen> <cursor-or-empty> [extract-wrap]
@@ -770,6 +801,7 @@ _fm_composer_scan_screen() {  # <plain-screen> <cursor-or-empty> [extract-wrap]
   local top_inner top_spaces='' geometry_check=0 geometry_ambiguous=0
   local content_inner content_spaces bottom_inner bottom_spaces glyph
   local current_indent='' current_family='' row=0 top=-1 valid=0 content_rows=0
+  local is_separator
   # Complete-box results: the box containing the cursor (cursor mode) or the
   # bottom-most complete box (no cursor).
   FM_COMPOSER_SCAN_BOX_TOP=-1
@@ -787,6 +819,7 @@ _fm_composer_scan_screen() {  # <plain-screen> <cursor-or-empty> [extract-wrap]
   FM_COMPOSER_SCAN_PI_OPEN=-1
   FM_COMPOSER_SCAN_PI_CLOSE=-1
   FM_COMPOSER_SCAN_PI_LAST_SEPARATOR=-1
+  FM_COMPOSER_SCAN_TITLED_ROW=-1
   # The glyph PROOF of each envelope: the first row strictly inside it whose
   # content leads with an agent prompt glyph once its side borders are
   # stripped, and that glyph. This is what tells a composer container from a
@@ -844,7 +877,16 @@ _fm_composer_scan_screen() {  # <plain-screen> <cursor-or-empty> [extract-wrap]
     # Pi separator rows: a solid `─` rule at least 8 columns wide. A separator
     # closes the preceding candidate and immediately opens the next, so an
     # earlier transcript rule can never outrank the live bottom composer pair.
+    # A claude titled rule is recorded on every scan but is a separator only
+    # when the caller set FM_COMPOSER_SCAN_TITLED_RULES=1 (claude identity).
+    is_separator=0
     if _fm_composer_pi_separator_row "$trimmed"; then
+      is_separator=1
+    elif _fm_composer_titled_rule_row "$trimmed"; then
+      FM_COMPOSER_SCAN_TITLED_ROW=$row
+      [ "${FM_COMPOSER_SCAN_TITLED_RULES:-0}" != 1 ] || is_separator=1
+    fi
+    if [ "$is_separator" = 1 ]; then
       FM_COMPOSER_SCAN_PI_LAST_SEPARATOR=$row
       if [ "$pi_open" -ge 0 ]; then
         FM_COMPOSER_SCAN_PI_PAIR_FOUND=1
@@ -1629,7 +1671,18 @@ EOF
     case "$cy" in *[!0-9]*) printf 'unknown'; return 0 ;; esac
   fi
   plain=$(printf '%s\n' "$screen" | fm_composer_strip_ansi)
-  _fm_composer_scan_screen "$plain" "$cy"
+  FM_COMPOSER_SCAN_TITLED_RULES=0 _fm_composer_scan_screen "$plain" "$cy"
+  # A titled rule is ordinary text unless the pane is proven to run claude:
+  # only then is it re-read as claude's composer separator.
+  if [ "$FM_COMPOSER_SCAN_TITLED_ROW" -ge 0 ] && [ "$has_identity" = 1 ]; then
+    if [ -z "$identity" ]; then
+      printf 'need-identity'
+      return 0
+    fi
+    if [ "${identity%%$'\t'*}" = claude ]; then
+      FM_COMPOSER_SCAN_TITLED_RULES=1 _fm_composer_scan_screen "$plain" "$cy"
+    fi
+  fi
   if [ -n "$cy" ]; then
     # Cursor mode (tmux): the shape CONTAINING the cursor is the composer.
     if [ "$FM_COMPOSER_SCAN_UNSAFE" = 1 ]; then
