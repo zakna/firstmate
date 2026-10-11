@@ -1,0 +1,15 @@
+## Lab FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.QuzIHD ; crew meta worktree=/Users/olivier/.treehouse/firstmate-cbd3ce/4/firstmate (branch fm/fm-control-exit-background-dialog-o1 @ 932a42a4, real no-mistakes run 'completed', PR #38 open)
+## status log tail:
+done [at=2]: PR https://github.com/zakna/firstmate/pull/38 checks green; held: review pending on head 932a42a
+
+## BEFORE (base 883c308e bin/fm-crew-state.sh):
+state: done · source: run-step · run passed: PR open · run: 01M4KRF13MV0K5T2P53BR29Z3M
+
+## AFTER (target b72f3929 bin/fm-crew-state.sh):
+state: done · source: run-step · run passed: PR open · held: review pending on head 932a42a · run: 01M4KRF13MV0K5T2P53BR29Z3M
+
+## ADVERSARIAL: newest done line has no held: (earlier one did) -> AFTER:
+state: done · source: run-step · run passed: PR open · run: 01M4KRF13MV0K5T2P53BR29Z3M
+
+## ADVERSARIAL: newest log line is 'working' carrying '; held:' -> AFTER:
+state: done · source: run-step · run passed: PR open · run: 01M4KRF13MV0K5T2P53BR29Z3M

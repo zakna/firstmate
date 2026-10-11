@@ -1,0 +1,2 @@
+## crew worktree /Users/olivier/.treehouse/firstmate-cbd3ce/8/firstmate (branch fm/fm-crew-state-held-disclosure-o1 @ d27b5181; real runs: cancelled d27b5181, running b72f3929)
+state: done · source: status-log · PR https://github.com/zakna/firstmate/pull/39 checks green; held: review pending · run still monitoring PR
