@@ -551,7 +551,8 @@ cmd_silent() {
 # continues it, and a keyed block such as `target:` or `attachments[N]{...}:`
 # is kept verbatim under `_blocks` rather than as a prompt field. An item that
 # lacks any of uid, prompt, selector, tag, or text is flagged `_incomplete`;
-# its items are returned as decoded field hashes.
+# its items are returned as decoded field hashes. decode_value turns the
+# JSON-style escapes of a quoted value into text the same way for both forms.
 # shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
 PROMPT_ITEMS_PL='
   use Encode ();
@@ -598,17 +599,20 @@ PROMPT_ITEMS_PL='
       for my $k (grep { !/^_/ } keys %$item) {
         my $v = $item->{$k};
         next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
-        $v = $1;
-        $v =~ s{\\(?:u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|(.))}{
-          defined $1 ? Encode::encode("UTF-8", chr(0x10000 + ((hex($1) - 0xD800) << 10) + (hex($2) - 0xDC00)))
-          : defined $3 ? (hex($3) < 0x20 || hex($3) == 0x7f || (hex($3) >= 0xD800 && hex($3) <= 0xDFFF)
-              ? "\\u" . lc($3) : Encode::encode("UTF-8", chr(hex($3))))
-          : $4 eq "n" ? "\n" : $4 eq "t" ? "\t" : $4 eq "r" ? "\r" : $4
-        }ge;
-        $item->{$k} = $v;
+        $item->{$k} = decode_value($1);
       }
     }
     return ($want, \@fields, \@rows, \@listed);
+  }
+  sub decode_value {
+    my ($v) = @_;
+    $v =~ s{\\(?:u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|(.))}{
+      defined $1 ? Encode::encode("UTF-8", chr(0x10000 + ((hex($1) - 0xD800) << 10) + (hex($2) - 0xDC00)))
+      : defined $3 ? (hex($3) < 0x20 || hex($3) == 0x7f || (hex($3) >= 0xD800 && hex($3) <= 0xDFFF)
+          ? "\\u" . lc($3) : Encode::encode("UTF-8", chr(hex($3))))
+      : $4 eq "n" ? "\n" : $4 eq "t" ? "\t" : $4 eq "r" ? "\r" : $4
+    }ge;
+    return $v;
   }
 '
 
@@ -645,9 +649,7 @@ cmd_choice_rows() {
       my @vals;
       while (length $row) {
         if ($row =~ s/^"((?:[^"\\]|\\.)*)"//) {
-          my $v = $1;
-          $v =~ s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge;
-          push @vals, $v;
+          push @vals, decode_value($1);
         } else {
           $row =~ s/^([^,]*)//;
           push @vals, $1;
@@ -787,7 +789,7 @@ cmd_read() {
         $malformed++;
         next;
       }
-      s/\\(.)/$1 eq "n" ? "\n" : $1 eq "t" ? "\t" : $1 eq "r" ? "\r" : $1/ge for @vals;
+      $_ = decode_value($_) for @vals;
       my %f;
       $f{$fields[$_]} = $vals[$_] for 0 .. $#fields;
       push @parsed, \%f;

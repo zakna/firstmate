@@ -4825,4 +4825,22 @@ assert_contains "$esc_out" "café and " "read lost the decoded unicode escape of
 assert_not_contains "$esc_out" "u00e9" "read turned a list-form unicode escape into literal text"
 pass "list-form items are validated and keep nested data and unicode escapes"
 
+TABESC="$TMP_ROOT/tabular-escape.result"
+cat > "$TABESC" <<'EOF_TABESC'
+session:
+  status: feedback
+prompts[2]{uid,prompt,selector,tag,text}:
+  "1","caf\u00e9 and \u001b[0m","","b","Placeholder element"
+  "2","Placeholder call: yes\n\nContext data:\n{\"schema\":\"fm-bearings-answer.v1\",\"question\":\"placeholder-call\",\"selection\":\"\",\"note\":\"placeholder\"}","","choice","Option caf\u00e9"
+EOF_TABESC
+tab_out=$("$ROOT/bin/fm-procevent-lavish.sh" read "$TABESC" 2>&1) \
+  || fail "read failed on a tabular form with unicode escapes: $tab_out"
+assert_contains "$tab_out" "café and \\u001b[0m" "read decoded a tabular unicode escape differently from the list form"
+assert_not_contains "$tab_out" "u00e9" "read turned a tabular unicode escape into literal text"
+tab_answers=$("$ROOT/bin/fm-procevent-lavish.sh" answers "$TABESC" 2>&1) \
+  || fail "answers failed on a tabular form with unicode escapes: $tab_answers"
+[ "$tab_answers" = "$(printf 'placeholder-call\tplaceholder\tOption café')" ] \
+  || fail "answers did not decode tabular unicode escapes: $tab_answers"
+pass "tabular values decode unicode escapes like the list form"
+
 printf '\nall procevent tests passed\n'
