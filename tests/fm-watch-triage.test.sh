@@ -2843,7 +2843,12 @@ test_live_declared_wait_churn_honors_the_resurface_throttle() {
     throttle="$state/.paused-resurfaced-$key"
 
     # First sight of a parked-but-live worker must still surface: the state is
-    # inconclusive and firstmate has to look at it.
+    # inconclusive and firstmate has to look at it. A verified captain-held
+    # transfer surfaces first only once it is older than the re-surface window
+    # (test_steered_captain_held_worker_stays_on_the_long_cadence), so that hold
+    # is aged past it here.
+    [ "$name" = paused-pipeline-churn ] || set_mtime "$(( $(date +%s) - 2000 ))" "$statusf"
+    sig=$(seen_sig "$statusf"); printf '%s' "$sig" > "$state/.seen-parked_status"
     text='parked, elapsed 1s'
     printf '%s' "$text" > "$capture_file"
     printf '%s' "$(hash_text "$text")" > "$state/.hash-$key"
