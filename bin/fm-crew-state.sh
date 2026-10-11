@@ -145,10 +145,10 @@
 #      claims are superseded BECAUSE THE RUN IS ALIVE when the run is
 #      running/fixing with recent reported activity: a killed or timed-out drive
 #      call is not daemon death, so that claim is answered by steering the crew
-#      to reattach, not by escalating. A run-step reading of done keeps the
-#      log's latest `done: ...; held: <why>` disclosure as its own detail
-#      component (append_log_held_disclosure), so the merge authority still
-#      sees it.
+#      to reattach, not by escalating. A run-step reading of done, short of
+#      PR merged, keeps the log's latest `done: ...; held: <why>` disclosure as
+#      its own detail component (append_log_held_disclosure), so the merge
+#      authority still sees it.
 #   4. No current run for this crew (pre-validation, uninitialized repository,
 #      proven historical head, or kind=scout): fall back to the recorded
 #      backend's pane busy state, then the resolved status declaration
