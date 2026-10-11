@@ -1,0 +1,22 @@
+=== journal snapshot while the replacement is launching ===
+v1
+task=rl50
+phase=launching
+ts=2026-10-11T12:49:15Z
+backend=tmux
+endpoint=fmses:fm-rl50
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.odOxsz/interrupt-bg-4865/wt
+kind=ship
+from_harness=claude
+from_model=default
+from_effort=default
+to_harness=claude
+to_model=default
+to_effort=default
+worktree_head=5fed5dde4a483040a11c949d2c5ceded022dc97e
+worktree_dirty=no
+note_file=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.odOxsz/interrupt-bg-4865/home/state/rl50.control-relaunch.note
+relaunch_tx=64459.20261011T124915Z.25326
+exit_result=stopped background-stopped=shell · sleep 900
+background-stopped=shell · sleep 900
+interrupting fm-control pid=64459 with SIGTERM

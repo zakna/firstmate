@@ -1,0 +1,25 @@
+=== fm-control relaunch exit=1 output ===
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/home/data/rl51/launch-brief.md records no ship branch; defaulting to legacy branch fm/rl51
+warning: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/home/data/rl51/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+error: task rl51's endpoint is in '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/proj', not its recorded worktree '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/wt'; refusing to relaunch an agent outside the copy holding its work
+error: the replacement agent for rl51 could not be launched on claude
+error: the old agent's exit also stopped its background work: background-stopped=shell · sleep 900
+error: rl51's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/wt
+=== journal after failed relaunch ===
+v1
+task=rl51
+phase=failed:launching
+ts=2026-10-11T12:48:52Z
+backend=tmux
+endpoint=fmses:fm-rl51
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-relaunch.7twvNz/rollback-bg2-24461/wt
+kind=ship
+from_harness=claude
+from_model=default
+from_effort=default
+to_harness=claude
+to_model=default
+to_effort=default
+rollback=prior-record-kept
+exit_result=stopped background-stopped=shell · sleep 900
+background-stopped=shell · sleep 900
