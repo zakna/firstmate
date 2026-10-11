@@ -725,6 +725,7 @@ confirm_exit_dialog() {  # <dialog-ere>
     fi
     fm_backend_send_key "$BACKEND" "$T" Enter "$LABEL" \
       || die "task $ID's $HARNESS exit dialog is open and the Enter that confirms 'Exit and stop tasks' was not delivered; close it with Escape (Stay) or Enter before any other action. Background work: $tasks"
+    [ "$RELAUNCH_ACTIVE" != 1 ] || printf '%s\n' "$tasks" > "$BACKGROUND_STOPPED_FILE" || true
     printf '%s' "$tasks"
     return 0
   fi
@@ -764,6 +765,9 @@ JOURNAL="$STATE/$ID.control-relaunch"
 META_PRIOR="$JOURNAL.meta-prior"
 BRIEF_PRIOR="$JOURNAL.brief-prior"
 NOTE_FILE="$JOURNAL.note"
+# Written by the relaunch's own exit the moment Enter confirms the exit dialog,
+# so a stop that fails afterwards still names the work it stopped.
+BACKGROUND_STOPPED_FILE="$JOURNAL.background-stopped"
 RELAUNCH_META_PUBLISHED=0
 RELAUNCH_AGENT_CONFIRMED=0
 # The old agent's exit result once it stopped, carrying " background-stopped=
@@ -813,7 +817,7 @@ journal_write() {  # <phase> [extra-line]...
 }
 
 relaunch_rollback() {
-  local state
+  local state stopped
   [ "$RELAUNCH_ACTIVE" = 1 ] || return 0
   [ "$RELAUNCH_PHASE" != complete ] || return 0
   RELAUNCH_ACTIVE=0
@@ -829,16 +833,21 @@ relaunch_rollback() {
       ;;
     stopping)
       state=$(agent_state 2>/dev/null || printf unknown)
+      stopped=
+      [ ! -s "$BACKGROUND_STOPPED_FILE" ] \
+        || stopped="background-stopped=$(cat "$BACKGROUND_STOPPED_FILE")"
+      [ -z "$stopped" ] \
+        || echo "error: the old agent's exit dialog was confirmed, stopping its background work: $stopped" >&2
       case "$state" in
         alive)
           if [ -n "$RELAUNCH_BRIEF" ] && [ -f "$BRIEF_PRIOR" ]; then
             cp -p "$BRIEF_PRIOR" "$RELAUNCH_BRIEF" 2>/dev/null || true
           fi
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-alive" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-alive" ${stopped:+"$stopped"} || true
           echo "error: relaunch of $ID failed while stopping the old agent, which is still running; its original instructions were restored" >&2
           ;;
         dead)
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept-agent-dead" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=prior-record-kept-agent-dead" ${stopped:+"$stopped"} || true
           echo "error: $ID's agent stopped but relaunch did not reach replacement launch; no agent is running, and its work plus progress note are preserved at $WT" >&2
           ;;
         *)
@@ -850,7 +859,7 @@ relaunch_rollback() {
           if [ -n "$RELAUNCH_BRIEF" ] && [ -f "$BRIEF_PRIOR" ]; then
             cp -p "$BRIEF_PRIOR" "$RELAUNCH_BRIEF" 2>/dev/null || true
           fi
-          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-state-$state" || true
+          journal_write "failed:$RELAUNCH_PHASE" "rollback=instructions-restored-agent-state-$state" ${stopped:+"$stopped"} || true
           echo "error: relaunch of $ID failed while stopping the old agent and its state is '$state', so it was not proven stopped; its original instructions were restored and the durable record was retained for recovery" >&2
           ;;
       esac
@@ -1103,6 +1112,7 @@ do_relaunch() {
   record_note
   journal_write noted "${CHECKPOINT_LINES[@]}" "$note_line"
 
+  rm -f "$BACKGROUND_STOPPED_FILE"
   journal_write stopping "${CHECKPOINT_LINES[@]}" "$note_line"
   exit_result=$(do_exit)
   case "$exit_result" in

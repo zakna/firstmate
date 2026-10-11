@@ -92,7 +92,8 @@ case "${1:-}" in
     else
       printf '%s\n' "$payload" >> "$D/keys"
       if [ "$payload" = Enter ] && [ -f "$D/claude-dialog" ]; then
-        rm -f "$D/claude-dialog"; printf 'zsh' > "$D/command"
+        rm -f "$D/claude-dialog"
+        [ -n "${FM_FAKE_STOP_HANGS:-}" ] || printf 'zsh' > "$D/command"
       elif [ "$payload" = Enter ] && [ -f "$D/exit-typed" ]; then
         rm -f "$D/exit-typed"; : > "$D/claude-dialog"
       fi
@@ -1423,6 +1424,23 @@ test_failed_relaunch_keeps_stopped_background_evidence() {
   pass "fm-control relaunch: a failed relaunch keeps the evidence of the background work it stopped"
 }
 
+test_unconfirmed_stop_keeps_stopped_background_evidence() {
+  local dir out rc
+  dir=$(new_case rollback-bg-stopping rl41)
+  add_ship_task "$dir" rl41 claude
+  : > "$dir/fake/claude-bg"
+  # Enter confirms "Exit and stop tasks", but the agent outlasts the exit wait.
+  out=$(FM_FAKE_STOP_HANGS=1 run_control "$dir" rl41 relaunch --stop-background --note "carry this forward"); rc=$?
+  expect_code 1 "$rc" "an unconfirmed stop should fail closed"$'\n'"$out"
+  [ "$(journal_field "$dir" rl41 phase)" = "failed:stopping" ] \
+    || fail "the journal should record the failed phase, got '$(journal_field "$dir" rl41 phase)'"
+  [ "$(journal_field "$dir" rl41 background-stopped)" = "shell · sleep 900" ] \
+    || fail "the failed stop's journal should keep the background work its confirmed dialog stopped"
+  assert_contains "$out" "background-stopped=shell · sleep 900" \
+    "the failure should name the background work the confirmed dialog stopped"
+  pass "fm-control relaunch: a stop that fails after confirming the exit dialog keeps the stopped work in its journal"
+}
+
 test_prepublication_failure_keeps_concurrent_durable_metadata() {
   local dir control_pid link_out rc i=0
   dir=$(new_case rollback-race rl30)
@@ -2542,6 +2560,7 @@ test_checkpoint_refusal_leaves_the_record_byte_identical
 test_checkpoint_refuses_uninspectable_head_and_status
 test_launch_failure_keeps_the_prior_record_and_reports_it
 test_failed_relaunch_keeps_stopped_background_evidence
+test_unconfirmed_stop_keeps_stopped_background_evidence
 test_prepublication_failure_keeps_concurrent_durable_metadata
 test_post_publication_launch_failure_keeps_the_new_record
 test_stop_transport_failure_reconciles_a_dead_agent
