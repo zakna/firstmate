@@ -72,6 +72,7 @@ $command_fields
 EOF
 [ "$cmd" = fm-remote-secondmate-control.sh ] || exit 93
 [ "$action" = relaunch ] || exit 94
+printf '%s\n' "$(perl -MMIME::Base64=decode_base64 -e 'print join(" ", split(/\0/, decode_base64($ARGV[0])))' "$argv_b64")" >> "$FM_FAKE_ARGV_LOG"
 case "$FM_FAKE_RELAUNCH_MODE" in
   refuse)
     printf 'error: unverified remote secondmate harness: %s\n' "$harness" >&2
@@ -97,7 +98,7 @@ chmod +x "$FAKEBIN/fake-ssh"
 
 run_relaunch() {  # <args...>
   env FM_HOME="$HOME_DIR" FM_SSH_BIN="$FAKEBIN/fake-ssh" \
-    FM_FAKE_RELAUNCH_MODE="${FM_FAKE_RELAUNCH_MODE:-}" \
+    FM_FAKE_RELAUNCH_MODE="${FM_FAKE_RELAUNCH_MODE:-}" FM_FAKE_ARGV_LOG="$TMP/argv.log" \
     "$ROOT/bin/fm-remote-secondmate-relaunch.sh" "$@" 2>&1
 }
 
@@ -188,5 +189,62 @@ expect_code 0 "$RC" "a confirmed remote relaunch should succeed with an armed PR
 fm_pr_poll_artifacts_valid "$HOME_DIR/state" ios "$ROOT/bin/fm-pr-poll.sh" \
   || fail "a remote relaunch broke PR poll authentication by writing harness/model/effort after pr="
 pass "a remote relaunch keeps an already-armed PR poll authenticating"
+
+# --- --stop-background crosses the hop only when the operator passes it -----
+reset_meta
+: > "$TMP/argv.log"
+OUT=$(run_relaunch ios claude claude-opus-5-5 medium); RC=$?
+expect_code 0 "$RC" "a plain relaunch should succeed"$'\n'"$OUT"
+assert_no_grep 'stop-background' "$TMP/argv.log" "the flag must not be sent unless the operator passed it"
+reset_meta
+: > "$TMP/argv.log"
+OUT=$(run_relaunch ios claude claude-opus-5-5 medium --stop-background); RC=$?
+expect_code 0 "$RC" "a relaunch authorizing --stop-background should succeed"$'\n'"$OUT"
+assert_grep 'relaunch ios claude claude-opus-5-5 medium --stop-background' "$TMP/argv.log" \
+  "the host-local relaunch did not receive --stop-background"
+reset_meta
+: > "$TMP/argv.log"
+OUT=$(run_relaunch ios claude claude-opus-5-5 medium --bogus); RC=$?
+expect_code 2 "$RC" "an unknown fifth argument must be refused"$'\n'"$OUT"
+[ ! -s "$TMP/argv.log" ] || fail "a refused fifth argument still crossed the hop: $(cat "$TMP/argv.log")"
+pass "a remote relaunch forwards --stop-background only when passed"
+
+# --- host-local relaunch maps --stop-background into fm-control.sh's argv ---
+# Runs the real control script from a copy of bin/ whose fm-control.sh is a stub
+# that records its argv, against a seeded remote home with a fm-remote endpoint.
+HOSTBIN="$TMP/host/bin"
+REMOTE_HOME="$TMP/remote-home"
+mkdir -p "$TMP/host" "$REMOTE_HOME/state/parent-route" "$REMOTE_HOME/bin"
+cp -R "$ROOT/bin" "$HOSTBIN"
+cat > "$HOSTBIN/fm-control.sh" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$FM_FAKE_CONTROL_LOG"
+SH
+chmod +x "$HOSTBIN/fm-control.sh"
+printf 'ios\n' > "$REMOTE_HOME/.fm-secondmate-home"
+printf '# remote secondmate home fixture\n' > "$REMOTE_HOME/AGENTS.md"
+fm_write_meta "$REMOTE_HOME/state/parent-route/ios.meta" \
+  "window=fm-remote:p1" "worktree=-" "project=-" "backend=herdr" \
+  "endpoint_task_id=ios" "harness=claude" "model=claude-opus-5-5" "effort=medium" \
+  "herdr_session=fm-remote" "herdr_workspace_id=w1" "herdr_tab_id=t1" "herdr_pane_id=p1"
+run_host_relaunch() {  # <args...>
+  env FM_HOME="$REMOTE_HOME" FM_FAKE_CONTROL_LOG="$TMP/control.log" \
+    "$HOSTBIN/fm-remote-secondmate-control.sh" relaunch "$@" 2>&1
+}
+: > "$TMP/control.log"
+OUT=$(run_host_relaunch ios claude claude-opus-5-5 medium); RC=$?
+expect_code 0 "$RC" "a plain host-local relaunch should succeed"$'\n'"$OUT"
+[ "$(cat "$TMP/control.log")" = "ios relaunch --harness claude --model claude-opus-5-5 --effort medium" ] \
+  || fail "plain host-local relaunch argv was wrong: $(cat "$TMP/control.log")"
+: > "$TMP/control.log"
+OUT=$(run_host_relaunch ios claude claude-opus-5-5 medium --stop-background); RC=$?
+expect_code 0 "$RC" "a host-local relaunch with --stop-background should succeed"$'\n'"$OUT"
+[ "$(cat "$TMP/control.log")" = "ios relaunch --harness claude --model claude-opus-5-5 --effort medium --stop-background" ] \
+  || fail "host-local relaunch did not pass --stop-background to fm-control.sh: $(cat "$TMP/control.log")"
+: > "$TMP/control.log"
+OUT=$(run_host_relaunch ios claude claude-opus-5-5 medium --bogus); RC=$?
+[ "$RC" -ne 0 ] || fail "a host-local relaunch must refuse an unknown fifth argument"
+[ ! -s "$TMP/control.log" ] || fail "a refused host-local relaunch still ran fm-control.sh: $(cat "$TMP/control.log")"
+pass "a host-local relaunch maps --stop-background into fm-control.sh only when passed"
 
 echo "ALL TESTS PASSED"
