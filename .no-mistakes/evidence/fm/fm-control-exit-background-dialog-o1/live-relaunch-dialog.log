@@ -1,0 +1,107 @@
+=== relaunch (no --stop-background) ===
+rc=1
+error: task xdlg's claude agent has background work its exit would stop: shell · sleep 1801 # FMEXITDIALOG29954x22260. Chose Stay, so the agent keeps running and nothing was stopped. If that work is disposable, run 'bin/fm-control.sh xdlg relaunch' directly with the same options plus --stop-background; otherwise let it finish first
+error: relaunch of xdlg failed while stopping the old agent, which is still running; its original instructions were restored
+meta unchanged after refusal
+--- pane after refusal ---
+
+
+
+
+
+
+
+
+
+                                                                                                    ◐ medium · /effort
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  T/fm-control-exit-dialog.eouuSt/wt (xdlg) ctx 29793/1000000  Haiku medium | 5h [░░░░░░] 1% →15:10 | 7d [░░░░░░] …
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+ok - live relaunch refuses at dialog and keeps agent + work
+=== relaunch --stop-background ===
+rc=1
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/data/xdlg/brief.md must contain nonempty ## Captain's intent and ## Firstmate spec subsections (or a nonempty legacy # Task body) before spawn
+error: the replacement agent for xdlg could not be launched on claude
+error: the old agent's exit also stopped its background work: background-stopped=shell · sleep 1801 # FMEXITDIALOG29954x22260
+error: xdlg's agent was stopped but the replacement did not launch; no agent is running, and its work plus the recorded progress note are preserved at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
+bg shell stopped
+--- state files ---
+xdlg.control-relaunch
+xdlg.control-relaunch.background-stopped
+xdlg.control-relaunch.brief-prior
+xdlg.control-relaunch.meta-prior
+xdlg.control-relaunch.note
+xdlg.meta
+## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch
+v1
+task=xdlg
+phase=failed:launching
+ts=2026-10-11T08:12:43Z
+backend=herdr
+endpoint=fm-lab-control-exit-dialog-29954:w1:p2
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
+kind=ship
+from_harness=claude
+from_model=default
+from_effort=default
+to_harness=claude
+to_model=haiku
+to_effort=default
+rollback=prior-record-kept
+exit_result=stopped background-stopped=shell · sleep 1801 # FMEXITDIALOG29954x22260
+## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.background-stopped
+shell · sleep 1801 # FMEXITDIALOG29954x22260
+## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.brief-prior
+# brief for xdlg
+## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.meta-prior
+window=fm-lab-control-exit-dialog-29954:w1:p2
+endpoint_task_id=xdlg
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
+project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/proj
+harness=claude
+kind=ship
+mode=no-mistakes
+yolo=off
+model=default
+effort=default
+backend=herdr
+herdr_session=fm-lab-control-exit-dialog-29954
+herdr_workspace_id=w1
+herdr_tab_id=w1:t2
+herdr_pane_id=w1:p2
+## /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/home/state/xdlg.control-relaunch.note
+live dialog test
+--- meta after ---
+window=fm-lab-control-exit-dialog-29954:w1:p2
+endpoint_task_id=xdlg
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/wt
+project=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-control-exit-dialog.eouuSt/proj
+harness=claude
+kind=ship
+mode=no-mistakes
+yolo=off
+model=default
+effort=default
+backend=herdr
+herdr_session=fm-lab-control-exit-dialog-29954
+herdr_workspace_id=w1
+herdr_tab_id=w1:t2
+herdr_pane_id=w1:p2
+--- pane after ---
+CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+
+➜  wt git:xdlg CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --model haiku --dangerously-skip-permissions
+
+Resume this session with:
+claude --resume 3940ae49-6887-47c9-bda8-6c1c9076edf6
+
+➜  wt git:xdlg
