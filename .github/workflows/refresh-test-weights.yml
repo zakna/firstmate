@@ -1,0 +1,68 @@
+name: Refresh test-shard weights
+
+# Keeps the portable-serial shard hints in bin/fm-test-run.sh current from the
+# timing artifacts CI already uploads. Mechanism and rationale:
+# docs/fm-test-portable-shards.md "Automatic refresh".
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: refresh-test-weights
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh serial shard hints
+    runs-on: ubuntu-latest
+    # Fast tier: downloads a few small artifacts and rewrites one table.
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: automation/refresh-test-weights
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Download timing artifacts from recent green main runs
+        run: |
+          set -eu
+          runs=$(gh run list --workflow CI --branch main --event push --status success \
+            --limit 3 --json databaseId --jq '.[].databaseId')
+          [ -n "$runs" ] || { echo "::notice::no green main CI run to measure"; exit 0; }
+          for run in $runs; do
+            gh run download "$run" --pattern 'fm-test-timing-portable-serial-*' \
+              -D "$RUNNER_TEMP/timing/$run" || echo "::warning::run $run has no serial timing artifacts"
+          done
+      - name: Refresh hints
+        id: refresh
+        run: |
+          set -eu
+          files=$(find "$RUNNER_TEMP/timing" -name '*.json' 2>/dev/null || true)
+          [ -n "$files" ] || { echo "::notice::no timing files; nothing to refresh"; exit 0; }
+          # shellcheck disable=SC2086
+          bin/fm-test-weights-refresh.sh $files
+          bin/fm-test-run.sh --check-coverage
+      - name: Open or update the refresh PR
+        run: |
+          set -eu
+          if git diff --quiet -- bin/fm-test-run.sh; then
+            echo "serial hints already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git commit -am "chore(ci): refresh portable-serial shard weights from measured durations"
+          git push --force origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore(ci): refresh portable-serial shard weights" \
+              --body "Serial shard hints rewritten by bin/fm-test-weights-refresh.sh from the slowest passing duration of each script in the last three green main CI runs. Only the serial hint table changes. Review the diff and merge, or close to skip this cycle."
+          fi
