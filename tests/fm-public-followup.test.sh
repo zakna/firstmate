@@ -3632,6 +3632,38 @@ test_rejected_event_wakes_owning_home_with_specific_reason() {
   pass "a rejected event records a specific reason and wakes the owning home once"
 }
 
+# CI ignores SIGPIPE, so a first-line reader that stops before its writer ends
+# leaves the writer printing a broken-pipe line on stderr. A tasks-axi refusal
+# far larger than a pipe buffer makes that timing deterministic.
+test_rejection_reason_reads_its_producer_whole_when_sigpipe_is_ignored() {
+  local home real_tasks event_id out err reason
+  home=$(make_home reject-sigpipe)
+  seed_commitment "$home" pf-reject-pipe req-reject-pipe discord main work-pipe
+  event_id=$(publish_raw_event "$home/state/public-followup/events" pf-reject-pipe main work-pipe \
+    pr-merged '{"pr_url":"https://github.com/example/repo/pull/7"}') \
+    || fail "could not publish the raw event"
+  real_tasks=$(command -v tasks-axi)
+  cat > "$home/fakebin/tasks-axi" <<'SH'
+#!/usr/bin/env bash
+case " $* " in
+  *" work-event "*)
+    printf '\n  \nrefused: first line\n' >&2
+    awk 'BEGIN { for (i = 0; i < 100000; i++) print "refused: a later line" }' >&2
+    exit 1 ;;
+esac
+exec "$REAL_TASKS_AXI" "$@"
+SH
+  chmod +x "$home/fakebin/tasks-axi"
+  out=$( (trap '' PIPE; REAL_TASKS_AXI="$real_tasks" run_pf "$home" consume) 2> "$home/consume.err") || true
+  err=$(cat "$home/consume.err")
+  assert_contains "$out" "rejected $event_id" "consume must quarantine the refused event"
+  reason=$(cat "$home/state/public-followup/rejected/$event_id.reason")
+  [ "$reason" = "refused: first line" ] \
+    || fail "the recorded reason must be the first non-blank refusal line, got '$reason'"
+  assert_not_contains "$err" "Broken pipe" "consume must add no broken-pipe line with SIGPIPE ignored"
+  pass "a tasks-axi refusal is read whole, so an ignored SIGPIPE adds no stderr line"
+}
+
 # The incident's exact shape: the bad value came from a REMOTE secondmate and
 # was quarantined in the owning main home after collection. The owning home is
 # the one that must be woken.
@@ -3998,6 +4030,7 @@ test_emit_refuses_a_repeated_deliverable_key
 test_emit_refuses_a_missing_required_deliverable
 test_emit_rules_agree_with_tasks_axi
 test_rejected_event_wakes_owning_home_with_specific_reason
+test_rejection_reason_reads_its_producer_whole_when_sigpipe_is_ignored
 test_remote_rejected_event_wakes_owning_home
 test_emit_requires_promised_deliverable_under_any_successful_outcome
 test_emit_requires_error_code_on_a_failure_promise
