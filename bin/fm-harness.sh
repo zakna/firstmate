@@ -19,6 +19,13 @@
 #                                        codex-native/<id>. Other efforts retain
 #                                        their adapter's existing policy. Native
 #                                        Codex validates model support at startup.
+#        fm-harness.sh validate-model-effort <harness> <model> <effort>
+#                                        Refuse a claude launch whose model id names the
+#                                        Sonnet family at high effort or above (allowed
+#                                        maximum medium) or the Haiku family at medium
+#                                        effort or above (allowed maximum low). Other
+#                                        harnesses, models, and an empty or default
+#                                        effort pass.
 #        fm-harness.sh ancestry [<pid>] print "<strength> <harness>" for the nearest
 #                                        harness process at or above <pid> (default this
 #                                        process), or nothing when the walk finds none.
@@ -528,7 +535,32 @@ validate_native_effort() {
   return 1
 }
 
+validate_model_effort() {
+  local harness=${1:-} model=${2:-} effort=${3:-} family cap rank cap_rank lower
+  [ "$harness" = claude ] || return 0
+  lower=$(printf '%s' "$model" | tr '[:upper:]' '[:lower:]')
+  case "$lower" in
+    *sonnet*) family=Sonnet cap=medium ;;
+    *haiku*) family=Haiku cap=low ;;
+    *) return 0 ;;
+  esac
+  case "$effort" in
+    low) rank=1 ;;
+    medium) rank=2 ;;
+    high) rank=3 ;;
+    xhigh) rank=4 ;;
+    max) rank=5 ;;
+    ultra) rank=6 ;;
+    *) return 0 ;;
+  esac
+  case "$cap" in low) cap_rank=1 ;; *) cap_rank=2 ;; esac
+  [ "$rank" -gt "$cap_rank" ] || return 0
+  echo "error: model '$model' ($family) cannot start at effort '$effort'; the allowed maximum for $family is $cap" >&2
+  return 1
+}
+
 case "${1:-}" in
+  validate-model-effort) shift; validate_model_effort "$@" ;;
   validate-native-effort) shift; validate_native_effort "$@" ;;
   ancestry)
     case "${2:-}" in
