@@ -553,10 +553,9 @@ cmd_silent() {
 # `NAME[N]:` header where `  - key: value` opens an item, `    key: value`
 # continues it, and a keyed block such as `target:` or `attachments[N]{...}:`
 # is kept verbatim under `_blocks` rather than as a prompt field. An item that
-# lacks any of uid, prompt, selector, tag, or text, or holds a quoted value that
-# never closes, is flagged `_incomplete`, and an item beyond the declared count
-# is flagged `_surplus` rather than dropped;
-# its items are returned as decoded field hashes. decode_value turns the
+# lacks any of uid, prompt, selector, tag, or text is flagged `_incomplete`;
+# item counts and unterminated quotes are judged once, for the whole capture,
+# by capture_invalid. Its items are returned as decoded field hashes. decode_value turns the
 # JSON-style escapes of a quoted value into text the same way for both forms.
 # shellcheck disable=SC2016 # Perl, not the shell, expands these variables.
 PROMPT_ITEMS_PL='
@@ -641,7 +640,6 @@ PROMPT_ITEMS_PL='
       if ($list_form) {
         if ($line =~ /^  - (\w+):[ ]?(.*)$/) {
           push @listed, {};
-          $listed[-1]{_surplus} = 1 if @listed > $want;
           $listed[-1]{$1} = $2;
           $block = undef;
         } elsif (@listed && $line =~ /^    (\w+)(\[\d+\](?:\{[^}]*\})?)?:[ ]?(.*)$/) {
@@ -665,10 +663,6 @@ PROMPT_ITEMS_PL='
       $item->{_incomplete} = (grep { !exists $item->{$_} } qw(uid prompt selector tag text)) ? 1 : 0;
       for my $k (grep { !/^_/ } keys %$item) {
         my $v = $item->{$k};
-        if ($v =~ /^"/ && $v !~ /^"((?:[^"\\]|\\.)*)"\s*$/) {
-          $item->{_incomplete} = 1;
-          next;
-        }
         next unless $v =~ /^"((?:[^"\\]|\\.)*)"\s*$/;
         $item->{$k} = decode_value($1);
       }
@@ -694,8 +688,8 @@ PROMPT_ITEMS_PL='
 # quoted fields carry JSON-style escapes, or as the expanded `prompts[N]:` list
 # form of `- key: value` items; read_prompt_items parses both, so this reads
 # fields by name rather than assuming a fixed column, and takes only items whose
-# `tag` field is `choice`; a list-form item flagged `_incomplete`, as from a
-# truncated capture, or `_surplus`, beyond the declared count, is skipped so a partial choice never feeds intake. A freeform `message` row is captain prose and is deliberately never a
+# `tag` field is `choice`; an invalid capture yields nothing, and a list-form
+# item flagged `_incomplete` is skipped so a partial choice never feeds intake. A freeform `message` row is captain prose and is deliberately never a
 # source of decision keys. A row that does not carry both a slug-shaped `question`
 # and the versioned `selection` and `note` fields inside its `Context data:` block
 # is skipped. A time-limited rollout branch accepts the old question/answer
@@ -737,7 +731,7 @@ cmd_choice_rows() {
     my @choices;
     for my $parsed (@parsed, @$items) {
       my %f = %$parsed;
-      next if $f{_incomplete} || $f{_surplus};
+      next if $f{_incomplete};
       next unless defined $f{tag} && $f{tag} eq "choice";
       my $prompt = $f{prompt};
       next unless defined $prompt && $prompt =~ /Context data:\s*(\{.*\})/s;
