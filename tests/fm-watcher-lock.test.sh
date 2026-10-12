@@ -379,6 +379,25 @@ leave_dead_link_locks() {  # <state> <lock>...
   wait "$holder" 2>/dev/null || true
 }
 
+test_lock_dead_owner_fixture_leaves_complete_pid() {
+  # fm_lock_try_create rewrites the owner's pid file after linking the lock, so a
+  # fixture that kills the holder as soon as the link resolves can land inside
+  # that truncate-then-write window and leave an empty pid. An empty pid is a
+  # live mid-acquire claim for its minimum grace, so a dead owner must carry its
+  # whole pid when the helper returns.
+  local dir state i lock
+  dir=$(make_case lock-dead-owner-fixture)
+  state="$dir/state"
+  i=0
+  while [ "$i" -lt 150 ]; do
+    lock="$state/.fixture-$i.lock.steal"
+    leave_dead_link_locks "$state" "$lock"
+    [ -s "$lock/pid" ] || fail "dead lock owner fixture left an empty pid on iteration $i"
+    i=$((i + 1))
+  done
+  pass "dead lock owner fixture always leaves a complete pid"
+}
+
 test_lock_reclaims_dead_steal_owner_without_nested_markers() {
   local dir state lockdir fakebin lnlog rc
   dir=$(make_case lock-dead-steal-owner)
@@ -1543,6 +1562,7 @@ test_guard_warnings
 test_lock_single_winner_under_concurrency
 test_lock_steals_dead_pid_lock
 test_lock_stale_steal_single_winner_under_concurrency
+test_lock_dead_owner_fixture_leaves_complete_pid
 test_lock_reclaims_dead_steal_owner_without_nested_markers
 test_lock_recovers_dead_nested_steal_chain
 test_lock_steal_reap_cannot_remove_successor
