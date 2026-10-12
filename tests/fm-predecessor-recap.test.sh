@@ -160,7 +160,7 @@ test_attached_short_password_is_redacted_for_mysql_only() {
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p2","name":"Bash","input":{"command":"mysqladmin -u root -psecret status; sudo env MYSQL_HOST=db /usr/bin/mysql -psecret"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar"}}]'
-    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"ok"}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"install mysql-server\n-pthread flag"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p4","name":"Bash","input":{"command":"mysql \\\n  -u root \\\n  -pcontpass9 db"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p4","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p5","name":"Bash","input":{"command":"mysql -e \"use db; select 1\" -pquotedpass7\necho done\nmysql -plinepass3"}}]'
@@ -175,6 +175,7 @@ test_attached_short_password_is_redacted_for_mysql_only() {
   assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
   assert_contains "$out" "mysqlimport -uroot -p[redacted] db && mariadb -p[redacted] && mariadb-dump -p[redacted]" "an attached -p value after other MySQL and MariaDB clients should be redacted"
   assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
+  assert_contains "$out" "install mysql-server -pthread flag" "a -p option on the line after a mysql word should be left unchanged"
   pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
 }
 
