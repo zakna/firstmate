@@ -60,7 +60,8 @@
 # JWTs, bearer tokens, Basic authorization values, private-key blocks, URL
 # passwords, the whole value of any key/token/secret/password/credential
 # assignment, quoted or not, and the value after a space-separated credential
-# flag such as --password, --token, or -p) become [redacted], and a tool call
+# flag such as --password, --token, or -p, and the value attached to -p in a mysql,
+# mysqladmin, or mysqldump command) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
@@ -134,7 +135,8 @@ def scrub:
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
   | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
   | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]");
+  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]")
+  | gsub("(?<f>\\bmysql(admin|dump)?\\b[^|;&\n]*?\\s-p)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]");
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
