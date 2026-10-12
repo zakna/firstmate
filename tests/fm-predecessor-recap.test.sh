@@ -150,6 +150,26 @@ test_transcript_truncated_and_bounded() {
   pass "recap: long items are cut and the recap is bounded by count and bytes"
 }
 
+test_attached_short_password_is_redacted_for_mysql_only() {
+  local dir t out
+  dir=$(new_case attachedp)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p1","name":"Bash","input":{"command":"mysql -phunter2"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p2","name":"Bash","input":{"command":"mysqladmin -u root -psecret status"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *hunter2* | *-psecret*) fail "an attached -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted]" "an attached -p value after mysql should be redacted"
+  assert_contains "$out" "mysqladmin -u root -p[redacted] status" "an attached -p value after mysqladmin options should be redacted"
+  assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
+  pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
+}
+
 test_secrets_are_redacted_and_dotenv_omitted() {
   local dir t out
   dir=$(new_case secrets)
@@ -309,6 +329,7 @@ test_newest_eligible_transcript_wins
 test_transcript_absent_gives_one_reason_line
 test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
+test_attached_short_password_is_redacted_for_mysql_only
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
