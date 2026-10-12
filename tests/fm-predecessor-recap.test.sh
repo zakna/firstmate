@@ -250,6 +250,11 @@ test_scrollback_fallback_for_other_harnesses() {
   assert_contains "$out" "• Ran mysql -uroot -p[redacted] db" "an attached -p value after a TUI prefix should be redacted"
   assert_contains "$out" "user@host:~/x\$ mysql -p[redacted]" "an attached -p value after a shell prompt should be redacted"
   assert_contains "$out" "❯ mysql -p[redacted]" "an attached -p value after a prompt glyph should be redacted"
+  printf '%s\n' "a ${esc}]8;;http://x" 'line two' '$ mysql -poscpass9 db' 'last' >"$dir/osc"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/osc" </dev/null)
+  case "$out" in *oscpass9*) fail "an attached -p password after an unterminated OSC reached the recap: $out" ;; esac
+  assert_contains "$out" "> line two" "a line after an unterminated OSC sequence should be kept"
+  assert_contains "$out" "> last" "the last line after an unterminated OSC sequence should be kept"
   printf '%s\n' '$ git add -p' 'diff --git a/x b/x' 'Enter password:' 'Welcome back' '$ ls -p' 'src/' >"$dir/options"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/options" </dev/null)
   assert_contains "$out" "> diff --git a/x b/x" "a line after one ending in -p should be kept"
