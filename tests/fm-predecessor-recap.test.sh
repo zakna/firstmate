@@ -187,11 +187,14 @@ test_attached_short_password_quoting_and_repeats_are_redacted() {
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p6","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p7","name":"Bash","input":{"command":"mysql -poldpass8 -h localhost -pactualsecret9 db"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p7","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p8","name":"Bash","input":{"command":"mysql -phunter\\ wordtwo db && mysql -pfoo\" fragthree\" db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p8","content":"ok"}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *ansicpass* | *oldpass8* | *actualsecret9*) fail "an attached -p password reached the recap: $out" ;; esac
+  case "$out" in *ansicpass* | *oldpass8* | *actualsecret9* | *wordtwo* | *fragthree*) fail "an attached -p password reached the recap: $out" ;; esac
   assert_contains "$out" "mysql -p[redacted] db" "an ANSI-C quoted attached -p value should be redacted whole"
   assert_contains "$out" "mysql -p[redacted] -h localhost -p[redacted] db" "every attached -p value in one command should be redacted"
+  assert_contains "$out" "mysql -p[redacted] db && mysql -p[redacted] db" "an attached -p value with a backslash-escaped space or adjacent quoted fragment should be redacted whole"
   pass "recap: ANSI-C quoted and repeated attached -p values are redacted"
 }
 
@@ -238,6 +241,9 @@ test_scrollback_fallback_for_other_harnesses() {
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
   case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
   assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
+  printf '%s\n' "\$ mysql \\${esc}[0m" '>   -pcolorpass7 db' >"$dir/colored"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/colored" </dev/null)
+  case "$out" in *colorpass7*) fail "an attached -p password after a colored continuation reached the recap: $out" ;; esac
   printf '%s\n' '• Ran mysql -uroot -psecretA db' 'user@host:~/x$ mysql -psecret3' '❯ mysql -psecret4' >"$dir/prompts"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/prompts" </dev/null)
   case "$out" in *secretA* | *secret3* | *secret4*) fail "an attached -p password after a prompt reached the recap: $out" ;; esac
