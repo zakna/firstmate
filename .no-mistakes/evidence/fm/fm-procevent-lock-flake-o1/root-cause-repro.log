@@ -1,0 +1,2 @@
+complete-pid (new fixture output) steal pid=[42449] -> acquirer rc=0
+empty-pid (old fixture race output) steal pid=[] -> acquirer rc=8
