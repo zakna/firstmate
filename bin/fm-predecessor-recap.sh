@@ -121,11 +121,13 @@ fi
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
 # Repeats until stable so each attached -p value in one command is redacted, not only the first.
-def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?\\s-p)(?!\\[redacted\\])(\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]") | if . == $in then . else mysqlp end;
-def scrub:
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?\\s-p)(?!\\[redacted\\])(?:\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\])+"; "\(.f)[redacted]") | if . == $in then . else mysqlp end;
+def strip:
   gsub("\u001b\\[[0-9;?]*[ -/]*[@-~]"; "")
   | gsub("\u001b\\][^\u0007\u001b]*(\u0007|\u001b\\\\)?"; "")
-  | gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "")
+  | gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "");
+def scrub:
+  strip
   | gsub("-----BEGIN [A-Z ]*PRIVATE KEY-----[\\s\\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)"; "[redacted private key]")
   | gsub("sk-[A-Za-z0-9_-]{16,}"; "[redacted]")
   | gsub("(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,})"; "[redacted]")
@@ -215,7 +217,7 @@ claude_items() {  # <jsonl>
 
 scrollback_items() {  # <file>
   jq -Rs -r --argjson max "$MAX_BYTES" "$JQ_DEFS"'
-    split("\n") | .[-400:] | join("\n") | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
+    split("\n") | .[-400:] | join("\n") | strip | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
