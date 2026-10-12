@@ -122,6 +122,11 @@ fi
 JQ_DEFS='
 # Repeats until stable so each attached -p value in one command is redacted, not only the first.
 def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?\\s-p)(?!\\[redacted\\])(?:\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\])+"; "\(.f)[redacted]") | if . == $in then . else mysqlp end;
+# The last 400 rows, started early enough that a row continued by a trailing
+# backslash keeps the rows it continues (at most 40 extra), so the command word survives the cut.
+def tail400: length as $n | . as $l | ([$n - 400, 0] | max) as $s
+  | ($s | until(. <= 0 or $s - . >= 40 or ($l[. - 1] | test("\\\\$") | not); . - 1)) as $b
+  | $l[$b:];
 def strip:
   gsub("\u001b\\[[0-9;?]*[ -/]*[@-~]"; "")
   | gsub("\u001b\\][^\u0007\u001b\n]*(\u0007|\u001b\\\\)?"; "")
@@ -217,7 +222,7 @@ claude_items() {  # <jsonl>
 
 scrollback_items() {  # <file>
   jq -Rs -r --argjson max "$MAX_BYTES" "$JQ_DEFS"'
-    split("\n") | .[-400:] | join("\n") | strip | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
+    split("\n") | tail400 | join("\n") | strip | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
