@@ -161,11 +161,17 @@ test_attached_short_password_is_redacted_for_mysql_only() {
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p4","name":"Bash","input":{"command":"mysql \\\n  -u root \\\n  -pcontpass9 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p4","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p5","name":"Bash","input":{"command":"mysql -e \"use db; select 1\" -pquotedpass7"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p5","content":"ok"}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *hunter2* | *-psecret*) fail "an attached -p password reached the recap: $out" ;; esac
+  case "$out" in *hunter2* | *-psecret* | *contpass9* | *quotedpass7*) fail "an attached -p password reached the recap: $out" ;; esac
   assert_contains "$out" "mysql -p[redacted]" "an attached -p value after mysql should be redacted"
   assert_contains "$out" "mysqladmin -u root -p[redacted] status" "an attached -p value after mysqladmin options should be redacted"
+  assert_contains "$out" "-u root \\ -p[redacted] db" "an attached -p value on a continuation line should be redacted"
+  assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
   assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
   pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
 }
