@@ -220,6 +220,11 @@ test_scrollback_fallback_for_other_harnesses() {
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
   case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
   assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
+  printf '%s\n' '$ git add -p' 'diff --git a/x b/x' 'Enter password:' 'Welcome back' '$ ls -p' 'src/' >"$dir/options"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/options" </dev/null)
+  assert_contains "$out" "> diff --git a/x b/x" "a line after one ending in -p should be kept"
+  assert_contains "$out" "> Welcome back" "a line after a password prompt should be kept"
+  assert_contains "$out" "> src/" "a line after one ending in ls -p should be kept"
 
   : >"$dir/empty"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/empty" </dev/null)

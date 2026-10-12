@@ -213,7 +213,7 @@ claude_items() {  # <jsonl>
 
 scrollback_items() {  # <file>
   jq -Rs -r --argjson max "$MAX_BYTES" "$JQ_DEFS"'
-    split("\n") | .[-400:] | join("\n") | scrub | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
+    split("\n") | .[-400:] | join("\n") | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(clip | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
