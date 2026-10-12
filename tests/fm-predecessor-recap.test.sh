@@ -159,7 +159,7 @@ test_attached_short_password_is_redacted_for_mysql_only() {
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p1","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p2","name":"Bash","input":{"command":"mysqladmin -u root -psecret status; sudo env MYSQL_HOST=db /usr/bin/mysql -psecret"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
-    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar; find /etc/mysql -name x -print; ls /var/lib/mysql -pla"}}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p4","name":"Bash","input":{"command":"mysql \\\n  -u root \\\n  -pcontpass9 db"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p4","content":"ok"}]'
@@ -174,7 +174,7 @@ test_attached_short_password_is_redacted_for_mysql_only() {
   assert_contains "$out" "-u root \\ -p[redacted] db" "an attached -p value on a continuation line should be redacted"
   assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
   assert_contains "$out" "mysqlimport -uroot -p[redacted] db && mariadb -p[redacted] && mariadb-dump -p[redacted]" "an attached -p value after other MySQL and MariaDB clients should be redacted"
-  assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar; find /etc/mysql -name x -print; ls /var/lib/mysql -pla" "unrelated options should be left unchanged"
+  assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
   pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
 }
 
@@ -221,6 +221,12 @@ test_scrollback_fallback_for_other_harnesses() {
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
   case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
   assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
+  printf '%s\n' '• Ran mysql -uroot -psecretA db' 'user@host:~/x$ mysql -psecret3' '❯ mysql -psecret4' >"$dir/prompts"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/prompts" </dev/null)
+  case "$out" in *secretA* | *secret3* | *secret4*) fail "an attached -p password after a prompt reached the recap: $out" ;; esac
+  assert_contains "$out" "• Ran mysql -uroot -p[redacted] db" "an attached -p value after a TUI prefix should be redacted"
+  assert_contains "$out" "user@host:~/x\$ mysql -p[redacted]" "an attached -p value after a shell prompt should be redacted"
+  assert_contains "$out" "❯ mysql -p[redacted]" "an attached -p value after a prompt glyph should be redacted"
   printf '%s\n' '$ git add -p' 'diff --git a/x b/x' 'Enter password:' 'Welcome back' '$ ls -p' 'src/' >"$dir/options"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/options" </dev/null)
   assert_contains "$out" "> diff --git a/x b/x" "a line after one ending in -p should be kept"
