@@ -155,7 +155,7 @@ test_attached_short_password_is_redacted_for_mysql_only() {
   dir=$(new_case attachedp)
   t=$(transcript_path "$dir" s1)
   {
-    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p1","name":"Bash","input":{"command":"mysql -phunter2"}}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p1","name":"Bash","input":{"command":"mysql -phunter2 && mysqlimport -uroot -phunter2 db && mariadb -phunter2 && mariadb-dump -psecret"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p1","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p2","name":"Bash","input":{"command":"mysqladmin -u root -psecret status"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
@@ -168,10 +168,11 @@ test_attached_short_password_is_redacted_for_mysql_only() {
   } >"$t"
   out=$(run_recap "$dir")
   case "$out" in *hunter2* | *-psecret* | *contpass9* | *quotedpass7*) fail "an attached -p password reached the recap: $out" ;; esac
-  assert_contains "$out" "mysql -p[redacted]" "an attached -p value after mysql should be redacted"
+  assert_contains "$out" "mysql -p[redacted] &&" "an attached -p value after mysql should be redacted"
   assert_contains "$out" "mysqladmin -u root -p[redacted] status" "an attached -p value after mysqladmin options should be redacted"
   assert_contains "$out" "-u root \\ -p[redacted] db" "an attached -p value on a continuation line should be redacted"
   assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
+  assert_contains "$out" "mysqlimport -uroot -p[redacted] db && mariadb -p[redacted] && mariadb-dump -p[redacted]" "an attached -p value after other MySQL and MariaDB clients should be redacted"
   assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
   pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
 }
@@ -215,6 +216,10 @@ test_scrollback_fallback_for_other_harnesses() {
   assert_contains "$out" "> red line" "control sequences should be stripped"
   case "$out" in *"$esc"*) fail "an escape sequence reached the recap" ;; esac
   case "$out" in *abcdefghijkl*) fail "a token in the capture reached the recap: $out" ;; esac
+  printf '%s\n' '$ mysql \' '>   -u root \' '>   -pcapturepass5 db' >"$dir/multiline"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
+  case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
+  assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
 
   : >"$dir/empty"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/empty" </dev/null)
