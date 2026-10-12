@@ -244,6 +244,9 @@ test_scrollback_fallback_for_other_harnesses() {
   printf '%s\n' "\$ mysql \\${esc}[0m" '>   -pcolorpass7 db' >"$dir/colored"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/colored" </dev/null)
   case "$out" in *colorpass7*) fail "an attached -p password after a colored continuation reached the recap: $out" ;; esac
+  { printf '%s\n' '$ mysql \' '>   -pBOUNDARYSECRET db'; for _ in $(seq 398); do echo; done; } >"$dir/cutoff"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/cutoff" </dev/null)
+  case "$out" in *BOUNDARYSECRET*) fail "an attached -p password on the first retained row of a cut-off capture reached the recap: $out" ;; esac
   printf '%s\n' '• Ran mysql -uroot -psecretA db' 'user@host:~/x$ mysql -psecret3' '❯ mysql -psecret4' >"$dir/prompts"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/prompts" </dev/null)
   case "$out" in *secretA* | *secret3* | *secret4*) fail "an attached -p password after a prompt reached the recap: $out" ;; esac
