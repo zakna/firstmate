@@ -1,0 +1,18 @@
+# scratch checkout with remotes:
+origin	git@github.com:zakna/firstmate.git (fetch)
+upstream	git@github.com:kunchenguid/firstmate.git (fetch)
+
+$ gh-axi pr view 50   # old bare-number instruction
+  number: 50
+  title: "fix: handle opencode idle supervision"
+  state: closed
+  author: tommy230
+  draft: no
+  body: "## Intent\n\nCaptain, the developer was trying to finish validation for PR #49 after the earlier run failed only at the push step. They wanted fork routing enabled and verified with a green doctor check, then wanted the validation rerun so the already-passing review, tests, docs, and lint could proceed to a successful push through the fork instead of the upstream repository.\n\n## What Changed\n\n- Teach the supervision daemon's composer guard to treat opencode's bordered `Ask anything...` prompt as i\n... (truncated, 12290 chars total - use --full to see complete body)"
+
+$ gh-axi pr view 50 --repo zakna/firstmate   # new instruction
+  number: 50
+  title: "fix(bin): remove the claim-ritual check from ship spawn and scout promotion"
+  state: merged
+  author: zakna
+  draft: no

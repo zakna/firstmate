@@ -1,0 +1,7 @@
+=== direct-PR ===
+7:Before you report done, read the PR back from the forge and confirm it is not a draft (`gh-axi pr view <number> --repo <owner>/<repo>` must print `draft: no`, where <number> and <owner>/<repo> come from your PR URL, because a bare number can resolve to a different repository); if it is a draft, mark it ready with `gh-axi pr ready <number> --repo <owner>/<repo>`.
+=== no-mistakes ===
+48:At the return point, read the PR back from the forge and confirm it is not a draft (`gh-axi pr view <number> --repo <owner>/<repo>` must print `draft: no`, where <number> and <owner>/<repo> come from your PR URL, because a bare number can resolve to a different repository); if it is a draft, mark it ready with `gh-axi pr ready <number> --repo <owner>/<repo>`.
+=== base commit for contrast ===
+Before you report done, read the PR back from the forge and confirm it is not a draft (`gh-axi pr view <number>` must print `draft: no`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with `gh-axi pr ready <number>`.
+At the return point, read the PR back from the forge and confirm it is not a draft (`gh-axi pr view <number>` must print `draft: no`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with `gh-axi pr ready <number>`.

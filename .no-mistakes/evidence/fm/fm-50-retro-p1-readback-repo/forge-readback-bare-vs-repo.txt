@@ -1,0 +1,25 @@
+$ gh-axi pr view 50   # bare number, as the old instruction said
+pull_request:
+  number: 50
+  title: "fix(bin): remove the claim-ritual check from ship spawn and scout promotion"
+  state: merged
+  author: zakna
+  draft: no
+  merged: "2026-10-11T19:51:57Z"
+  checks: "20 passed, 0 failed, 20 total"
+  body: "## Intent\n\nRemove the claim-ritual check that PR 40 added (fm-spawn.sh refuses a ship spawn, and fm-promote.sh refuses a scout promotion, when a project has a RITUAL.md-style file and the brief lacks `Claim recovery:` and `Claim model:` lines; a prose match in AGENTS.md or CLAUDE.md only warns). The decision: remove it entirely. The portfolio ritual that caused it was an older attempt at managing projects, and firstmate now does that job, so the check is not needed.\n\n## What Changed\n\n- `fm-spawn\n... (truncated, 21692 chars total - use --full to see complete body)"
+  comment_count: 1 — use --comments to see full comments
+  review_count: 0 — use --reviews to see full reviews
+
+$ gh-axi pr view 50 --repo zakna/firstmate   # as the new instruction says
+pull_request:
+  number: 50
+  title: "fix(bin): remove the claim-ritual check from ship spawn and scout promotion"
+  state: merged
+  author: zakna
+  draft: no
+  merged: "2026-10-11T19:51:57Z"
+  checks: "20 passed, 0 failed, 20 total"
+  body: "## Intent\n\nRemove the claim-ritual check that PR 40 added (fm-spawn.sh refuses a ship spawn, and fm-promote.sh refuses a scout promotion, when a project has a RITUAL.md-style file and the brief lacks `Claim recovery:` and `Claim model:` lines; a prose match in AGENTS.md or CLAUDE.md only warns). The decision: remove it entirely. The portfolio ritual that caused it was an older attempt at managing projects, and firstmate now does that job, so the check is not needed.\n\n## What Changed\n\n- `fm-spawn\n... (truncated, 21692 chars total - use --full to see complete body)"
+  comment_count: 1 — use --comments to see full comments
+  review_count: 0 — use --reviews to see full reviews
