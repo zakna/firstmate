@@ -165,23 +165,34 @@ test_attached_short_password_is_redacted_for_mysql_only() {
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p4","content":"ok"}]'
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"p5","name":"Bash","input":{"command":"mysql -e \"use db; select 1\" -pquotedpass7\necho done\nmysql -plinepass3"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p5","content":"ok"}]'
-    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p6","name":"Bash","input":{"command":"mysql -p$\u0027ansicpass 4\u0027 db"}}]'
-    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p6","content":"ok"}]'
-    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p7","name":"Bash","input":{"command":"mysql -poldpass8 -h localhost -pactualsecret9 db"}}]'
-    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p7","content":"ok"}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *hunter2* | *-psecret* | *contpass9* | *quotedpass7* | *linepass3* | *ansicpass* | *oldpass8* | *actualsecret9*) fail "an attached -p password reached the recap: $out" ;; esac
+  case "$out" in *hunter2* | *-psecret* | *contpass9* | *quotedpass7* | *linepass3*) fail "an attached -p password reached the recap: $out" ;; esac
   assert_contains "$out" "mysql -p[redacted] &&" "an attached -p value after mysql should be redacted"
   assert_contains "$out" "mysqladmin -u root -p[redacted] status" "an attached -p value after mysqladmin options should be redacted"
   assert_contains "$out" "sudo env MYSQL_HOST=db /usr/bin/mysql -p[redacted]" "an attached -p value after sudo, env, and a path prefix should be redacted"
   assert_contains "$out" "-u root \\ -p[redacted] db" "an attached -p value on a continuation line should be redacted"
   assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
   assert_contains "$out" "mysqlimport -uroot -p[redacted] db && mariadb -p[redacted] && mariadb-dump -p[redacted]" "an attached -p value after other MySQL and MariaDB clients should be redacted"
-  assert_contains "$out" "mysql -p[redacted] db" "an ANSI-C quoted attached -p value should be redacted whole"
-  assert_contains "$out" "mysql -p[redacted] -h localhost -p[redacted] db" "every attached -p value in one command should be redacted"
   assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
   pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
+}
+
+test_attached_short_password_quoting_and_repeats_are_redacted() {
+  local dir t out
+  dir=$(new_case attachedp2)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p6","name":"Bash","input":{"command":"mysql -p$\u0027ansicpass 4\u0027 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p6","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p7","name":"Bash","input":{"command":"mysql -poldpass8 -h localhost -pactualsecret9 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p7","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *ansicpass* | *oldpass8* | *actualsecret9*) fail "an attached -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted] db" "an ANSI-C quoted attached -p value should be redacted whole"
+  assert_contains "$out" "mysql -p[redacted] -h localhost -p[redacted] db" "every attached -p value in one command should be redacted"
+  pass "recap: ANSI-C quoted and repeated attached -p values are redacted"
 }
 
 test_secrets_are_redacted_and_dotenv_omitted() {
@@ -359,6 +370,7 @@ test_transcript_absent_gives_one_reason_line
 test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
 test_attached_short_password_is_redacted_for_mysql_only
+test_attached_short_password_quoting_and_repeats_are_redacted
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript

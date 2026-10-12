@@ -120,6 +120,8 @@ fi
 # Shared jq definitions: scrubbing, one-line collapse, and the byte bound.
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
+# Repeats until stable so each attached -p value in one command is redacted, not only the first.
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?\\s-p)(?!\\[redacted\\])(\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]") | if . == $in then . else mysqlp end;
 def scrub:
   gsub("\u001b\\[[0-9;?]*[ -/]*[@-~]"; "")
   | gsub("\u001b\\][^\u0007\u001b]*(\u0007|\u001b\\\\)?"; "")
@@ -136,7 +138,7 @@ def scrub:
   | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
   | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]"; "i")
   | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]")
-  | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?\\s-p)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]");
+  | mysqlp;
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
