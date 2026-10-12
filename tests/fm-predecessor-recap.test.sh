@@ -217,7 +217,7 @@ test_scrollback_fallback_for_other_harnesses() {
   assert_contains "$out" "> red line" "control sequences should be stripped"
   case "$out" in *"$esc"*) fail "an escape sequence reached the recap" ;; esac
   case "$out" in *abcdefghijkl*) fail "a token in the capture reached the recap: $out" ;; esac
-  printf '%s\n' '$ mysql \' '>   -u root \' '>   -pcapturepass5 db' >"$dir/multiline"
+  printf '%s\n' "\$ mysql \\" ">   -u root \\" '>   -pcapturepass5 db' >"$dir/multiline"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
   case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
   assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
