@@ -777,6 +777,38 @@ fm_write_secondmate_meta() {
     "projects=$projects"
 }
 
+# --- link-lock fixtures -----------------------------------------------------
+
+# fm_leave_dead_link_locks <wake-lib> <state> <lock>...
+# Start a process that claims each given link lock, then SIGKILL it so every
+# claim is left behind with a dead owner - an acquirer TERMed mid-steal.
+# The holder signals readiness only after every claim has returned, because a
+# claim still rewrites its pid file after linking the lock and a kill inside
+# that rewrite leaves an empty pid, which acquirers honour as a live mid-acquire.
+fm_leave_dead_link_locks() {
+  local lib=$1 state=$2 holder i ready
+  shift 2
+  ready="$state/.holder-ready.$$.$RANDOM"
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    ready=$2
+    shift 2
+    for lock do fm_lock_try_create "$lock" || exit 7; done
+    : > "$ready"
+    exec sleep 30
+  ' _ "$lib" "$ready" "$@" >/dev/null 2>&1 &
+  holder=$!
+  i=0
+  while [ "$i" -lt 500 ] && [ ! -e "$ready" ]; do
+    sleep 0.02
+    i=$((i + 1))
+  done
+  [ -e "$ready" ] || fail "dead link-lock owner did not finish claiming its locks"
+  kill -KILL "$holder" 2>/dev/null || true
+  wait "$holder" 2>/dev/null || true
+  rm -f "$ready"
+}
+
 # --- common assertions ------------------------------------------------------
 
 # assert_equals <expected> <actual> <msg>

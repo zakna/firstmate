@@ -863,6 +863,15 @@ Replacing only the titled row with a solid rule gave `empty` before the fix too,
 `test_matrix_claude_titled_rule_composer` in `tests/fm-composer-lib.test.sh` pins the scrubbed capture, and also checks that typed text under the titled rule still reads `pending` and that a prompt glyph inside a rule never proves a composer.
 Any tool can print a titled rule, so it pairs only under a proven `claude` identity; `test_matrix_titled_rule_needs_claude_identity` pins that gate, and `test_send_text_submit_claude_titled_rule_composer_is_proven_and_submitted` in `tests/fm-backend-herdr.test.sh` pins the Herdr submit path's payload proof under the same rule.
 
+The live guard `FM_COMPOSER_MATRIX_LIVE=1 tests/fm-composer-matrix-live-e2e.test.sh` launches `claude -n <name>` and refreshes this entry against the running process.
+On 2026-10-11 on macOS arm64 (Darwin 25.6.0), tmux 3.7c, it printed:
+
+```text
+ok - claude (2.1.296 (Claude Code)): a named session's real top rule reads as a titled rule (without a claude identity: unknown)
+ok - claude (2.1.296 (Claude Code)): the titled-rule composer read cursorless under a claude identity is empty
+ok - claude (2.1.296 (Claude Code)): the titled-rule composer read at the cursor under a claude identity is empty
+```
+
 ### 2026-09-15 codex-cli 0.154.0 idle starfield and status footer through Herdr
 
 Verified on 2026-09-15 on macOS arm64 (Darwin 25.5.0) against codex-cli 0.154.0 (model gpt-6-astra, fast mode) running as a Codex second mate inside a Herdr pane, read through Herdr's ANSI capture with its exact capability descriptor (`styled=1`, `cursor=0`, `identity=1`, `rows=20`).

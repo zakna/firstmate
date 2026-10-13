@@ -16,14 +16,10 @@
 # instructions under `## Firstmate spec`; the scout-time spec remains context but
 # is not relabeled as the ship spec. Promotion refuses leftover `{TASK}` /
 # `{FIRSTMATE_SPEC}` placeholders and a `## Captain's intent` line opening with
-# a Captain label or address (bin/fm-dod-lib.sh). It also refuses a scout whose
-# project has a dedicated claim-ritual file when the `## Captain's intent` it
-# delivers lacks the `Claim recovery:` and `Claim model:` lines, and only warns
-# when the project's AGENTS.md or CLAUDE.md merely describes a claim ritual
-# (bin/fm-claim-ritual-lib.sh), the same rule bin/fm-spawn.sh applies to a
-# first ship launch. It warns, and still
-# promotes, when the scout-time `## Firstmate spec` hands the worker its own
-# gate responses (bin/fm-gate-delegation-lib.sh). A pre-subsection scout
+# a Captain label or address (bin/fm-dod-lib.sh).
+# It warns, and still promotes, when the scout-time `## Firstmate spec`
+# hands the worker its own gate responses (bin/fm-gate-delegation-lib.sh).
+# A pre-subsection scout
 # brief contributes only Task lines explicitly marked as captain words to intent,
 # read outside fenced blocks and indented examples so a quoted `Captain:` sample
 # never passes the provenance gate as the ask (bin/fm-dod-lib.sh).
@@ -58,8 +54,6 @@ DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
 . "$SCRIPT_DIR/fm-dod-lib.sh"
 # shellcheck source=bin/fm-gate-delegation-lib.sh
 . "$SCRIPT_DIR/fm-gate-delegation-lib.sh"
-# shellcheck source=bin/fm-claim-ritual-lib.sh
-. "$SCRIPT_DIR/fm-claim-ritual-lib.sh"
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
 # shellcheck source=bin/fm-wake-lib.sh
@@ -242,15 +236,6 @@ fi
 if [ -z "$(printf '%s' "$INTENT_BODY" | tr -d '[:space:]')" ]; then
   echo "error: $SCOUT_BRIEF has no provenance-marked Captain's intent; add the captain's actual words before promotion" >&2
   exit 1
-fi
-if [ -n "$PROMOTE_PROJECT" ] && RITUAL_FILE=$(fm_claim_ritual_detect "$PROMOTE_PROJECT"); then
-  if RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$INTENT_BODY"); then
-    echo "error: $PROMOTE_PROJECT runs its own claim ritual (${RITUAL_FILE#"$PROMOTE_PROJECT"/}) but the Captain's intent promotion delivers from $SCOUT_BRIEF lacks: $RITUAL_MISSING; the scout-time Firstmate spec is only context to the promoted worker, so copy the project's claim-recovery procedure and model requirement into ## Captain's intent before promotion (bin/fm-claim-ritual-lib.sh)" >&2
-    exit 1
-  fi
-elif [ -n "$PROMOTE_PROJECT" ] && RITUAL_FILE=$(fm_claim_ritual_prose_detect "$PROMOTE_PROJECT") &&
-  RITUAL_MISSING=$(fm_claim_ritual_brief_missing "$INTENT_BODY"); then
-  echo "warning: $PROMOTE_PROJECT may run its own claim ritual (${RITUAL_FILE#"$PROMOTE_PROJECT"/} describes one) and the Captain's intent promotion delivers from $SCOUT_BRIEF lacks: $RITUAL_MISSING; promoting anyway (bin/fm-claim-ritual-lib.sh)" >&2
 fi
 
 # The promoted worker must receive the same delivery contract an ordinary ship

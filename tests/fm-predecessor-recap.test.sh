@@ -150,6 +150,55 @@ test_transcript_truncated_and_bounded() {
   pass "recap: long items are cut and the recap is bounded by count and bytes"
 }
 
+test_attached_short_password_is_redacted_for_mysql_only() {
+  local dir t out
+  dir=$(new_case attachedp)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p1","name":"Bash","input":{"command":"mysql -phunter2 && mysqlimport -uroot -phunter2 db && mariadb -phunter2 && mariadb-dump -psecret"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p2","name":"Bash","input":{"command":"mysqladmin -u root -psecret status; sudo env MYSQL_HOST=db /usr/bin/mysql -psecret"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p3","name":"Bash","input":{"command":"find . -print; ls -p; grep -P x f; tar -pxf a.tar"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p3","content":"install mysql-server\n-pthread flag"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p4","name":"Bash","input":{"command":"mysql \\\n  -u root \\\n  -pcontpass9 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p4","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p5","name":"Bash","input":{"command":"mysql -e \"use db; select 1\" -pquotedpass7\necho done\nmysql -plinepass3"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p5","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *hunter2* | *-psecret* | *contpass9* | *quotedpass7* | *linepass3*) fail "an attached -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted] &&" "an attached -p value after mysql should be redacted"
+  assert_contains "$out" "mysqladmin -u root -p[redacted] status" "an attached -p value after mysqladmin options should be redacted"
+  assert_contains "$out" "sudo env MYSQL_HOST=db /usr/bin/mysql -p[redacted]" "an attached -p value after sudo, env, and a path prefix should be redacted"
+  assert_contains "$out" "-u root \\ -p[redacted] db" "an attached -p value on a continuation line should be redacted"
+  assert_contains "$out" "-e \"use db; select 1\" -p[redacted]" "a ; inside a quoted argument should not stop the scan"
+  assert_contains "$out" "mysqlimport -uroot -p[redacted] db && mariadb -p[redacted] && mariadb-dump -p[redacted]" "an attached -p value after other MySQL and MariaDB clients should be redacted"
+  assert_contains "$out" "find . -print; ls -p; grep -P x f; tar -pxf a.tar" "unrelated options should be left unchanged"
+  assert_contains "$out" "install mysql-server -pthread flag" "a -p option on the line after a mysql word should be left unchanged"
+  pass "recap: attached -p<value> is redacted for mysql tools and unrelated options are kept"
+}
+
+test_attached_short_password_quoting_and_repeats_are_redacted() {
+  local dir t out
+  dir=$(new_case attachedp2)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p6","name":"Bash","input":{"command":"mysql -p$\u0027ansicpass 4\u0027 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p6","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p7","name":"Bash","input":{"command":"mysql -poldpass8 -h localhost -pactualsecret9 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p7","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"p8","name":"Bash","input":{"command":"mysql -phunter\\ wordtwo db && mysql -pfoo\" fragthree\" db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"p8","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *ansicpass* | *oldpass8* | *actualsecret9* | *wordtwo* | *fragthree*) fail "an attached -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted] db" "an ANSI-C quoted attached -p value should be redacted whole"
+  assert_contains "$out" "mysql -p[redacted] -h localhost -p[redacted] db" "every attached -p value in one command should be redacted"
+  assert_contains "$out" "mysql -p[redacted] db && mysql -p[redacted] db" "an attached -p value with a backslash-escaped space or adjacent quoted fragment should be redacted whole"
+  pass "recap: ANSI-C quoted and repeated attached -p values are redacted"
+}
+
 test_secrets_are_redacted_and_dotenv_omitted() {
   local dir t out
   dir=$(new_case secrets)
@@ -189,6 +238,32 @@ test_scrollback_fallback_for_other_harnesses() {
   assert_contains "$out" "> red line" "control sequences should be stripped"
   case "$out" in *"$esc"*) fail "an escape sequence reached the recap" ;; esac
   case "$out" in *abcdefghijkl*) fail "a token in the capture reached the recap: $out" ;; esac
+  printf '%s\n' "\$ mysql \\" ">   -u root \\" '>   -pcapturepass5 db' >"$dir/multiline"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/multiline" </dev/null)
+  case "$out" in *capturepass5*) fail "an attached -p password on a continuation line of the capture reached the recap: $out" ;; esac
+  assert_contains "$out" ">   -p[redacted] db" "an attached -p value on a continuation line of the capture should be redacted"
+  printf '%s\n' "\$ mysql \\${esc}[0m" '>   -pcolorpass7 db' >"$dir/colored"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/colored" </dev/null)
+  case "$out" in *colorpass7*) fail "an attached -p password after a colored continuation reached the recap: $out" ;; esac
+  { printf '%s\n' "\$ mysql \\" '>   -pBOUNDARYSECRET db'; for _ in $(seq 398); do echo; done; } >"$dir/cutoff"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/cutoff" </dev/null)
+  case "$out" in *BOUNDARYSECRET*) fail "an attached -p password on the first retained row of a cut-off capture reached the recap: $out" ;; esac
+  printf '%s\n' '• Ran mysql -uroot -psecretA db' 'user@host:~/x$ mysql -psecret3' '❯ mysql -psecret4' >"$dir/prompts"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/prompts" </dev/null)
+  case "$out" in *secretA* | *secret3* | *secret4*) fail "an attached -p password after a prompt reached the recap: $out" ;; esac
+  assert_contains "$out" "• Ran mysql -uroot -p[redacted] db" "an attached -p value after a TUI prefix should be redacted"
+  assert_contains "$out" "user@host:~/x\$ mysql -p[redacted]" "an attached -p value after a shell prompt should be redacted"
+  assert_contains "$out" "❯ mysql -p[redacted]" "an attached -p value after a prompt glyph should be redacted"
+  printf '%s\n' "a ${esc}]8;;http://x" 'line two' '$ mysql -poscpass9 db' 'last' >"$dir/osc"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/osc" </dev/null)
+  case "$out" in *oscpass9*) fail "an attached -p password after an unterminated OSC reached the recap: $out" ;; esac
+  assert_contains "$out" "> line two" "a line after an unterminated OSC sequence should be kept"
+  assert_contains "$out" "> last" "the last line after an unterminated OSC sequence should be kept"
+  printf '%s\n' '$ git add -p' 'diff --git a/x b/x' 'Enter password:' 'Welcome back' '$ ls -p' 'src/' >"$dir/options"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/options" </dev/null)
+  assert_contains "$out" "> diff --git a/x b/x" "a line after one ending in -p should be kept"
+  assert_contains "$out" "> Welcome back" "a line after a password prompt should be kept"
+  assert_contains "$out" "> src/" "a line after one ending in ls -p should be kept"
 
   : >"$dir/empty"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/empty" </dev/null)
@@ -309,6 +384,8 @@ test_newest_eligible_transcript_wins
 test_transcript_absent_gives_one_reason_line
 test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
+test_attached_short_password_is_redacted_for_mysql_only
+test_attached_short_password_quoting_and_repeats_are_redacted
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript

@@ -799,7 +799,7 @@ Ship branch: $branch
 This task ships **direct-PR**: you raise the PR yourself, without the no-mistakes pipeline.
 The task is complete only when committed on your branch.
 When it is implemented and committed, push your branch and open a PR with \`gh-axi\` that is ready for review, not a draft$pr_base.
-Before you report done, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number>\` must print \`draft: no\`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with \`gh-axi pr ready <number>\`.
+Before you report done, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number> --repo <owner>/<repo>\` must print \`draft: no\`, where <number> and <owner>/<repo> come from your PR URL, because a bare number can resolve to a different repository); if it is a draft, mark it ready with \`gh-axi pr ready <number> --repo <owner>/<repo>\`.
 A draft cannot be merged, so a done report on one leaves the merge unasked.
 Then append \`done [at=<epoch>]: PR {url}\` to the status file and stop.
 EOF
@@ -842,7 +842,7 @@ Read that from the default branch's \`.no-mistakes.yaml\` (\`git show origin/<de
 - With CI (no \`no_ci: true\`): the return point is /no-mistakes reporting CI green (the CI-ready return point - do not wait for it to keep monitoring in the background until merge).
 - With no CI (\`no_ci: true\`): no check runs, so do not wait for the drive call to report CI green, which can arrive hours later.
   The return point is the ci step's log (\`no-mistakes axi logs --step ci\`) showing that the repository declares no CI and is treating that as all checks passed, which the ci step logs at its first poll; read that log while the drive call runs in the background.
-At the return point, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number>\` must print \`draft: no\`, where <number> is the PR number from your PR URL); if it is a draft, mark it ready with \`gh-axi pr ready <number>\`.
+At the return point, read the PR back from the forge and confirm it is not a draft (\`gh-axi pr view <number> --repo <owner>/<repo>\` must print \`draft: no\`, where <number> and <owner>/<repo> come from your PR URL, because a bare number can resolve to a different repository); if it is a draft, mark it ready with \`gh-axi pr ready <number> --repo <owner>/<repo>\`.
 A draft cannot be merged, so a done report on one leaves the merge unasked.
 Then append the one ready line that names the real evidence, and stop. You are finished.
 - With CI: \`done [at=<epoch>]: PR {url} checks green: {name of each check that ran}; read changed files: {yes|no|unknown}\`.
