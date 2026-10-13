@@ -60,7 +60,8 @@
 # JWTs, bearer tokens, Basic authorization values, private-key blocks, URL
 # passwords, the whole value of any key/token/secret/password/credential
 # assignment, quoted or not, and the value after a space-separated credential
-# flag such as --password, --token, or -p) become [redacted], and a tool call
+# flag such as --password, --token, or -p, and the value attached to -p in any
+# mysql* or mariadb* client command) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
@@ -119,10 +120,19 @@ fi
 # Shared jq definitions: scrubbing, one-line collapse, and the byte bound.
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
-def scrub:
+# Repeats until stable so each attached -p value in one command is redacted, not only the first.
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\\[redacted\\])(?:\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\])+"; "\(.f)[redacted]") | if . == $in then . else mysqlp end;
+# The last 400 rows, started early enough that a row continued by a trailing
+# backslash keeps the rows it continues (at most 40 extra), so the command word survives the cut.
+def tail400: length as $n | . as $l | ([$n - 400, 0] | max) as $s
+  | ($s | until(. <= 0 or $s - . >= 40 or ($l[. - 1] | test("\\\\$") | not); . - 1)) as $b
+  | $l[$b:];
+def strip:
   gsub("\u001b\\[[0-9;?]*[ -/]*[@-~]"; "")
-  | gsub("\u001b\\][^\u0007\u001b]*(\u0007|\u001b\\\\)?"; "")
-  | gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "")
+  | gsub("\u001b\\][^\u0007\u001b\n]*(\u0007|\u001b\\\\)?"; "")
+  | gsub("[\u0000-\u0008\u000b-\u001f\u007f]"; "");
+def scrub:
+  strip
   | gsub("-----BEGIN [A-Z ]*PRIVATE KEY-----[\\s\\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)"; "[redacted private key]")
   | gsub("sk-[A-Za-z0-9_-]{16,}"; "[redacted]")
   | gsub("(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,})"; "[redacted]")
@@ -134,7 +144,8 @@ def scrub:
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
   | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
   | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]");
+  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]")
+  | mysqlp;
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
@@ -211,7 +222,7 @@ claude_items() {  # <jsonl>
 
 scrollback_items() {  # <file>
   jq -Rs -r --argjson max "$MAX_BYTES" "$JQ_DEFS"'
-    split("\n") | .[-400:] | map(clip | scrub | sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
+    split("\n") | tail400 | map(clip) | join("\n") | strip | [splits("(?<!\\\\)\n")] | map(scrub) | join("\n") | split("\n") | map(sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
