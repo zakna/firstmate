@@ -491,6 +491,26 @@ test_arm_still_fails_a_watcher_stalled_outside_system_sleep() {
   pass "watch-arm: a live watcher stalled outside system sleep still fails the re-arm"
 }
 
+# The real last-wake probe: on macOS it reads a whole epoch second no later
+# than now from kern.waketime; elsewhere it reports no known wake, which leaves
+# beacon ages unadjusted.
+test_system_wake_probe_reads_the_host_wake() {
+  local dir out now
+  dir=$(make_case wake-probe)
+  out=$(unset FM_TEST_SYSTEM_WAKE_EPOCH; FM_STATE_OVERRIDE="$dir/state" \
+    bash -c '. "$1"; fm_system_last_wake_epoch' _ "$ROOT/bin/fm-wake-lib.sh") \
+    || fail "the system wake probe failed"
+  now=$(date +%s)
+  if [ "$(uname)" = Darwin ]; then
+    case "$out" in ''|*[!0-9]*) fail "the macOS wake probe did not read an epoch second: '$out'" ;; esac
+    [ "$out" -le "$now" ] || fail "the macOS wake probe read a wake in the future: $out > $now"
+    [ "$out" -gt 0 ] || fail "the macOS wake probe read epoch zero"
+  else
+    [ -z "$out" ] || fail "a host without a wake probe reported a wake: $out"
+  fi
+  pass "watch-arm: the system wake probe reads the host wake where it is known"
+}
+
 test_rearm_resurfaces_durable_queue_and_remote_open_decision() {
   local dir home state fakebin result armout drainout status watcher_pid sequence generation decision_recovery_arm decision_successor
   dir=$(make_case rearm-resurface)
@@ -1826,6 +1846,7 @@ test_attached_arm_follows_a_slow_live_holder
 test_attached_arm_hands_a_stalled_holder_to_its_replacement
 test_arm_follows_a_live_watcher_resuming_from_system_sleep
 test_arm_still_fails_a_watcher_stalled_outside_system_sleep
+test_system_wake_probe_reads_the_host_wake
 test_rearm_resurfaces_durable_queue_and_remote_open_decision
 test_slow_rearm_recovery_is_still_surfaced
 test_marker_publish_failure_retains_recovery_evidence

@@ -235,6 +235,11 @@ Below that bound a stale beacon alone does not end an attached arm's watch of a 
 At the bound the arm reports a typed stalled-holder failure so its owner's retry can replace the holder.
 `fm_watcher_stall_bound` in `bin/fm-wake-lib.sh` owns the shared derivation; `bin/fm-watch-arm.sh`'s header owns the exact attached-arm close behavior.
 
+System sleep suspends a live watcher, so its beacon ages in wall-clock time while it cannot run.
+The live-watcher health check, the stale-holder refusal, and the stall bound therefore age a beacon older than the host's last wake from that wake, so a re-arm right after the wake follows the resuming watcher instead of reporting a broken mechanism.
+A watcher that stays silent for a full grace after the wake is stale as before.
+`fm_beacon_awake_age` in `bin/fm-wake-lib.sh` owns that measurement; the last wake is known only on macOS, and other platforms keep the unadjusted wall-clock age.
+
 The auto-arm hook additionally exports its resolved `FM_GUARD_GRACE` when it forks `bin/fm-watch-arm.sh`.
 The arm wrapper and the watcher it may start then judge staleness with the exact same value the hook just judged it with, whether that value came from an operator override or the poll-derived default.
 
