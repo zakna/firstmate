@@ -52,6 +52,12 @@ export FM_GATE_REFUSE_BYPASS=1
 # leaked harness pin alone stays inert outside a suite.
 export FM_TEST_SEAM=1
 
+# Pin the host's last system wake to "unknown" (bin/fm-wake-lib.sh
+# fm_system_last_wake_epoch), so a beacon a case backdates is not re-aged from a
+# real wake that happened minutes before the run. A case that exercises sleep
+# sets FM_TEST_SYSTEM_WAKE_EPOCH itself, or unsets it to read the real probe.
+export FM_TEST_SYSTEM_WAKE_EPOCH=0
+
 # Clear the task-worker marker bin/fm-spawn.sh exports into ship and scout
 # panes. This suite builds git-init fixture repositories whose primary checkout
 # it runs a copied bin/fm-test-run.sh in, and that runner refuses the primary

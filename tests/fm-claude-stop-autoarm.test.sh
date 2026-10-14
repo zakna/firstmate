@@ -674,6 +674,45 @@ test_benign_cycle_end_with_live_watcher_is_silent() {
   pass "auto-arm: benign cycle end with a live watcher and fresh beacon stays silent across the next cycle"
 }
 
+# A Mac that sleeps with its lid closed suspends the live watcher, so its beacon
+# ages in wall-clock time while it cannot run. Right after the wake that stale
+# beacon on a live, identity-matched watcher is not a broken mechanism: the
+# watcher has had less than one grace window of awake time to beat again.
+# The same live watcher whose beacon stayed stale for a full grace after the
+# wake is still the real failure and keeps the operator notice.
+test_failed_cycle_with_watcher_resuming_from_sleep_is_benign() {
+  local dir out status pid identity now
+  dir=$(make_primary_dir "$TMP_ROOT/sleep-resume")
+  : > "$dir/state/task.meta"
+  write_arm_fixture "$dir" failed
+  sleep 60 &
+  pid=$!
+  identity=$(watcher_identity "$dir" "$pid") || fail "could not identify the suspended watcher holder"
+  record_watcher_lock "$dir" "$pid" "$identity"
+  now=$(date +%s)
+  fm_touch_epoch "$((now - 900))" "$dir/state/.last-watcher-beat"
+  out=$(FM_TEST_SYSTEM_WAKE_EPOCH=$((now - 5)) run_autoarm "$dir" 2>/dev/null); status=$?
+  expect_code 0 "$status" "a watcher resuming from system sleep must not fail the auto-arm"
+  [ -z "$out" ] || fail "a watcher resuming from system sleep produced an operator notice: $out"
+  [ "$(epoch_outcome "$dir")" = clean ] || fail "sleep-resume cycle must record outcome=clean, got: $(epoch_outcome "$dir")"
+  [ ! -e "$dir/state/.claude-autoarm-failure-notified" ] || fail "sleep-resume cycle opened a failure episode"
+  kill -0 "$pid" 2>/dev/null || fail "the auto-arm signalled the resuming watcher"
+
+  dir=$(make_primary_dir "$TMP_ROOT/sleep-then-stalled")
+  : > "$dir/state/task.meta"
+  write_arm_fixture "$dir" failed
+  record_watcher_lock "$dir" "$pid" "$identity"
+  now=$(date +%s)
+  fm_touch_epoch "$((now - 900))" "$dir/state/.last-watcher-beat"
+  out=$(FM_TEST_SYSTEM_WAKE_EPOCH=$((now - 400)) run_autoarm "$dir" 2>/dev/null); status=$?
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  expect_code 2 "$status" "a watcher still silent a full grace after the wake must fail the auto-arm"
+  assert_contains "$out" "automatic supervision mechanism is broken" "a watcher stalled after the wake must keep the failure notice"
+  [ "$(epoch_outcome "$dir")" = failed ] || fail "stalled-after-wake cycle must record outcome=failed, got: $(epoch_outcome "$dir")"
+  pass "auto-arm: a watcher resuming from system sleep is benign, one stalled after the wake still fails"
+}
+
 test_positive_recovery_budget_contention_preserves_episode() {
   local dir out status pid identity holder
   dir=$(make_primary_dir "$TMP_ROOT/recovery-budget-contention")
@@ -1714,6 +1753,7 @@ test_failure_notice_marker_write_refuses_delivery_and_retries
 test_unverified_clean_close_exhausts_retries
 test_post_alarm_actionable_close_is_suppressed
 test_benign_cycle_end_with_live_watcher_is_silent
+test_failed_cycle_with_watcher_resuming_from_sleep_is_benign
 test_positive_recovery_budget_contention_preserves_episode
 test_owner_mutex_contention_preserves_failure_episode_reset
 test_arms_for_x_mode_poll_need_without_inflight

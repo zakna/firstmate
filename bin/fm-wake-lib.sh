@@ -122,6 +122,45 @@ fm_path_age() {
   echo $(( now - m ))
 }
 
+# fm_system_last_wake_epoch
+# Prints the epoch second of the host's most recent wake from system sleep, or
+# nothing when it is unknown. Darwin reads kern.waketime; every other platform
+# prints nothing, which leaves beacon ages unadjusted. A host that has not
+# slept since boot reports no known wake. Under FM_TEST_SEAM=1,
+# FM_TEST_SYSTEM_WAKE_EPOCH replaces the probe (0 or empty: no known wake).
+fm_system_last_wake_epoch() {
+  local out
+  if [ "${FM_TEST_SEAM:-}" = 1 ] && [ -n "${FM_TEST_SYSTEM_WAKE_EPOCH+set}" ]; then
+    case "$FM_TEST_SYSTEM_WAKE_EPOCH" in ''|0|*[!0-9]*) return 0 ;; esac
+    printf '%s\n' "$FM_TEST_SYSTEM_WAKE_EPOCH"
+    return 0
+  fi
+  [ "$_FM_UNAME" = Darwin ] || return 0
+  out=$(/usr/sbin/sysctl -n kern.waketime 2>/dev/null) || return 0
+  [[ "$out" =~ ^\{\ sec\ =\ ([0-9]+), ]] || return 0
+  [ "${BASH_REMATCH[1]}" -gt 0 ] || return 0
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+# fm_beacon_awake_age <path>
+# A watcher beacon's age in seconds of host awake time, for liveness verdicts.
+# System sleep suspends a live watcher, so its beacon ages in wall-clock time
+# while it cannot run; a beacon older than the last wake is therefore aged
+# from that wake, giving the resumed watcher the same grace a fresh beacon
+# gets. A watcher that does not beat within that grace after the wake, or one
+# with no known wake after its beacon, ages exactly as fm_path_age reports.
+fm_beacon_awake_age() {
+  local path=$1 m now wake
+  m=$(fm_path_mtime "$path") || { echo 999999; return; }
+  [ -n "$m" ] || { echo 999999; return; }
+  fm_epoch_seconds_to now
+  wake=$(fm_system_last_wake_epoch)
+  if [ -n "$wake" ] && [ "$wake" -gt "$m" ] && [ "$wake" -le "$now" ]; then
+    m=$wake
+  fi
+  echo $(( now - m ))
+}
+
 # fm_poll_derived_grace [poll-seconds]
 # Default guard-grace derivation: max(300, poll + 60). A watcher touches its
 # liveness beacon once per poll cycle, so a fixed 300s grace stops correctly
@@ -194,7 +233,7 @@ fm_watcher_healthy() {
   fm_pid_alive "$pid" || return 1
   fm_watcher_lock_matches_pid "$state" "$watch_path" "$pid" "$home" || return 1
   identity=$FM_WATCHER_MATCHED_IDENTITY
-  age=$(fm_path_age "$beat")
+  age=$(fm_beacon_awake_age "$beat")
   [ "$age" -lt "$grace" ] || return 1
   # shellcheck disable=SC2034 # Read by callers after fm_watcher_healthy returns.
   FM_WATCHER_HEALTHY_PID=$pid

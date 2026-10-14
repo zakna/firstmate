@@ -406,7 +406,7 @@ attach_and_wait() {
       continue
     fi
     if attached_holder_live "$attached_pid"; then
-      age=$(fm_path_age "$BEAT")
+      age=$(fm_beacon_awake_age "$BEAT")
       if [ "$age" -lt "$STALL_BOUND" ]; then
         sleep "$ATTACH_POLL"
         continue
