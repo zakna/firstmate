@@ -71,8 +71,9 @@
 #   --per-script-timeout-secs N
 #                   terminate a script that runs longer than N seconds and
 #                   record it as exit 124 (0 disables, the default). The
-#                   --changed applies 1500s automatically, above the current
-#                   slowest CI hint with margin; exceeding it becomes a bounded
+#                   --changed applies 1500s automatically (2100s for
+#                   tests/fm-supervision-host.test.sh), above each script's
+#                   CI hint with margin; exceeding it becomes a bounded
 #                   failure, not proof of a hang. --max-wall-ms is checked
 #                   after the run and so cannot catch a hang on its own.
 #                   External interruption cleanup is outside this runner's
@@ -189,9 +190,8 @@ PER_SCRIPT_TIMEOUT_AUTOMATIC=0
 # Bound applied automatically on the automatic --changed path, derived from
 # measured healthy runtimes with margin rather than picked: it keeps
 # tests/fm-watch-triage.test.sh (about 1075s under CI load) under the bound with
-# roughly 1.4x headroom, though tests/fm-supervision-host.test.sh has measured up
-# to about 1757s under CI load (the hint table below records both loaded
-# figures), and it stays under the 30-minute normal CI tier so a wedged script
+# roughly 1.4x headroom (the one script above it has its own bound below; the
+# hint table records both loaded figures), and it stays under the 30-minute normal CI tier so a wedged script
 # fails here, with its output, before the job cap cancels the lane. It is a guard, not a speed control: a HUNG script becomes a
 # bounded failure instead of an unbounded suite, which is the shape that
 # silently outruns a caller's invocation budget.
