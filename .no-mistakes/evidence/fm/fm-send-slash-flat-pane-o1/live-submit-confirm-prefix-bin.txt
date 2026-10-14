@@ -1,0 +1,10 @@
+ok - live Herdr submit confirm: Claude Code (2.1.299 (Claude Code)) on herdr 0.9.3 reports empty and renders the requested reply in isolated session fm-lab-herdr-submit-con-14560-23456
+ok - live Herdr submit confirm: Claude Code (2.1.299 (Claude Code)) on herdr 0.9.3 submits a U+2063 away-supervisor payload whose read-back drops the mark
+not ok - Claude Code (2.1.299 (Claude Code)) on herdr 0.9.3: fm-send refused a skill slash command to an idle named session: ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the requested message WILL still be sent.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: text not sent to fm-lab-herdr-submit-con-14560-23456:w2:p1 (herdr send failed; tried meta=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-herdr-submit-confirm-live.9tnpsy/skillhome/state/submitskill-o1.meta; backend=from-meta)
