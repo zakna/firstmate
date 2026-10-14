@@ -227,11 +227,8 @@ while [ "$i" -lt 60 ]; do
   sleep 1
 done
 [ "$idle" = 1 ] || fail "named Claude Code ($VERSION) session on $HERDR_VER never rendered an idle composer"
-screen=$(lab pane read "$SKILL_PANE" --source visible 2>/dev/null || true)
-case "$screen" in
-  *fm-submitskill*) ;;
-  *) fail "Claude Code ($VERSION) on $HERDR_VER: the named session did not render its title, so this scenario would not cover a titled composer rule" ;;
-esac
+lab pane read "$SKILL_PANE" --source visible 2>/dev/null | grep -F 'fm-submitskill' | grep -qF '─' \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: the named session did not render its title on the composer rule, so this scenario would not cover a titled composer rule"
 cat > "$SKILL_HOME/state/submitskill-o1.meta" <<EOF
 window=$SESSION:$SKILL_PANE
 endpoint_task_id=submitskill-o1
