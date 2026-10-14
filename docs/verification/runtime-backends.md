@@ -872,6 +872,16 @@ ok - claude (2.1.296 (Claude Code)): the titled-rule composer read cursorless un
 ok - claude (2.1.296 (Claude Code)): the titled-rule composer read at the cursor under a claude identity is empty
 ```
 
+The same rule broke typed slash commands sent by `bin/fm-send.sh` to a named Claude worker on Herdr: the pre-Enter payload proof read the typed command as absent, cleared it, and the send reported `herdr send failed`.
+The third scenario of `FM_HERDR_SUBMIT_CONFIRM_LIVE=1 tests/fm-herdr-submit-confirm-live-e2e.test.sh` sends a project skill's slash command through `bin/fm-send.sh` to an idle `claude -n <name>` pane and requires the skill's reply.
+On 2026-10-14 on macOS arm64 (Darwin 25.6.0), Herdr 0.9.3, it printed:
+
+```text
+ok - live Herdr submit confirm: Claude Code (2.1.299 (Claude Code)) on herdr 0.9.3 runs a skill slash command sent by fm-send to an idle named session
+```
+
+Run against the tree before the titled-rule fix, the same scenario failed with `fm-send refused a skill slash command to an idle named session`, the `herdr send failed` shape.
+
 ### 2026-09-15 codex-cli 0.154.0 idle starfield and status footer through Herdr
 
 Verified on 2026-09-15 on macOS arm64 (Darwin 25.5.0) against codex-cli 0.154.0 (model gpt-6-astra, fast mode) running as a Codex second mate inside a Herdr pane, read through Herdr's ANSI capture with its exact capability descriptor (`styled=1`, `cursor=0`, `identity=1`, `rows=20`).
@@ -1343,7 +1353,7 @@ ok - fm_backend_herdr_composer_state: a slash-command popup cannot hide a typed 
 ok - fm_backend_herdr_send_text_submit: a typed slash command hidden behind its popup is still proven and submitted
 ```
 
-Live guard (third scenario of the opt-in guard, verifying the agent actually exited):
+Live guard (fourth scenario of the opt-in guard, verifying the agent actually exited):
 
 ```sh
 FM_HERDR_SUBMIT_CONFIRM_LIVE=1 tests/fm-herdr-submit-confirm-live-e2e.test.sh
