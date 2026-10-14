@@ -194,7 +194,7 @@ mkdir -p "$SKILL_WORK/.claude/skills/fmprobe" "$SKILL_HOME/state" "$SKILL_HOME/c
 cat > "$SKILL_WORK/.claude/skills/fmprobe/SKILL.md" <<EOF
 ---
 name: fmprobe
-description: Live-guard probe skill. Reply with exactly $SKILL_TOKEN and nothing else.
+description: Live-guard probe skill.
 ---
 Reply with exactly $SKILL_TOKEN and nothing else.
 EOF
@@ -243,7 +243,7 @@ herdr_session=$SESSION
 herdr_pane_id=$SKILL_PANE
 EOF
 skill_send() { # <text>
-  FM_HOME="$SKILL_HOME" FM_SEND_SETTLE=0 bash "$ROOT/bin/fm-send.sh" submitskill-o1 "$1" >/dev/null 2>&1
+  { FM_HOME="$SKILL_HOME" FM_SEND_SETTLE=0 bash "$ROOT/bin/fm-send.sh" submitskill-o1 "$1" >/dev/null; } 2>&1
 }
 skill_wait_reply() { # <token> <min-occurrences>
   local n=0 occurrences
@@ -266,15 +266,18 @@ lab pane send-keys "$SKILL_PANE" enter >/dev/null \
   || fail "could not submit the warm-up turn in the named session"
 skill_wait_reply "$WARM_TOKEN" 2 \
   || fail "Claude Code ($VERSION) on $HERDR_VER: the named session never answered its warm-up turn"
+idle=0
 i=0
 while [ "$i" -lt 45 ]; do
   st=$(lab agent get "$SKILL_PANE" 2>/dev/null | jq -r '.result.agent.agent_status // empty')
-  case "$st" in idle|done) break ;; esac
+  case "$st" in idle|done) idle=1; break ;; esac
   i=$((i + 1))
   sleep 1
 done
-skill_send '/fmprobe' \
-  || fail "Claude Code ($VERSION) on $HERDR_VER: fm-send refused a skill slash command to an idle named session (the herdr send failed shape)"
+[ "$idle" = 1 ] \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: the named session never went idle after its warm-up turn (last status '$st')"
+send_err=$(skill_send '/fmprobe') \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: fm-send refused a skill slash command to an idle named session: $send_err"
 skill_wait_reply "$SKILL_TOKEN" 1 \
   || fail "Claude Code ($VERSION) on $HERDR_VER: fm-send reported a delivered skill slash command but the skill never replied"
 pass "live Herdr submit confirm: Claude Code ($VERSION) on $HERDR_VER runs a skill slash command sent by fm-send to an idle named session"
