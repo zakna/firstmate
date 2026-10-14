@@ -185,6 +185,7 @@ JOBS_EXPLICIT=0
 JOBS_MAX=8
 MAX_WALL_MS=
 PER_SCRIPT_TIMEOUT_SECS=0
+PER_SCRIPT_TIMEOUT_AUTOMATIC=0
 # Bound applied automatically on the automatic --changed path, derived from
 # measured healthy runtimes with margin rather than picked: it keeps
 # tests/fm-watch-triage.test.sh (about 1075s under CI load) under the bound with
@@ -195,6 +196,11 @@ PER_SCRIPT_TIMEOUT_SECS=0
 # bounded failure instead of an unbounded suite, which is the shape that
 # silently outruns a caller's invocation budget.
 CHANGED_DEFAULT_TIMEOUT_SECS=1500
+# The one script whose measured CI runtime (about 1757s) exceeds the default
+# above; it gets its own automatic bound with roughly 1.2x headroom, and every
+# other script keeps CHANGED_DEFAULT_TIMEOUT_SECS. An explicit
+# --per-script-timeout-secs still applies to every script, this one included.
+CHANGED_SUPERVISION_HOST_TIMEOUT_SECS=2100
 
 # How many separate-runner shards the portable serial remainder splits into.
 # One owner: CI lane names carry this count and are refused when they disagree.
@@ -2278,6 +2284,7 @@ AUTO_CONCURRENCY=0
 if { [ "$MODE" = changed ] || [ "$MODE" = scripts ]; } && [ "$JOBS_EXPLICIT" -eq 0 ]; then
   if [ "$MODE" = changed ] && [ "${#SCRIPTS[@]}" -gt 0 ] && [ "$PER_SCRIPT_TIMEOUT_SECS" -eq 0 ]; then
     PER_SCRIPT_TIMEOUT_SECS=$CHANGED_DEFAULT_TIMEOUT_SECS
+    PER_SCRIPT_TIMEOUT_AUTOMATIC=1
   fi
   auto_admissible=0
   for s in "${SCRIPTS[@]}"; do
@@ -2457,6 +2464,18 @@ record_script_result() {
   TOTAL=$((TOTAL + 1))
 }
 
+# The bound one script runs under: the automatic --changed bound, except the
+# slow supervision-host suite, which has its own automatic bound. An explicit
+# bound is returned unchanged for every script.
+script_timeout_bound() {  # <script>
+  if [ "$PER_SCRIPT_TIMEOUT_AUTOMATIC" -eq 1 ] \
+    && [ "$(basename "$1")" = fm-supervision-host.test.sh ]; then
+    printf '%s\n' "$CHANGED_SUPERVISION_HOST_TIMEOUT_SECS"
+  else
+    printf '%s\n' "$PER_SCRIPT_TIMEOUT_SECS"
+  fi
+}
+
 # Run <script>, capturing output to <out>. <stream> 1 also echoes it live.
 # <id> only has to be unique within this run. When PER_SCRIPT_TIMEOUT_SECS is
 # positive, a script that outruns it is terminated and reported as exit 124: a
@@ -2470,30 +2489,31 @@ run_script_bounded() {  # <script> <out> <stream> <id>
   local GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
   # shellcheck source=tests/git-config-helpers.sh
   . "$ROOT/tests/git-config-helpers.sh" || return
-  local rc
+  local rc bound
   : "$id"
+  bound=$(script_timeout_bound "$script")
   set +e
   if [ "$stream" -eq 1 ]; then
-    if [ "$PER_SCRIPT_TIMEOUT_SECS" -gt 0 ]; then
+    if [ "$bound" -gt 0 ]; then
       # Expansion is intentionally deferred to the child bash passed to -c.
       # shellcheck disable=SC2016
-      fm_run_timed "$PER_SCRIPT_TIMEOUT_SECS" bash -c \
+      fm_run_timed "$bound" bash -c \
         'bash "$1" 2>&1 | tee "$2"; exit "${PIPESTATUS[0]}"' _ "$script" "$out"
       rc=$?
     else
       bash "$script" 2>&1 | tee "$out"
       rc=${PIPESTATUS[0]}
     fi
-  elif [ "$PER_SCRIPT_TIMEOUT_SECS" -gt 0 ]; then
-    fm_run_timed "$PER_SCRIPT_TIMEOUT_SECS" bash "$script" >"$out" 2>&1
+  elif [ "$bound" -gt 0 ]; then
+    fm_run_timed "$bound" bash "$script" >"$out" 2>&1
     rc=$?
   else
     bash "$script" >"$out" 2>&1
     rc=$?
   fi
-  if [ "$PER_SCRIPT_TIMEOUT_SECS" -gt 0 ] && [ "$rc" -eq 124 ]; then
+  if [ "$bound" -gt 0 ] && [ "$rc" -eq 124 ]; then
     printf 'not ok - %s exceeded the per-script bound of %ss and was terminated\n' \
-      "$script" "$PER_SCRIPT_TIMEOUT_SECS" >>"$out"
+      "$script" "$bound" >>"$out"
     [ "$stream" -eq 1 ] && tail -1 "$out"
   fi
   return "$rc"
