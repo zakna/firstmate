@@ -1200,6 +1200,9 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.on?.("before_agent_start", (event) => {
+    // Pi 1.2 also raises this event for an idle custom-message run with no
+    // user prompt; `in` narrows that union and still compiles on older Pi.
+    if (!("prompt" in event)) return;
     consumeWake(generation, event.prompt);
   });
   pi.on?.("message_start", (event) => {

@@ -1681,6 +1681,14 @@ ${context.command}
     // getEntries() here loses the captain request that the next wake may answer.
     // Stage it verbatim and remember the future persisted index for turn_end's
     // duplicate suppression. Operational extension injections are not dialog.
+    // Pi 1.2 also raises this event for an idle custom-message run, which
+    // carries the opening message instead of a user prompt; `in` narrows that
+    // union and still compiles on older Pi, where every event carries one.
+    if (!("prompt" in event)) {
+      const opening = (event as { message?: { content?: unknown } }).message?.content;
+      processingOpenedThisRun = queuedProcessingContent !== null && opening === queuedProcessingContent;
+      return;
+    }
     const prompt = event.prompt;
     processingOpenedThisRun = queuedProcessingContent !== null && prompt === queuedProcessingContent;
     const trimmed = prompt.trim();
