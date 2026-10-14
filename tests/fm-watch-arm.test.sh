@@ -455,23 +455,23 @@ test_arm_follows_a_live_watcher_resuming_from_system_sleep() {
 }
 
 # Sleep explains staleness only up to one grace window after the wake. A live
-# watcher whose beacon is older than the grace and that did not beat during the
-# awake time since the wake, or whose beacon went stale before the system slept,
-# is still refused, so the real-failure path keeps its FAILED report.
+# watcher that beat after the wake and then went silent past the grace, or one
+# that hung before the system slept and did not beat within the grace after the
+# wake, is still refused, so the real-failure path keeps its FAILED report.
 test_arm_still_fails_a_watcher_stalled_outside_system_sleep() {
-  local dir state fakebin armout now wake status label
-  for label in stalled-after-wake stale-before-sleep; do
+  local dir state fakebin armout now beat wake status label
+  for label in stalled-after-wake hung-before-sleep; do
     dir=$(make_case "sleep-$label")
     state="$dir/state"
     fakebin="$dir/fakebin"
     armout="$dir/arm.out"
     seed_suspended_holder "$dir" "$state"
     now=$(date +%s)
-    fm_touch_epoch "$((now - 120))" "$state/.last-watcher-beat"
     case "$label" in
-      stalled-after-wake) wake=$((now - 60)) ;;
-      stale-before-sleep) wake=$((now - 200)) ;;
+      stalled-after-wake) beat=$((now - 120)) wake=$((now - 200)) ;;
+      hung-before-sleep) beat=$((now - 300)) wake=$((now - 120)) ;;
     esac
+    fm_touch_epoch "$beat" "$state/.last-watcher-beat"
     PATH="$fakebin:$PATH" FM_HOME="$dir" FM_STATE_OVERRIDE="$state" FM_ARM_ATTACH_POLL=0.1 \
       FM_ARM_CONFIRM_TIMEOUT=2 FM_GUARD_GRACE=30 FM_WATCHER_STALL_BOUND=600 \
       FM_TEST_SYSTEM_WAKE_EPOCH=$wake "$WATCH_ARM" > "$armout" 2>&1 &
@@ -491,9 +491,10 @@ test_arm_still_fails_a_watcher_stalled_outside_system_sleep() {
   pass "watch-arm: a live watcher stalled outside system sleep still fails the re-arm"
 }
 
-# The real last-wake probe: on macOS it reads a whole epoch second no later
-# than now from kern.waketime; elsewhere it reports no known wake, which leaves
-# beacon ages unadjusted.
+# The real last-wake probe: on macOS it reads a whole positive epoch second no
+# later than now from kern.waketime, or reports no known wake when the host has
+# not slept since boot; elsewhere it reports no known wake, which leaves beacon
+# ages unadjusted.
 test_system_wake_probe_reads_the_host_wake() {
   local dir out now
   dir=$(make_case wake-probe)
@@ -502,9 +503,11 @@ test_system_wake_probe_reads_the_host_wake() {
     || fail "the system wake probe failed"
   now=$(date +%s)
   if [ "$(uname)" = Darwin ]; then
-    case "$out" in ''|*[!0-9]*) fail "the macOS wake probe did not read an epoch second: '$out'" ;; esac
-    [ "$out" -le "$now" ] || fail "the macOS wake probe read a wake in the future: $out > $now"
-    [ "$out" -gt 0 ] || fail "the macOS wake probe read epoch zero"
+    if [ -n "$out" ]; then
+      case "$out" in *[!0-9]*) fail "the macOS wake probe did not read an epoch second: '$out'" ;; esac
+      [ "$out" -le "$now" ] || fail "the macOS wake probe read a wake in the future: $out > $now"
+      [ "$out" -gt 0 ] || fail "the macOS wake probe read epoch zero"
+    fi
   else
     [ -z "$out" ] || fail "a host without a wake probe reported a wake: $out"
   fi

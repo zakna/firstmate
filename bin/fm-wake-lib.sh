@@ -125,7 +125,8 @@ fm_path_age() {
 # fm_system_last_wake_epoch
 # Prints the epoch second of the host's most recent wake from system sleep, or
 # nothing when it is unknown. Darwin reads kern.waketime; every other platform
-# prints nothing, which leaves beacon ages unadjusted. Under FM_TEST_SEAM=1,
+# prints nothing, which leaves beacon ages unadjusted. A host that has not
+# slept since boot reports no known wake. Under FM_TEST_SEAM=1,
 # FM_TEST_SYSTEM_WAKE_EPOCH replaces the probe (0 or empty: no known wake).
 fm_system_last_wake_epoch() {
   local out
@@ -137,6 +138,7 @@ fm_system_last_wake_epoch() {
   [ "$_FM_UNAME" = Darwin ] || return 0
   out=$(/usr/sbin/sysctl -n kern.waketime 2>/dev/null) || return 0
   [[ "$out" =~ ^\{\ sec\ =\ ([0-9]+), ]] || return 0
+  [ "${BASH_REMATCH[1]}" -gt 0 ] || return 0
   printf '%s\n' "${BASH_REMATCH[1]}"
 }
 
