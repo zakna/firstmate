@@ -1,0 +1,11 @@
+== [HEAD-sleep-resume] repo=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WPYPQ8GS59JX62W4ZA497R
+real watcher pid=8921 beating; lock pid=8921
+SIGSTOP watcher (lid-close suspension); state: T   
+beacon backdated 900s (suspended through sleep)
+wake source: seam FM_TEST_SYSTEM_WAKE_EPOCH = now-5s
+arm still running after 8s (following)
+SIGCONT watcher (lid open, resumes)
+beacon age after resume: 922s; arm alive: yes
+--- arm output:
+watcher: attached pid=8921 (beacon 900s)
+watcher pid 8921 alive: yes

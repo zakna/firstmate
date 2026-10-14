@@ -1,0 +1,10 @@
+== [HEAD-stalled-after-wake] repo=/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WPYPQ8GS59JX62W4ZA497R
+real watcher pid=17382 beating; lock pid=17382
+SIGSTOP watcher (lid-close suspension); state: T   
+beacon backdated 900s (suspended through sleep)
+wake source: seam FM_TEST_SYSTEM_WAKE_EPOCH = now-400s
+arm exited status=1
+--- arm output:
+watcher: lock held by live pid 17382 but heartbeat is stale for 400s (>30s); inspect or stop that watcher before re-arming.
+watcher: FAILED - watcher cycle exited 1 without an actionable reason
+watcher pid 17382 alive: yes
