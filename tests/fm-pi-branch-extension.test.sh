@@ -2124,6 +2124,17 @@ if (openedByRequest?.messages?.some((message) => message.customType === "fm-bran
   throw new Error(`dedicated processing with history was not stripped: ${JSON.stringify(openedByRequest)}`);
 }
 await fire("agent_end", {});
+// Pi 1.2 opens the same dedicated run with a prompt-less custom event that
+// carries the processing message itself.
+aborted = false;
+await fire("before_agent_start", { messageType: "custom", message: processingMsg }, abortCtx);
+await fire("agent_start", {}, defaultSessionCtx);
+const openedByCustomRequest = await fire("context", { messages: [...history, processingMsg] }, abortCtx);
+if (!aborted) throw new Error("a dedicated processing turn opened by a custom before_agent_start was not aborted under the record");
+if (openedByCustomRequest?.messages?.some((message) => message.customType === "fm-branch-process")) {
+  throw new Error(`custom-opened dedicated processing was not stripped: ${JSON.stringify(openedByCustomRequest)}`);
+}
+await fire("agent_end", {});
 await fire("agent_settled", {});
 if (requests().length !== 1) throw new Error("a request pending when the record appeared was re-presented to the parked main");
 if (JSON.stringify(unprocessedSeqs()) !== JSON.stringify([seq1])) throw new Error(`the record moved the processed marker: ${unprocessedSeqs()}`);
