@@ -1,0 +1,32 @@
+now=Wed Oct 14 10:49:31 CEST 2026 pinned host wake=Wed Oct 14 10:49:38 CEST 2026 (now-wake=-7s, grace 300s)
+  PID  PPID STAT COMMAND
+87072 55605 Ss   bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-claude-stop-autoarm.sh
+87263 87072 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch-arm.sh
+87281 87263 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+lid closed: SIGSTOP watcher 87281
+beacon backdated to Oct 14 10:39:38 2026 (before the wake; wall-clock age 593s)
+Stop-hook arm 87263 killed (its cycle ends without a reason while the watcher is suspended)
+--- after:
+  PID  PPID STAT COMMAND
+87281     1 T    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+.claude-autoarm-epoch
+epoch=2 owner_pid=13623 outcome=arming updated_at=1791967788
+Wed Oct 14 10:49:48 2026     bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-claude-stop-autoarm.sh
+
+arm_pid=10322	watcher_pid=10357	origin=started	started_at=1791967772	ended_at=1791967773	exit_code=1	signal=none	reason=nonzero-exit	beacon_age=595	lock_before=pid:87281|identity:Wed Oct 14 10:48:10 2026     bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh	lock_after=pid:87281|identity:Wed Oct 14 10:48:10 2026     bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh	successor=none
+lid opened: SIGCONT watcher
+  PID STAT COMMAND
+87281 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+--- primary pane:
+  - What happened: the automatic restart was cut off after two tries. It refused to start a fresh monitor because one is already running (process 87281, started about 90 seconds ago by
+    bin/fm-watch.sh), and that monitor reported its last check-in as 594 seconds old.
+  - Why that's odd: a monitor that is only about 90 seconds old can't have a 594-second-old check-in. Either the check-in age is miscalculated or an old check-in record was left behind. That looks
+    like the bug open PR #57 targets: false auto-start failures caused by how check-in age is measured.
+  - Scope: this home is a temporary lab copy (/var/folders/.../fm-lab.OJD1Ym), not your live fleet.
+  I haven't stopped the existing monitor or started another one. Should I stop process 87281 and restart monitoring for this lab home, or leave it as evidence for the PR #57 investigation?
+✻ Brewed for 15s · done 10:49 AM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ leave it as evidence
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY ctx 52931/1000000  Opus medium | 5h [░░░░░░] 1% →15:10 | 7d [██░░░░] 27% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

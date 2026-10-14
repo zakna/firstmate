@@ -1,0 +1,32 @@
+now=Wed Oct 14 10:52:43 CEST 2026 pinned host wake=Wed Oct 14 10:52:39 CEST 2026 (now-wake=4s, grace 300s)
+  PID  PPID STAT COMMAND
+25662 17136 Ss   bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-claude-stop-autoarm.sh
+26197 25662 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch-arm.sh
+26306 26197 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+lid closed: SIGSTOP watcher 26306
+beacon backdated to Oct 14 10:42:39 2026 (before the wake; wall-clock age 604s)
+Stop-hook arm 26197 killed (its cycle ends without a reason while the watcher is suspended)
+--- after:
+  PID  PPID STAT COMMAND
+26306     1 T    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+failure markers: 
+epoch=1 owner_pid=25662 outcome=clean updated_at=1791967964
+Wed Oct 14 10:50:39 2026     bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-claude-stop-autoarm.sh
+
+lid opened: SIGCONT watcher
+  PID STAT COMMAND
+26306 S    bash /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY/bin/fm-watch.sh
+beacon now Oct 14 10:53:04 2026
+--- primary pane:
+ ▐▛███▛█   Claude Code v2.1.299
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY
+❯ Run bin/fm-session-start.sh now, then just reply done.
+  Thought for 4s, ran 1 shell command
+⏺ Done, captain.
+✻ Crunched for 15s · done 10:50 AM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M4WS08K2NTV8M7TTY2J6XCFY ctx 47146/1000000  Opus medium | 5h [░░░░░░] 2% →15:10 | 7d [██░░░░] 27% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents
