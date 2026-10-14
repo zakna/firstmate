@@ -390,6 +390,107 @@ test_attached_arm_hands_a_stalled_holder_to_its_replacement() {
   pass "watch-arm: an attached arm hands a holder stalled past the bound to its owner's replacement"
 }
 
+# Record a live process under its real identity as this home's watcher lock
+# holder, with no beacon touch of its own: the shape of a watcher the system
+# suspended mid-cycle. Sets SEED_PID.
+seed_suspended_holder() {  # <dir> <state>
+  local dir=$1 state=$2 identity
+  sleep 300 &
+  SEED_PID=$!
+  identity=$(FM_STATE_OVERRIDE="$state" bash -c '. "$1"; fm_pid_identity "$2"' _ "$ROOT/bin/fm-wake-lib.sh" "$SEED_PID") \
+    || fail "could not identify the suspended holder"
+  mkdir -p "$state/.watch.lock"
+  printf '%s\n' "$SEED_PID" > "$state/.watch.lock/pid"
+  printf '%s\n' "$dir" > "$state/.watch.lock/fm-home"
+  printf '%s\n' "$WATCH" > "$state/.watch.lock/watcher-path"
+  printf '%s\n' "$identity" > "$state/.watch.lock/pid-identity"
+}
+
+# A closed lid suspends the live watcher, so its beacon ages in wall-clock time
+# while it cannot run. A re-arm right after the wake must follow that watcher
+# rather than refuse it as stale and fail: it has had less than one grace window
+# of awake time to beat again. A duplicate watcher start stands down the same way.
+test_arm_follows_a_live_watcher_resuming_from_system_sleep() {
+  local dir state fakebin armout watchout now status i
+  dir=$(make_case sleep-resume)
+  state="$dir/state"
+  fakebin="$dir/fakebin"
+  armout="$dir/arm.out"
+  watchout="$dir/watch.out"
+  seed_suspended_holder "$dir" "$state"
+  now=$(date +%s)
+  fm_touch_epoch "$((now - 120))" "$state/.last-watcher-beat"
+
+  PATH="$fakebin:$PATH" FM_HOME="$dir" FM_STATE_OVERRIDE="$state" FM_ARM_ATTACH_POLL=0.1 \
+    FM_ARM_CONFIRM_TIMEOUT=2 FM_GUARD_GRACE=30 FM_WATCHER_STALL_BOUND=600 \
+    FM_TEST_SYSTEM_WAKE_EPOCH=$((now - 2)) "$WATCH_ARM" > "$armout" 2>&1 &
+  ARM_PID=$!
+  i=0
+  while [ "$i" -lt 100 ]; do
+    grep -qF "watcher: attached pid=$SEED_PID" "$armout" 2>/dev/null && break
+    kill -0 "$ARM_PID" 2>/dev/null || break
+    sleep 0.1
+    i=$((i + 1))
+  done
+  sleep 1
+  grep -qF "watcher: attached pid=$SEED_PID" "$armout" \
+    || fail "re-arm after system sleep did not follow the resuming watcher: $(cat "$armout")"
+  ! grep -qF 'watcher: FAILED' "$armout" \
+    || fail "re-arm after system sleep reported a broken mechanism: $(cat "$armout")"
+  kill -0 "$ARM_PID" 2>/dev/null || fail "re-arm after system sleep stopped following the resuming watcher"
+  kill -TERM "$ARM_PID" 2>/dev/null || true
+  wait "$ARM_PID" 2>/dev/null || true
+
+  PATH="$fakebin:$PATH" FM_HOME="$dir" FM_STATE_OVERRIDE="$state" FM_GUARD_GRACE=30 \
+    FM_WATCHER_STALL_BOUND=600 FM_TEST_SYSTEM_WAKE_EPOCH=$((now - 2)) \
+    "$WATCH" > "$watchout" 2>&1
+  status=$?
+  expect_code 0 "$status" "a duplicate watcher must stand down beside a watcher resuming from sleep: $(cat "$watchout")"
+  grep -qF "watcher: already running pid $SEED_PID" "$watchout" \
+    || fail "a duplicate watcher did not stand down beside the resuming watcher: $(cat "$watchout")"
+  is_live_non_zombie "$SEED_PID" || fail "the resuming watcher was signalled"
+  kill "$SEED_PID" 2>/dev/null || true
+  wait "$SEED_PID" 2>/dev/null || true
+  pass "watch-arm: a re-arm follows a live watcher resuming from system sleep"
+}
+
+# Sleep explains staleness only up to one grace window after the wake. A live
+# watcher whose beacon is older than the grace and that did not beat during the
+# awake time since the wake, or whose beacon went stale before the system slept,
+# is still refused, so the real-failure path keeps its FAILED report.
+test_arm_still_fails_a_watcher_stalled_outside_system_sleep() {
+  local dir state fakebin armout now wake status label
+  for label in stalled-after-wake stale-before-sleep; do
+    dir=$(make_case "sleep-$label")
+    state="$dir/state"
+    fakebin="$dir/fakebin"
+    armout="$dir/arm.out"
+    seed_suspended_holder "$dir" "$state"
+    now=$(date +%s)
+    fm_touch_epoch "$((now - 120))" "$state/.last-watcher-beat"
+    case "$label" in
+      stalled-after-wake) wake=$((now - 60)) ;;
+      stale-before-sleep) wake=$((now - 200)) ;;
+    esac
+    PATH="$fakebin:$PATH" FM_HOME="$dir" FM_STATE_OVERRIDE="$state" FM_ARM_ATTACH_POLL=0.1 \
+      FM_ARM_CONFIRM_TIMEOUT=2 FM_GUARD_GRACE=30 FM_WATCHER_STALL_BOUND=600 \
+      FM_TEST_SYSTEM_WAKE_EPOCH=$wake "$WATCH_ARM" > "$armout" 2>&1 &
+    ARM_PID=$!
+    wait_for_exit "$ARM_PID" 100
+    status=$?
+    [ "$status" -ne 0 ] && [ "$status" -ne 124 ] \
+      || fail "$label: re-arm did not fail on a stalled live watcher (status $status): $(cat "$armout")"
+    grep -qF 'watcher: FAILED' "$armout" \
+      || fail "$label: re-arm did not report the stalled live watcher: $(cat "$armout")"
+    ! grep -qF "watcher: attached pid=$SEED_PID" "$armout" \
+      || fail "$label: re-arm followed a watcher whose beacon is stale outside system sleep: $(cat "$armout")"
+    is_live_non_zombie "$SEED_PID" || fail "$label: an under-bound stalled watcher was signalled"
+    kill "$SEED_PID" 2>/dev/null || true
+    wait "$SEED_PID" 2>/dev/null || true
+  done
+  pass "watch-arm: a live watcher stalled outside system sleep still fails the re-arm"
+}
+
 test_rearm_resurfaces_durable_queue_and_remote_open_decision() {
   local dir home state fakebin result armout drainout status watcher_pid sequence generation decision_recovery_arm decision_successor
   dir=$(make_case rearm-resurface)
@@ -1723,6 +1824,8 @@ test_reaper_stops_a_tracked_watcher
 test_attached_arm_still_fails_on_a_wake_it_did_not_deliver
 test_attached_arm_follows_a_slow_live_holder
 test_attached_arm_hands_a_stalled_holder_to_its_replacement
+test_arm_follows_a_live_watcher_resuming_from_system_sleep
+test_arm_still_fails_a_watcher_stalled_outside_system_sleep
 test_rearm_resurfaces_durable_queue_and_remote_open_decision
 test_slow_rearm_recovery_is_still_surfaced
 test_marker_publish_failure_retains_recovery_evidence
