@@ -1,0 +1,43 @@
+== portable-serial-1of9
+tests/fm-supervision-host.test.sh
+       1
+== portable-serial-2of9
+tests/fm-watch-triage.test.sh
+tests/fm-turnend-foreign-owner-arm-fix.test.sh
+tests/fm-busy-state.test.sh
+      12
+== portable-serial-3of9
+tests/fm-public-followup.test.sh
+tests/fm-control-relaunch.test.sh
+tests/fm-live-lab.test.sh
+      29
+== portable-serial-4of9
+tests/fm-session-start.test.sh
+tests/fm-remote-reply.test.sh
+tests/fm-pi-branch-extension.test.sh
+      29
+== portable-serial-5of9
+tests/fm-remote-secondmate-lifecycle-e2e.test.sh
+tests/fm-contributions.test.sh
+tests/fm-remote-job.test.sh
+      29
+== portable-serial-6of9
+tests/fm-pr-check-security.test.sh
+tests/fm-wake-queue.test.sh
+tests/fm-secondmate-busy-contract-live-e2e.test.sh
+      30
+== portable-serial-7of9
+tests/fm-procevent.test.sh
+tests/fm-bearings-snapshot.test.sh
+tests/fm-remote-backlog-handoff.test.sh
+      29
+== portable-serial-8of9
+tests/fm-backlog-atomicity.test.sh
+tests/fm-secondmate-harness.test.sh
+tests/fm-secondmate-reconcile.test.sh
+      30
+== portable-serial-9of9
+tests/fm-teardown.test.sh
+tests/fm-spawn-dispatch-profile.test.sh
+tests/fm-watch-arm.test.sh
+      30

@@ -1,0 +1,29 @@
+BASE a683d6c:
+FM_TEST_COVERAGE ok total=259 parallel=24 parallel_max_ms=665545 parallel_imbalance_ms=2 parallel_unhinted=0 serial=219 serial_shards=9 serial_unhinted=16 serial_max_ms=1074843 serial_budget_ms=1200000 herdr=16
+BASE portable-serial-2of9:
+tests/fm-supervision-host.test.sh
+tests/fm-intent-check.test.sh
+tests/fm-remote-job-claim-retention.test.sh
+tests/fm-send-inbox.test.sh
+tests/fm-turnend-guard.test.sh
+tests/fm-voice-relay.test.sh
+tests/fm-classify-corr-token.test.sh
+tests/fm-update.test.sh
+tests/fm-timeout-lib.test.sh
+tests/fm-send-secondmate-marker.test.sh
+tests/fm-herdr-session-cleanup.test.sh
+tests/fm-busy-state.test.sh
+tests/fm-procevent-quota.test.sh
+tests/fm-harness-liveness-drift-live-e2e.test.sh
+tests/fm-peek-remote.test.sh
+tests/fm-jev-mem-guard.test.sh
+tests/fm-no-mistakes-required.test.sh
+tests/fm-codex-continuity-live-e2e.test.sh
+tests/fm-cursor-primary-live-e2e.test.sh
+tests/fm-harness-adapter-references.test.sh
+tests/fm-devin-signals-live-e2e.test.sh
+tests/fm-pr-state-live-e2e.test.sh
+BASE with the main-run measured supervision-host hint (1756500) but old 1200000 budget:
+fm-test-run: coverage guard: largest portable serial shard packs 1756500ms above the 1200000ms target
+fm-test-run: refresh CI hints and rebalance or add shards; do not raise the job timeout: docs/fm-test-portable-shards.md
+rc=1
