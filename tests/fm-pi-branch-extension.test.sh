@@ -2127,6 +2127,11 @@ await fire("agent_end", {});
 // Pi 1.2 opens the same dedicated run with a prompt-less custom event that
 // carries the processing message itself.
 aborted = false;
+await fire("before_agent_start", { messageType: "custom", message: { ...processingMsg, content: "some other custom message" } }, abortCtx);
+await fire("agent_start", {}, defaultSessionCtx);
+await fire("context", { messages: [...history, processingMsg] }, abortCtx);
+if (aborted) throw new Error("a run opened by an unrelated custom message was aborted under the record");
+await fire("agent_end", {});
 await fire("before_agent_start", { messageType: "custom", message: processingMsg }, abortCtx);
 await fire("agent_start", {}, defaultSessionCtx);
 const openedByCustomRequest = await fire("context", { messages: [...history, processingMsg] }, abortCtx);
