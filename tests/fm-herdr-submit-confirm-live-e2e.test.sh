@@ -5,7 +5,9 @@
 # a busy-queued Enter can keep proven pending text visible. A stub cannot prove
 # either signal. This guard launches real Claude Code in an isolated Herdr lab
 # and requires fm_backend_herdr_send_text_submit to report empty for a landed
-# idle steer. It then requires the same submit path to prove and submit a
+# idle steer. It requires bin/fm-send.sh to deliver a skill slash command to a
+# named Claude session idle after a finished turn, and the skill to run. It
+# then requires the same submit path to prove and submit a
 # typed /exit slash command behind the command popup Claude renders below the
 # composer (the fm-control exit breakage on 2.1.283) and verifies the agent
 # actually exited. It fails naming the harness and version rather than
@@ -177,6 +179,105 @@ done
 [ "$landed" = 1 ] \
   || fail "Claude Code ($VERSION) on $HERDR_VER: operational submit reported '$verdict' but the expected reply never rendered"
 pass "live Herdr submit confirm: Claude Code ($VERSION) on $HERDR_VER submits a U+2063 away-supervisor payload whose read-back drops the mark"
+
+# A skill slash command steered through fm-send to a NAMED Claude worker. A
+# named session titles the composer's top rule; before that rule paired as the
+# composer separator, the pre-Enter proof read the typed command as absent,
+# cleared it, and fm-send reported "herdr send failed". This drives the real
+# typed plane: a task selector resolved through a throwaway home's metadata
+# (flat pane, no presentation binding), a pane idle after a finished turn, and
+# a project skill whose reply proves the command ran rather than only landed.
+SKILL_TOKEN="FMHERDRSKILL$$_$RANDOM"
+SKILL_WORK="$TMP_ROOT/skillwork"
+SKILL_HOME="$TMP_ROOT/skillhome"
+mkdir -p "$SKILL_WORK/.claude/skills/fmprobe" "$SKILL_HOME/state" "$SKILL_HOME/config" "$SKILL_HOME/data"
+cat > "$SKILL_WORK/.claude/skills/fmprobe/SKILL.md" <<EOF
+---
+name: fmprobe
+description: Live-guard probe skill. Reply with exactly $SKILL_TOKEN and nothing else.
+---
+Reply with exactly $SKILL_TOKEN and nothing else.
+EOF
+git -C "$SKILL_WORK" init -q || fail "could not initialize the skill probe directory"
+SKILL_JSON=$(lab workspace create --cwd "$SKILL_WORK" --label fm-submitskill --no-focus) \
+  || fail "could not create the isolated named-session workspace"
+SKILL_PANE=$(printf '%s' "$SKILL_JSON" | jq -er '.result.root_pane.pane_id') \
+  || fail "named-session workspace create did not return a pane id"
+lab pane run "$SKILL_PANE" "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude --dangerously-skip-permissions --settings '{\"feedbackDrafts\":\"off\"}' -n fm-submitskill" >/dev/null \
+  || fail "could not launch a named Claude Code ($VERSION) session in the isolated Herdr pane"
+idle=0
+trusted=0
+i=0
+while [ "$i" -lt 60 ]; do
+  screen=$(lab pane read "$SKILL_PANE" --source visible 2>/dev/null || true)
+  case "$screen" in
+    *'bypass permissions on'*)
+      st=$(lab agent get "$SKILL_PANE" 2>/dev/null | jq -r '.result.agent.agent_status // empty')
+      case "$st" in idle|done) idle=1; break ;; esac
+      ;;
+    *'Yes, I trust this folder'*)
+      if [ "$trusted" = 0 ]; then
+        trusted=1
+        lab pane send-keys "$SKILL_PANE" down enter >/dev/null \
+          || fail "could not accept Claude's folder-trust prompt in the named session"
+      fi
+      ;;
+  esac
+  i=$((i + 1))
+  sleep 1
+done
+[ "$idle" = 1 ] || fail "named Claude Code ($VERSION) session on $HERDR_VER never rendered an idle composer"
+screen=$(lab pane read "$SKILL_PANE" --source visible 2>/dev/null || true)
+case "$screen" in
+  *fm-submitskill*) ;;
+  *) fail "Claude Code ($VERSION) on $HERDR_VER: the named session did not render its title, so this scenario would not cover a titled composer rule" ;;
+esac
+cat > "$SKILL_HOME/state/submitskill-o1.meta" <<EOF
+window=$SESSION:$SKILL_PANE
+endpoint_task_id=submitskill-o1
+worktree=$SKILL_WORK
+harness=claude
+kind=ship
+backend=herdr
+herdr_session=$SESSION
+herdr_pane_id=$SKILL_PANE
+EOF
+skill_send() { # <text>
+  FM_HOME="$SKILL_HOME" FM_SEND_SETTLE=0 bash "$ROOT/bin/fm-send.sh" submitskill-o1 "$1" >/dev/null 2>&1
+}
+skill_wait_reply() { # <token> <min-occurrences>
+  local n=0 occurrences
+  while [ "$n" -lt 45 ]; do
+    occurrences=$(lab pane read "$SKILL_PANE" --source recent --lines 200 2>/dev/null | grep -F -c "$1" || true)
+    [ "$occurrences" -ge "$2" ] && return 0
+    n=$((n + 1))
+    sleep 1
+  done
+  return 1
+}
+# A finished turn first, so the slash command reaches a worker that is idle
+# after work rather than a fresh composer. It is typed with raw Herdr keys so
+# only the slash command below depends on the submit path under test.
+WARM_TOKEN="FMHERDRWARM$$_$RANDOM"
+lab pane send-text "$SKILL_PANE" "Reply with exactly $WARM_TOKEN and nothing else." >/dev/null \
+  || fail "could not type the warm-up turn into the named session"
+sleep 0.5
+lab pane send-keys "$SKILL_PANE" enter >/dev/null \
+  || fail "could not submit the warm-up turn in the named session"
+skill_wait_reply "$WARM_TOKEN" 2 \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: the named session never answered its warm-up turn"
+i=0
+while [ "$i" -lt 45 ]; do
+  st=$(lab agent get "$SKILL_PANE" 2>/dev/null | jq -r '.result.agent.agent_status // empty')
+  case "$st" in idle|done) break ;; esac
+  i=$((i + 1))
+  sleep 1
+done
+skill_send '/fmprobe' \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: fm-send refused a skill slash command to an idle named session (the herdr send failed shape)"
+skill_wait_reply "$SKILL_TOKEN" 1 \
+  || fail "Claude Code ($VERSION) on $HERDR_VER: fm-send reported a delivered skill slash command but the skill never replied"
+pass "live Herdr submit confirm: Claude Code ($VERSION) on $HERDR_VER runs a skill slash command sent by fm-send to an idle named session"
 
 # The fm-control exit regression: a typed slash command (/exit) makes Claude
 # Code 2.1.283 render its command popup between the composer and the pane
