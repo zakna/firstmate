@@ -249,6 +249,27 @@ test_attached_password_command_substitution_is_redacted_whole() {
   pass "recap: an attached -p command substitution is redacted whole"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_separated_flag_and_assignment_command_substitutions_are_redacted_whole() {
+  local dir t out
+  dir=$(new_case separatedsub)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"mysql -p $(cat spa spb) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"mysql --password=$(echo $(cat fla flb) flc) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c3","name":"Bash","input":{"command":"MYSQL_PASSWORD=\"$(cat asa asb)\" mysql db && API_TOKEN=`cat bta btb` run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c3","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *spa* | *spb* | *fla* | *flb* | *flc* | *asa* | *asb* | *bta* | *btb*) fail "a command-substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p [redacted] db" "a command substitution after a separated -p should be redacted whole"
+  assert_contains "$out" "mysql --password=[redacted] db" "a command substitution after --password= should be redacted whole"
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db && API_TOKEN=[redacted] run" "a command substitution in a secret assignment should be redacted whole"
+  pass "recap: separated -p, credential flag, and secret assignment command substitutions are redacted whole"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -470,6 +491,7 @@ test_secrets_are_redacted_and_dotenv_omitted
 test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
 test_attached_password_command_substitution_is_redacted_whole
+test_separated_flag_and_assignment_command_substitutions_are_redacted_whole
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator

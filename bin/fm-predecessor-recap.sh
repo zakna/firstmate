@@ -120,9 +120,11 @@ fi
 # Shared jq definitions: scrubbing, one-line collapse, and the byte bound.
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
+# A secret value: one shell word of $bare characters, escapes, quotes, and whole (nested, quoted, or backtick) command substitutions.
+def shword($bare): "(?:(?<sub>\\$\\((?:\\g<sub>|[^()\"\u0027\\\\]|\\\\.|\"(?:[^\"\\\\]|\\\\.)*\"|\u0027[^\u0027]*\u0027)*\\)?)|`(?:[^`\\\\]|\\\\.)*`?|\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|" + $bare + ")+";
 # Repeats until stable so each attached -p value in one command is redacted, not only the first;
 # \u0001 (removed from input by strip) marks a value already redacted, so a password that starts with [redacted] is still redacted.
-def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)(?:(?<sub>\\$\\((?:\\g<sub>|[^()\"\u0027\\\\]|\\\\.|\"(?:[^\"\\\\]|\\\\.)*\"|\u0027[^\u0027]*\u0027)*\\)?)|`(?:[^`\\\\]|\\\\.)*`?|\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\;&|<>])+"; "\(.f)\u0001") | if . == $in then . else mysqlp end;
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)" + shword("[^\\s\"\u0027\\\\;&|<>]"); "\(.f)\u0001") | if . == $in then . else mysqlp end;
 def mysqlpall: mysqlp | gsub("\u0001"; "[redacted]");
 # A row is continued when an odd run of trailing backslashes escapes the newline; an even run escapes itself.
 def cont: test("(^|[^\\\\])(\\\\\\\\)*\\\\$");
@@ -148,9 +150,9 @@ def scrub:
   | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<b>authorization\\s*:\\s*basic\\s+)[A-Za-z0-9+/._~-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
-  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027,;}]+)"; "\(.k)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)(\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|[^\\s\"\u0027]+)"; "\(.f)[redacted]")
+  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)" + shword("[^\\s\"\u0027\\\\,;}]"); "\(.k)[redacted]"; "i")
+  | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))" + shword("[^\\s\"\u0027\\\\]"); "\(.f)[redacted]"; "i")
+  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)" + shword("[^\\s\"\u0027\\\\]"); "\(.f)[redacted]")
   | mysqlpall;
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
