@@ -1,0 +1,7 @@
+# runs schema (read-only)
+3|head_sha|TEXT|1||0
+6|submitted_head_sha|TEXT|0||0
+9|review_approved_head_sha|TEXT|0||0
+23|terminal_head_verified_at|INTEGER|0||0
+# sample range check on this run
+01M4ZN9W4B17C4VTF8KNQTMREP|a1f18dc5c934cf52b0833d01044b94b6e4e2caf2|a1f18dc5c934cf52b0833d01044b94b6e4e2caf2
