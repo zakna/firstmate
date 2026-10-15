@@ -33,6 +33,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
 4. When the scout reports, handle it as any finished investigation.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
    The supervisor also adds each new defect class the report proposes to the register, keeping the earliest meaning on a letter and never reusing one.
+   A debt item that names a concrete structure-only tidy in a code area gets the tidy slot that `ship-landing` owns.
    The supervisor records each open workflow-level follow-up and each approved Process change in `${FM_HOME:?}/data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure
@@ -62,6 +63,12 @@ Open the pipeline database read-only.
   `if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 && substr($0, 1, 9) == "# Retro: " { print FILENAME }' {} +; fi | while IFS= read -r f; do grep -q '^Project:' "$f" || grep -lE '(^|[^[:alnum:]_.-])<repository address>([^[:alnum:]_-]|$)' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`; for Gerrit, use `gerrit.example.com/(c/)?<project>` so both the repository root and canonical change URLs match.
 - This home's defect-class register, `${FM_HOME:?}/data/retro-defect-classes.md`: the lettered classes that name recurring defect shapes across retros.
   It is captain-private, so cite classes by letter and name and never copy its text into a tracked file; when the file is absent, name defect shapes in plain words and propose the first register entries in the report.
+- The landing notes, `${FM_HOME:?}/data/<task-id>/landing-note.md`, of this project's tasks that landed since the previous retro.
+  A task's `project=` record names its project clone by the absolute resolved path `bin/fm-spawn.sh` wrote, in `${FM_HOME:?}/state/<task-id>.meta` before cleanup and in `${FM_HOME:?}/data/<task-id>/meta.txt` after it.
+  The query reads that path from the delivering task's own metadata, so a project name or a relative path never reaches the match; it stops with an error when that metadata names no project.
+  `T='<delivering task-id>'; M="${FM_HOME:?}/state/$T.meta"; [ -f "$M" ] || M="${FM_HOME:?}/data/$T/meta.txt"; C=$(sed -n 's/^project=//p' "$M" 2>/dev/null | tail -n 1); if [ -z "$C" ]; then echo "no project= record for $T" >&2; elif [ -d "${FM_HOME:?}/data" ]; then for n in "${FM_HOME:?}"/data/*/landing-note.md; do [ -f "$n" ] || continue; id=$(basename "$(dirname "$n")"); m="${FM_HOME:?}/state/$id.meta"; [ -f "$m" ] || m="${FM_HOME:?}/data/$id/meta.txt"; [ -f "$m" ] && grep -qxF "project=$C" "$m" && printf '%s\n' "$n"; done; fi`
+  Keep a listed note only when its task's landing evidence shows it landed after the newest earlier retro report of this project found above, or at any time when there is none: the merge time of the pull request or change that `pr=` in that same metadata file names or, with no `pr=`, of the merged one whose head branch is `branch=`, or else, for a local-only task, the date of the entry `merge <branch=>: Fast-forward` in `git -C <project clone> reflog --date=iso <default branch>`; a task with no such evidence did not land, and its note is skipped.
+  Each answer (c) names a fact the instructions or the project's `AGENTS.md` did not give the worker, and each answer (b) names the tidy that worker proposed.
 - This home's workflow follow-ups, `${FM_HOME:?}/data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
   Every retro re-verifies them, whatever its project; when the file is absent, treat it as empty.
 

@@ -58,6 +58,7 @@ data/                personal fleet records; LOCAL, gitignored as a whole
   secondmates.md      local and remote secondmate routing table; firstmate-private, maintained by the secondmate seed helpers (section 6)
   <id>/brief.md      per-task crewmate brief, or per-secondmate charter brief when kind=secondmate
   <id>/report.md     scout task deliverable, written by the crewmate; survives teardown
+  <id>/landing-note.md  ship worker's landing note, written before its ready report; survives teardown; bin/fm-dod-lib.sh owns its questions, ship-landing and retro read it
   <id>/status-log.txt <id>/meta.txt <id>/steering/  copies of the task's status log, task record, and steering messages that teardown keeps before removing them from state/ (bin/fm-teardown.sh)
   pipeline-spend.jsonl  optional per-task no-mistakes pipeline spend, written only when config/pipeline-spend is present; bin/fm-pipeline-spend.sh owns the schema
 projects/            cloned repos; gitignored; read-only except under hard rule 1's concrete captain-approved project operation exception
