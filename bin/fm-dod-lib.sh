@@ -484,7 +484,7 @@ fm_intent_scan() {  # <mode> <terms> <slug> <linked> <mentioned> <file-args...>
       who = "(captain|captain'"'"'s (words|ask|intent)|the user|user|firstmate|first mate|supervisor|operator|owner|crewmate|worker|assistant|me)"
       if (t ~ ("^\\[" who "\\]") || t ~ ("^" who "[*_]*[ \t]*:"))
         return "speaker label"
-      if (t ~ /^please([^a-z]|$)/ || has_word(l, "(yourself|yourselves|you must|you should|you will|you'"'"'ll|you need to|your branch|your worktree)") || t ~ /^captain[ \t]*,/ || l ~ /[,;][ \t]*captain[ \t]*[,.!?]/)
+      if (t ~ /^please([^a-z]|$)/ || has_word(l, "(yourself|yourselves|you must|you should|you will|you'"'"'ll|you need to|your branch|your worktree)") || has_word(l, "captain"))
         return "direct address"
       if (unit ~ /^[ \t]*>/ || l ~ /(^|[^a-z])(said|says|say|saying|wrote|words|asked|told|replied|answered|quoted|approved|authori[sz]ed)[ \t]*[,:]?[ \t]*("|\342\200\234)/ || l ~ /("|\342\200\235)[ \t]*,?[ \t]*(said|says|wrote|asked|replied|answered)([^a-z]|$)/)
         return "quote"
