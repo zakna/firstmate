@@ -252,6 +252,26 @@ test_password_starting_with_redacted_text_is_redacted() {
   pass "recap: a password that starts with [redacted] is redacted"
 }
 
+test_attached_password_keeps_a_following_shell_operator() {
+  local dir t out
+  dir=$(new_case shellop)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"o1","name":"Bash","input":{"command":"mysql -psecret; echo after"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"o1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"o2","name":"Bash","input":{"command":"mysqldump -pbackup>dump.sql"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"o2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"o3","name":"Bash","input":{"command":"mysql -pa1 | tee out & mysql -pb2 < in.sql"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"o3","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *-psecret* | *-pbackup* | *-pa1* | *-pb2*) fail "an attached -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted]; echo after" "a ; after an attached -p value should be kept"
+  assert_contains "$out" "mysqldump -p[redacted]>dump.sql" "a redirection after an attached -p value should be kept"
+  assert_contains "$out" "mysql -p[redacted] | tee out & mysql -p[redacted] < in.sql" "a pipe, &, or < after an attached -p value should be kept"
+  pass "recap: an attached -p value stops at a shell operator"
+}
+
 test_scrollback_fallback_for_other_harnesses() {
   local dir out esc
   dir=$(new_case scrollback)
@@ -413,6 +433,7 @@ test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
+test_attached_password_keeps_a_following_shell_operator
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
