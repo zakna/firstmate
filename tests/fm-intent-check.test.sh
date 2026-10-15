@@ -11,11 +11,11 @@ TMP_ROOT=$(fm_test_tmproot fm-intent-check)
 fm_git_identity fmtest fmtest@example.invalid
 CHECK="$ROOT/bin/fm-intent-check.sh"
 
-# A project repository whose own files use the word "pipeline" but none of the
-# fleet terms, with a github.com origin.
+# A project repository whose own files use the word "pipeline" and the fleet
+# terms "captain" and "fleet", with a github.com origin.
 REPO="$TMP_ROOT/repo"
 git init -q "$REPO"
-printf 'The build pipeline caches the captain dependency list.\n' > "$REPO/README.md"
+printf 'The build pipeline caches the captain dependency list and the fleet manifest.\n' > "$REPO/README.md"
 git -C "$REPO" add README.md
 git -C "$REPO" commit -q -m init
 git -C "$REPO" remote add origin https://github.com/acme/widgets.git
@@ -101,9 +101,11 @@ The owner said: "ship it".
 
 test_repository_vocabulary_is_not_fleet_vocabulary() {
   local dir="$TMP_ROOT/vocab" out
-  write_launch_brief "$dir" 'Keep the pipeline cache. Keep the supervisor restart logic.'
+  write_launch_brief "$dir" 'Keep the pipeline cache. Keep the fleet manifest. Keep the supervisor restart logic.'
   out=$(run_check "$dir" 'Keep the pipeline cache.') \
     || fail "a term the repository itself uses was refused: $out"
+  out=$(run_check "$dir" 'Keep the fleet manifest.') \
+    || fail "a fleet term the repository itself uses was refused: $out"
   out=$(run_check "$dir" 'Keep the supervisor restart logic.') && fail "a foreign fleet term passed"
   assert_contains "$out" 'fleet vocabulary "supervisor"' "foreign fleet term was not named"
   pass "only fleet terms the repository does not use are refused"
