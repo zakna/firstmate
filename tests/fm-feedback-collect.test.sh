@@ -411,6 +411,80 @@ test_forge_read_failure_is_reported() {
   pass 'a failed review-comment read is reported per pull request'
 }
 
+test_empty_steer_body_is_unreadable() {
+  local dir="$TMP_ROOT/empty-steer"
+  mkdir -p "$dir/home/state/task-a.inbox/handled"
+  make_db "$dir/state.sqlite"
+  make_backlog "$dir/home"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nVALID-STEER\n' \
+    > "$dir/home/state/task-a.inbox/handled/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\n' \
+    > "$dir/home/state/task-a.inbox/handled/002.msg"
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed on an empty steering body'
+  jq -e '
+    ([.inputs[] | select(.name == "steers")][0].status == "error")
+    and ([.inputs[] | select(.name == "steers")][0].detail | contains("002.msg"))
+    and ([.records[] | select(.source == "steer")] | length == 1)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "empty steering body was not reported as unreadable: $(jq -c . "$dir/feedback.json")"
+  pass 'an empty steering body is reported as unreadable'
+}
+
+test_pipe_in_table_cell_is_escaped() {
+  local dir="$TMP_ROOT/pipe-cell"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO step_rounds VALUES
+  ('rd-pipe', 's-review-2', 5, 'initial', 'user_declined', '[]',
+   '{"findings":[{"id":"P1","severity":"warning","file":"a|b.md","description":"PIPE-FILE"}]}', '{}', $IN);
+SQL
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed on a pipe in a file name'
+  grep -qF '| a\|b.md | 1 |' "$dir/feedback.md" \
+    || fail "pipe in a table cell was not escaped: $(grep -F 'a|b.md' "$dir/feedback.md" | head -3)"
+  pass 'a pipe in a Markdown table cell is escaped'
+}
+
+test_partial_database_reads_are_kept() {
+  local dir="$TMP_ROOT/partial-db"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" 'ALTER TABLE step_results DROP COLUMN skip_reason;'
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed on a failing database read'
+  jq -e '
+    ([.inputs[] | select(.name == "no-mistakes")][0] | .status == "error"
+      and (.detail | contains("step_results")))
+    and ([.records[] | select(.source == "finding" and .text == "DECLINED-ONE")] | length == 1)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "successful reads were dropped after one failed: $(jq -c . "$dir/feedback.json")"
+  pass 'successful database reads survive one failed read'
+}
+
+test_failed_runs_read_keeps_run_labels() {
+  local dir="$TMP_ROOT/failed-runs-read"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" <<SQL
+ALTER TABLE repos RENAME COLUMN upstream_url TO remote_url;
+INSERT INTO step_rounds VALUES
+  ('rd-bad-selected', 's-review-2', 2, 'initial', 'user', 'not-json', '{}', '{}', $IN);
+SQL
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed when the runs read failed'
+  jq -e '
+    ([.inputs[] | select(.name == "no-mistakes")][0] | .status == "error"
+      and (.detail | contains("runs")) and (.detail | contains("1 unreadable step_rounds payload")))
+    and ([.records[] | select(.source == "finding" and .text == "DECLINED-ONE")] | length == 1)
+    and ([.records[] | select(.run != null)] | length > 0
+      and all(.ticket == "run \(.run)"))
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "records kept after a failed runs read lost their run labels: $(jq -c . "$dir/feedback.json")"
+  pass 'records kept after a failed runs read are labelled by run'
+}
+
 test_usage_errors() {
   local code
   "$COLLECT" --since 2026-13 --out "$TMP_ROOT/x" >/dev/null 2>&1; code=$?
@@ -427,7 +501,9 @@ for test_name in test_collects_every_source_in_the_window test_reused_branch_kee
   test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
   test_malformed_steer_records_are_reported test_missing_backlog_skips_steers \
-  test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported test_usage_errors; do
+  test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported \
+  test_empty_steer_body_is_unreadable test_failed_runs_read_keeps_run_labels test_pipe_in_table_cell_is_escaped \
+  test_partial_database_reads_are_kept test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
 [ "$failures" -eq 0 ] || fail "$failures feedback-collect regressions"
