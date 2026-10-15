@@ -329,7 +329,8 @@ fm_brief_intent_address_line() {  # <file>
 # The pipeline publishes the `--intent` string as the pull request body, so the
 # words a worker may pass are checked before the run starts. One term per line;
 # a term the repository's own tracked files already use is that project's
-# vocabulary rather than the fleet's and is not refused there.
+# vocabulary rather than the fleet's and is not refused there, except that any
+# sentence naming the captain is still refused as direct address.
 FM_INTENT_FLEET_TERMS='captain
 firstmate
 first mate
