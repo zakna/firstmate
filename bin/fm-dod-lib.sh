@@ -749,7 +749,8 @@ EOF
 }
 
 # The one-line no-mistakes delivery rule bin/fm-brief.sh writes as both the
-# first and the last line of a no-mistakes ship brief, so a worker that skims
+# first and the last line of a no-mistakes ship brief, and bin/fm-promote.sh
+# writes around a promoted scout's ship instructions, so a worker that skims
 # the Definition of done still meets it. fm_dod_accept_ship_done enforces it.
 fm_nm_delivery_line() {  # [<forge>]
   if [ "${1:-none}" = gerrit ]; then
