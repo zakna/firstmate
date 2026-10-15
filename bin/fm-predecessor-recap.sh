@@ -61,7 +61,7 @@
 # passwords, the whole value of any key/token/secret/password/credential
 # assignment, quoted or not, and the value after a space-separated credential
 # flag such as --password, --token, or -p, and the value attached to -p in any
-# mysql* or mariadb* client command) become [redacted], and a tool call
+# mysql* or mariadb* client command, including a whole $(...) or backtick command substitution) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
