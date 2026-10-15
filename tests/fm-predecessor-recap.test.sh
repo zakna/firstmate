@@ -362,6 +362,124 @@ test_arithmetic_expansion_is_redacted_whole_in_secret_values() {
   pass "recap: an arithmetic expansion is redacted whole in secret values"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_deeply_nested_command_substitution_is_redacted_whole() {
+  local dir t out cmd i
+  dir=$(new_case deepnest)
+  t=$(transcript_path "$dir" s1)
+  cmd='MYSQL_PASSWORD='
+  for i in $(seq 30); do cmd="$cmd\$(echo "; done
+  cmd="${cmd}dna dnb"
+  for i in $(seq 30); do cmd="$cmd dnc$i)"; done
+  cmd="$cmd mysql db"
+  {
+    entry assistant "$dir/wt" "[{\"type\":\"tool_use\",\"id\":\"d1\",\"name\":\"Bash\",\"input\":{\"command\":\"$cmd\"}}]"
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"d1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *dna* | *dnb* | *dnc*) fail "part of a deeply nested command-substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db" "a command substitution nested 30 levels deep should be redacted whole"
+  pass "recap: a deeply nested command substitution is redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_process_substitution_inside_command_substitution_is_redacted_whole() {
+  local dir t out
+  dir=$(new_case procsub)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"s1","name":"Bash","input":{"command":"mysql --password=$(cat <(echo psa psb)) db && API_TOKEN=$(tee >(cat psc psd)) run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"s1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *psa* | *psb* | *psc* | *psd*) fail "part of a process substitution inside a command-substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql --password=[redacted] db && API_TOKEN=[redacted] run" "a process substitution inside a command substitution should be redacted whole"
+  pass "recap: a process substitution inside a command substitution is redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_adjacent_backtick_substitutions_are_redacted_whole() {
+  local dir t out
+  dir=$(new_case adjacentbt)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"b1","name":"Bash","input":{"command":"API_TOKEN=`cat bka bkb``cat bkc bkd` run && mysql -p `cat bke``cat bkf bkg` db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"b1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *bka* | *bkb* | *bkc* | *bkd* | *bke* | *bkf* | *bkg*) fail "part of adjacent backtick substitutions reached the recap: $out" ;; esac
+  assert_contains "$out" "API_TOKEN=[redacted] run && mysql -p [redacted] db" "adjacent backtick substitutions should be redacted whole"
+  pass "recap: adjacent backtick substitutions are redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_escaped_newline_inside_substitution_is_redacted_whole() {
+  local dir t out
+  dir=$(new_case escnewline)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"n1","name":"Bash","input":{"command":"mysql -p $(cat \\\n  ena enb) db && PASSWORD=`cat \\\n  enc end` run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"n1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *ena* | *enb* | *enc* | *end\ *) fail "part of a substitution with an escaped newline reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p [redacted] db && PASSWORD=[redacted] run" "a substitution holding an escaped newline should be redacted whole"
+  pass "recap: a substitution holding an escaped newline is redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_unbalanced_secret_value_is_redacted_to_the_end() {
+  local dir t out
+  dir=$(new_case unbalanced)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"u1","name":"Bash","input":{"command":"run --password=$(cat <(echo uba) ubb"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"u1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"u2","name":"Bash","input":{"command":"TOKEN=\"$(cat ubc) ubd"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"u2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *uba* | *ubb* | *ubc* | *ubd*) fail "part of an unbalanced secret value reached the recap: $out" ;; esac
+  assert_contains "$out" "tool call Bash: run --password=[redacted]
+" "an unclosed substitution should be redacted to the end"
+  assert_contains "$out" "tool call Bash: TOKEN=[redacted]
+" "an unclosed quote should be redacted to the end"
+  pass "recap: an unbalanced secret value is redacted to the end"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_inline_code_secret_keeps_the_following_prose() {
+  local dir t out
+  dir=$(new_case inlinecode)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"text","text":"I set `API_KEY=foo` in the env, then ran `make test` and it passed."}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"Run `export TOKEN=$(cat ~/.tok)` first, then run `make test` and it passes."}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"Set `API_KEY=\"abc\"` in .env, then run `make` to build it all."}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *foo* | *.tok* | *abc*) fail "an inline-code secret reached the recap: $out" ;; esac
+  assert_contains "$out" 'I set `API_KEY=[redacted]` in the env, then ran `make test` and it passed.' "a backtick after a bare secret should end it, not open a substitution"
+  assert_contains "$out" 'Run `export TOKEN=[redacted]` first, then run `make test` and it passes.' "a backtick after a closed \$(...) secret should end it, not open a substitution"
+  assert_contains "$out" 'Set `API_KEY=[redacted]` in .env, then run `make` to build it all.' "a backtick after a closed quoted secret should end it, not open a substitution"
+  pass "recap: an inline-code secret keeps the following prose"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_parameter_expansion_and_array_secrets_are_redacted_whole() {
+  local dir t out
+  dir=$(new_case paramarray)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"g1","name":"Bash","input":{"command":"PASSWORD=${X:-gpa gpb} run && PASSWORDS=(gpc gpd gpe) go && TOKEN=\"${A:-\"gpf gpg\"}\" end"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"g1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *gpa* | *gpb* | *gpc* | *gpd* | *gpe* | *gpf* | *gpg*) fail "part of a parameter-expansion or array secret reached the recap: $out" ;; esac
+  assert_contains "$out" "PASSWORD=[redacted] run && PASSWORDS=[redacted] go && TOKEN=[redacted] end" "a \${...} or (...) secret should be redacted whole"
+  pass "recap: parameter-expansion and array secrets are redacted whole"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -589,6 +707,13 @@ test_quoted_command_substitution_with_inner_quotes_is_redacted_whole
 test_compound_secret_word_is_redacted_to_the_next_unquoted_space
 test_quote_after_a_substitution_secret_does_not_pair_with_a_later_secret
 test_arithmetic_expansion_is_redacted_whole_in_secret_values
+test_deeply_nested_command_substitution_is_redacted_whole
+test_process_substitution_inside_command_substitution_is_redacted_whole
+test_adjacent_backtick_substitutions_are_redacted_whole
+test_escaped_newline_inside_substitution_is_redacted_whole
+test_unbalanced_secret_value_is_redacted_to_the_end
+test_inline_code_secret_keeps_the_following_prose
+test_parameter_expansion_and_array_secrets_are_redacted_whole
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
