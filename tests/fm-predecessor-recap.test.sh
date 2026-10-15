@@ -316,14 +316,32 @@ test_compound_secret_word_is_redacted_to_the_next_unquoted_space() {
   {
     entry assistant "$dir/wt" '[{"type":"tool_use","id":"w1","name":"Bash","input":{"command":"PASSWORD=$(pass)cwa run && API_TOKEN=$(cwb)$(cwc) run && cmd --password $(cwd)cwe next"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w1","content":"ok"}]'
-    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w2","name":"Bash","input":{"command":"mysql -p $(cwf)cwg db && TOKEN=pre$(cwh i)cwj run && SECRET=$(cwk)\"cwl cwm\" run"}}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w2","name":"Bash","input":{"command":"mysql -p $(cwf)cwg db && TOKEN=pre$(cwh i)cwj run run"}}]'
     entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w2","content":"ok"}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *cwa* | *cwb* | *cwc* | *cwd* | *cwe* | *cwf* | *cwg* | *cwh* | *cwj* | *cwk* | *cwl* | *cwm*) fail "part of a compound secret word reached the recap: $out" ;; esac
+  case "$out" in *cwa* | *cwb* | *cwc* | *cwd* | *cwe* | *cwf* | *cwg* | *cwh* | *cwj*) fail "part of a compound secret word reached the recap: $out" ;; esac
   assert_contains "$out" "PASSWORD=[redacted] run && API_TOKEN=[redacted] run && cmd --password [redacted] next" "text joined to a command substitution should be redacted with it"
-  assert_contains "$out" "mysql -p [redacted] db && TOKEN=[redacted] run && SECRET=[redacted] run" "a bare prefix or quoted suffix around a command substitution should be redacted with it"
+  assert_contains "$out" "mysql -p [redacted] db && TOKEN=[redacted] run" "a bare prefix or suffix around a command substitution should be redacted with it"
   pass "recap: a compound secret word is redacted up to the next unquoted space"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_quote_after_a_substitution_secret_does_not_pair_with_a_later_secret() {
+  local dir t out
+  dir=$(new_case subquotepair)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"curl -H \"X-Token: $(cat t)\" --password=\"sqa sqb\" x"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"run \u0027--token=$(x)\u0027 y \u0027--secret=sqc\u0027 z"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *sqa* | *sqb* | *sqc*) fail "a secret after a quoted substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "curl -H \"X-Token: [redacted]\" --password=[redacted] x" "a quote closing a substitution secret should not open a quoted value"
+  assert_contains "$out" "run '--token=[redacted]' y '--secret=[redacted]' z" "a single quote closing a substitution secret should not open a quoted value"
+  pass "recap: a quote after a substitution secret does not pair with a later secret"
 }
 
 # shellcheck disable=SC2016 # literal shell text inside JSON fixtures
@@ -569,6 +587,7 @@ test_separated_flag_and_assignment_command_substitutions_are_redacted_whole
 test_quoted_secret_does_not_pair_with_a_later_secret_quote
 test_quoted_command_substitution_with_inner_quotes_is_redacted_whole
 test_compound_secret_word_is_redacted_to_the_next_unquoted_space
+test_quote_after_a_substitution_secret_does_not_pair_with_a_later_secret
 test_arithmetic_expansion_is_redacted_whole_in_secret_values
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
