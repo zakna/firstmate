@@ -318,6 +318,22 @@ test_scrollback_fallback_for_other_harnesses() {
   pass "recap: other harnesses fall back to the terminal capture, or say why there is none"
 }
 
+test_scrollback_continuation_survives_cutoff_and_clip() {
+  local dir out esc long
+  dir=$(new_case scrollback-continuation)
+  esc=$(printf '\033')
+  { printf '%s\n' "\$ mysql \\${esc}[0m" '>   -pSTYLEDCUTSECRET db'; for _ in $(seq 398); do echo; done; } >"$dir/styled-cutoff"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/styled-cutoff" </dev/null)
+  case "$out" in *STYLEDCUTSECRET*) fail "an attached -p password after a styled continuation cut off at the 400-row limit reached the recap: $out" ;; esac
+  assert_contains "$out" "-p[redacted] db" "the password row after a styled cut-off continuation should be redacted"
+  long=$(printf 'x%.0s' $(seq 4100))
+  printf '%s\n' "\$ mysql $long \\" '>   -pCLIPSECRET db' >"$dir/long"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/long" </dev/null)
+  case "$out" in *CLIPSECRET*) fail "an attached -p password after a continuation row longer than the clip reached the recap: $out" ;; esac
+  assert_contains "$out" "-p[redacted] db" "the password row after a clipped continuation row should be redacted"
+  pass "recap: a continuation survives the scrollback cutoff and the row clip"
+}
+
 test_only_the_predecessor_account_root_is_read() {
   local dir t decoy out
   dir=$(new_case account)
@@ -435,6 +451,7 @@ test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
 test_scrollback_fallback_for_other_harnesses
+test_scrollback_continuation_survives_cutoff_and_clip
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
 test_tiny_byte_bound_terminates
