@@ -86,14 +86,14 @@
 # file and in brief.md's `## Captain's intent`, so a relaunch agrees, before the
 # worker reruns the check, or the worker stops. It refuses speaker labels,
 # direct address (an opening `please`, `yourself`, `you must`, `you should`,
-# `you will`, `you need to`, `your branch`, `your worktree`, or a vocative
-# captain), attributed quotes, fleet terms the repository does not use, and
-# any sentence outside the authorized words; fenced and indented examples and
-# inline code are exempt from all but the last. It requires `Refs #<n>` for
-# every issue of the repository's github.com origin the brief links by URL and
-# refuses a reference that is not this repository's issue the brief names. It
-# does not authenticate the content of --resolved substance beyond those
-# classes, nor catch a worker-directed imperative without those words.
+# `you will`, `you need to`, `your branch`, `your worktree`, or any
+# sentence naming the captain), attributed quotes, fleet terms the repository
+# does not use, and any sentence outside the authorized words; fenced and
+# indented examples and inline code are exempt from all but the last. It
+# requires `Refs #<n>` for every issue of the repository's github.com origin the
+# brief links by URL and refuses a reference that is not this repository's issue
+# the brief names. It does not authenticate the content of --resolved substance
+# beyond those classes, nor catch a worker-directed imperative without those words.
 # The string passed must be self-sufficient - it plus the codebase reconstructs
 # roughly the same specification - so a report, decision, or PR the intent
 # refers to is written into it as substance, never left as a pointer.
