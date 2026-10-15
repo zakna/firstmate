@@ -1,0 +1,32 @@
+Stored file values:
+a\|b.md
+c|d.md
+e\f.md
+g\\|h.md
+trail\
+
+== base File table (raw markdown)
+| a\\|b.md | 1 |
+| c\|d.md | 1 |
+| e\f.md | 1 |
+| g\\\|h.md | 1 |
+| trail\ | 1 |
+== base File cells as rendered by pandoc -f gfm
+  a|b.md    1
+  c|d.md    1
+  e\f.md    1
+  g\|h.md   1
+  trail\    1
+
+== target File table (raw markdown)
+| a\\\|b.md | 1 |
+| c\|d.md | 1 |
+| e\\f.md | 1 |
+| g\\\\\|h.md | 1 |
+| trail\\ | 1 |
+== target File cells as rendered by pandoc -f gfm
+  a\|b.md    1
+  c|d.md     1
+  e\f.md     1
+  g\\|h.md   1
+  trail\     1
