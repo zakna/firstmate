@@ -124,12 +124,14 @@ JQ_DEFS='
 # \u0001 (removed from input by strip) marks a value already redacted, so a password that starts with [redacted] is still redacted.
 def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)(?:\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\;&|<>])+"; "\(.f)\u0001") | if . == $in then . else mysqlp end;
 def mysqlpall: mysqlp | gsub("\u0001"; "[redacted]");
-# Rows joined where an odd run of trailing backslashes escapes the newline; an even run escapes itself.
-def continued: split("\n") | reduce .[] as $r ([]; if length > 0 and (.[-1] | test("(^|[^\\\\])(\\\\\\\\)*\\\\$")) then .[-1] += "\n" + $r else . + [$r] end);
+# A row is continued when an odd run of trailing backslashes escapes the newline; an even run escapes itself.
+def cont: test("(^|[^\\\\])(\\\\\\\\)*\\\\$");
+def continued: split("\n") | reduce .[] as $r ([]; if length > 0 and (.[-1] | cont) then .[-1] += "\n" + $r else . + [$r] end);
 # The last 400 rows, started early enough that a row continued by a trailing
 # backslash keeps the rows it continues (at most 40 extra), so the command word survives the cut.
+# Rows arrive already stripped, so a continuation followed by an escape sequence still ends in its backslash.
 def tail400: length as $n | . as $l | ([$n - 400, 0] | max) as $s
-  | ($s | until(. <= 0 or $s - . >= 40 or ($l[. - 1] | test("\\\\$") | not); . - 1)) as $b
+  | ($s | until(. <= 0 or $s - . >= 40 or ($l[. - 1] | cont | not); . - 1)) as $b
   | $l[$b:];
 def strip:
   gsub("\u001b\\[[0-9;?]*[ -/]*[@-~]"; "")
@@ -152,6 +154,8 @@ def scrub:
   | mysqlpall;
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
+# A clipped row that was continued keeps its trailing backslash, so the row it continues still joins to it.
+def cliprow: if length > 4000 and cont then .[0:4000] | if cont then . else . + "\\" end else clip end;
 def cut($n): if length > $n then .[0:$n] + " [truncated]" else . end;
 def bytecut($n):
   if $n <= 0 then ""
@@ -226,7 +230,7 @@ claude_items() {  # <jsonl>
 
 scrollback_items() {  # <file>
   jq -Rs -r --argjson max "$MAX_BYTES" "$JQ_DEFS"'
-    split("\n") | tail400 | map(clip) | join("\n") | strip | continued | map(scrub) | join("\n") | split("\n") | map(sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
+    strip | split("\n") | tail400 | map(cliprow) | join("\n") | continued | map(scrub) | join("\n") | split("\n") | map(sub("\\s+$"; "") | select(test("\\S"))) | .[-40:]
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
