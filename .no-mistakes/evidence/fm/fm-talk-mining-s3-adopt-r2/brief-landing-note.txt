@@ -1,0 +1,46 @@
+=== $ FM_HOME=$LAB bin/fm-brief.sh landing-no-mistakes-t1 demo --mode no-mistakes
+scaffolded: $LAB/data/landing-no-mistakes-t1/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note lines in $LAB/data/landing-no-mistakes-t1/brief.md:
+154:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `$LAB/data/landing-no-mistakes-t1/landing-note.md` with three short answers:
+155-- (a) what this change made harder to change next;
+156-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+157-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+158-That note is task material outside your worktree: never commit it.
+159-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+--- order check (landing note precedes bug-test contract, after DoD):
+154:Before the `done:` line that finishes this task - the ready report, not an e
+159:When this task fixes a bug, first add a test that reproduces the bug and fai
+--- landing-note.md already exists? no
+=== $ FM_HOME=$LAB bin/fm-brief.sh landing-direct-pr-t1 demo --mode direct-PR
+scaffolded: $LAB/data/landing-direct-pr-t1/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note lines in $LAB/data/landing-direct-pr-t1/brief.md:
+107:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `$LAB/data/landing-direct-pr-t1/landing-note.md` with three short answers:
+108-- (a) what this change made harder to change next;
+109-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+110-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+111-That note is task material outside your worktree: never commit it.
+112-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+--- order check (landing note precedes bug-test contract, after DoD):
+107:Before the `done:` line that finishes this task - the ready report, not an e
+112:When this task fixes a bug, first add a test that reproduces the bug and fai
+--- landing-note.md already exists? no
+=== $ FM_HOME=$LAB bin/fm-brief.sh landing-local-only-t1 demo --mode local-only
+scaffolded: $LAB/data/landing-local-only-t1/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note lines in $LAB/data/landing-local-only-t1/brief.md:
+102:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `$LAB/data/landing-local-only-t1/landing-note.md` with three short answers:
+103-- (a) what this change made harder to change next;
+104-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+105-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+106-That note is task material outside your worktree: never commit it.
+107-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+--- order check (landing note precedes bug-test contract, after DoD):
+102:Before the `done:` line that finishes this task - the ready report, not an e
+107:When this task fixes a bug, first add a test that reproduces the bug and fai
+--- landing-note.md already exists? no
+=== $ FM_HOME=$LAB bin/fm-brief.sh landing-scout-t1 demo --scout   (adversarial: scout must NOT get a landing note)
+scaffolded: $LAB/data/landing-scout-t1/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+landing-note mentions in scout brief: 0

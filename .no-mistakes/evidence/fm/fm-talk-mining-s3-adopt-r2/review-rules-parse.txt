@@ -1,0 +1,11 @@
+.agents/skills/*/SKILL.md -> 4 lines
+skills/*/SKILL.md -> 4 lines
+tests/** -> 6 lines
+bin/** -> 6 lines
+.claude/mods/** -> 6 lines
+anti-cheat groups: ['tests/**', 'bin/**', '.claude/mods/**'] identical text: True
+'assertion weakened or removed': True
+'newly skipped or deleted': True
+'fixed value that only matches the test data': True
+'mock or stub of the unit': True
+'expected value changed to fit new output': True
