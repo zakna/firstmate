@@ -507,7 +507,7 @@ jq -r '
   def quoted: "      " + (tostring | gsub("\r"; "") | gsub("\n"; "\n      "));
   def counts($key):
     (group_by(.[$key] // "") | map({k: (.[0][$key] // "" | one), n: length}) | sort_by(-.n, .k))
-    | map("| \(if .k == "" then "(none)" else .k | gsub("\\|"; "\\|") end) | \(.n) |") | join("\n");
+    | map("| \(if .k == "" then "(none)" else .k | gsub("\\\\"; "\\\\") | gsub("\\|"; "\\|") end) | \(.n) |") | join("\n");
   .records as $all
   | "# Feedback across landed tickets since \(.since)",
     "Landed set: tickets merged through a no-mistakes pipeline run only.",

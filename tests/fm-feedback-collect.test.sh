@@ -447,6 +447,22 @@ SQL
   pass 'a pipe in a Markdown table cell is escaped'
 }
 
+test_backslash_before_pipe_in_table_cell_is_escaped() {
+  local dir="$TMP_ROOT/backslash-pipe-cell"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" <<'SQL'
+INSERT INTO step_rounds VALUES
+  ('rd-bs', 's-review-2', 6, 'initial', 'user_declined', '[]',
+   '{"findings":[{"id":"P2","severity":"warning","file":"a\\|b.md","description":"BACKSLASH-PIPE-FILE"}]}', '{}', 1790000000);
+SQL
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed on a backslash before a pipe in a file name'
+  grep -qF '| a\\\|b.md | 1 |' "$dir/feedback.md" \
+    || fail "backslash before a pipe was not escaped: $(grep -F 'b.md' "$dir/feedback.md" | head -3)"
+  pass 'a backslash before a pipe in a Markdown table cell is escaped'
+}
+
 test_partial_database_reads_are_kept() {
   local dir="$TMP_ROOT/partial-db"
   mkdir -p "$dir/home"
@@ -503,6 +519,7 @@ for test_name in test_collects_every_source_in_the_window test_reused_branch_kee
   test_malformed_steer_records_are_reported test_missing_backlog_skips_steers \
   test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported \
   test_empty_steer_body_is_unreadable test_failed_runs_read_keeps_run_labels test_pipe_in_table_cell_is_escaped \
+  test_backslash_before_pipe_in_table_cell_is_escaped \
   test_partial_database_reads_are_kept test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
