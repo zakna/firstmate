@@ -227,6 +227,141 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   pass "recap: credential-shaped strings are redacted and .env contents omitted"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_attached_password_command_substitution_is_redacted_whole() {
+  local dir t out
+  dir=$(new_case attachedsub)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"mysql -p$(cat suba subb) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"mysql -p$(echo $(cat nesta nestb) tail1) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c3","name":"Bash","input":{"command":"mysql -p$(cat \"quoted a\" \"b)c\") db && mysql -p\"$(cat dqa dqb)\" db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c3","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c4","name":"Bash","input":{"command":"mysql -p`cat bta btb` db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c4","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *suba* | *subb* | *nesta* | *nestb* | *tail1* | *"quoted a"* | *"b)c"* | *dqa* | *dqb* | *bta* | *btb*) fail "a command-substitution -p password reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted] db" "a command substitution after -p should be redacted whole"
+  assert_contains "$out" "mysql -p[redacted] db && mysql -p[redacted] db" "a quoted or nested command substitution after -p should be redacted whole"
+  pass "recap: an attached -p command substitution is redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_separated_flag_and_assignment_command_substitutions_are_redacted_whole() {
+  local dir t out
+  dir=$(new_case separatedsub)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"mysql -p $(cat spa spb) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"mysql --password=$(echo $(cat fla flb) flc) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c3","name":"Bash","input":{"command":"MYSQL_PASSWORD=\"$(cat asa asb)\" mysql db && API_TOKEN=`cat bta btb` run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c3","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *spa* | *spb* | *fla* | *flb* | *flc* | *asa* | *asb* | *bta* | *btb*) fail "a command-substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p [redacted] db" "a command substitution after a separated -p should be redacted whole"
+  assert_contains "$out" "mysql --password=[redacted] db" "a command substitution after --password= should be redacted whole"
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db && API_TOKEN=[redacted] run" "a command substitution in a secret assignment should be redacted whole"
+  pass "recap: separated -p, credential flag, and secret assignment command substitutions are redacted whole"
+}
+
+test_quoted_secret_does_not_pair_with_a_later_secret_quote() {
+  local dir t out
+  dir=$(new_case quotepair)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"echo \"--token=abc\" && cmd --password=\"qpa qpb\""}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"export TOKEN=abc\"; curl --password=\"qpc qpd\""}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *qpa* | *qpb* | *qpc* | *qpd*) fail "a quoted secret after an earlier quoted secret reached the recap: $out" ;; esac
+  assert_contains "$out" "echo \"--token=[redacted]\" && cmd --password=[redacted]" "a closing quote after a secret should not open a quoted value"
+  assert_contains "$out" "export TOKEN=[redacted]\"; curl --password=[redacted]" "a stray quote after a secret should not swallow the next secret"
+  pass "recap: a quoted secret does not pair its closing quote with a later secret"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_quoted_command_substitution_with_inner_quotes_is_redacted_whole() {
+  local dir t out
+  dir=$(new_case innerquote)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"MYSQL_PASSWORD=\"$(cat \"iqa iqb\")\" mysql db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"mysql --password=\"$(cat \"iqc iqd\")\" db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c3","name":"Bash","input":{"command":"mysql -p \"$(cat \"iqe iqf\")\" db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c3","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *iqa* | *iqb* | *iqc* | *iqd* | *iqe* | *iqf*) fail "a quoted command substitution with inner quotes reached the recap: $out" ;; esac
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db" "a quoted substitution in a secret assignment should be redacted whole"
+  assert_contains "$out" "mysql --password=[redacted] db" "a quoted substitution after --password= should be redacted whole"
+  assert_contains "$out" "mysql -p [redacted] db" "a quoted substitution after a separated -p should be redacted whole"
+  pass "recap: a quoted command substitution with inner quotes is redacted whole"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_compound_secret_word_is_redacted_to_the_next_unquoted_space() {
+  local dir t out
+  dir=$(new_case compoundword)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w1","name":"Bash","input":{"command":"PASSWORD=$(pass)cwa run && API_TOKEN=$(cwb)$(cwc) run && cmd --password $(cwd)cwe next"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w2","name":"Bash","input":{"command":"mysql -p $(cwf)cwg db && TOKEN=pre$(cwh i)cwj run run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *cwa* | *cwb* | *cwc* | *cwd* | *cwe* | *cwf* | *cwg* | *cwh* | *cwj*) fail "part of a compound secret word reached the recap: $out" ;; esac
+  assert_contains "$out" "PASSWORD=[redacted] run && API_TOKEN=[redacted] run && cmd --password [redacted] next" "text joined to a command substitution should be redacted with it"
+  assert_contains "$out" "mysql -p [redacted] db && TOKEN=[redacted] run" "a bare prefix or suffix around a command substitution should be redacted with it"
+  pass "recap: a compound secret word is redacted up to the next unquoted space"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_quote_after_a_substitution_secret_does_not_pair_with_a_later_secret() {
+  local dir t out
+  dir=$(new_case subquotepair)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"curl -H \"X-Token: $(cat t)\" --password=\"sqa sqb\" x"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"run \u0027--token=$(x)\u0027 y \u0027--secret=sqc\u0027 z"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *sqa* | *sqb* | *sqc*) fail "a secret after a quoted substitution secret reached the recap: $out" ;; esac
+  assert_contains "$out" "curl -H \"X-Token: [redacted]\" --password=[redacted] x" "a quote closing a substitution secret should not open a quoted value"
+  assert_contains "$out" "run '--token=[redacted]' y '--secret=[redacted]' z" "a single quote closing a substitution secret should not open a quoted value"
+  pass "recap: a quote after a substitution secret does not pair with a later secret"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_arithmetic_expansion_is_redacted_whole_in_secret_values() {
+  local dir t out
+  dir=$(new_case arithmetic)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"a1","name":"Bash","input":{"command":"MYSQL_PASSWORD=$((123456)) mysql db && mysql -p $((345678)) db && mysql -p$((456789)) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"a1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"a2","name":"Bash","input":{"command":"API_KEY=$(echo $((7 + 8)) x) run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"a2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *123456* | *345678* | *456789* | *"7 + 8"*) fail "an arithmetic-expansion secret reached the recap: $out" ;; esac
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db && mysql -p [redacted] db && mysql -p[redacted] db" "an arithmetic expansion should be redacted whole"
+  assert_contains "$out" "API_KEY=[redacted] run" "an arithmetic expansion inside a command substitution should be redacted whole"
+  pass "recap: an arithmetic expansion is redacted whole in secret values"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -447,6 +582,13 @@ test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
 test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
+test_attached_password_command_substitution_is_redacted_whole
+test_separated_flag_and_assignment_command_substitutions_are_redacted_whole
+test_quoted_secret_does_not_pair_with_a_later_secret_quote
+test_quoted_command_substitution_with_inner_quotes_is_redacted_whole
+test_compound_secret_word_is_redacted_to_the_next_unquoted_space
+test_quote_after_a_substitution_secret_does_not_pair_with_a_later_secret
+test_arithmetic_expansion_is_redacted_whole_in_secret_values
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
