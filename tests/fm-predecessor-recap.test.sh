@@ -230,7 +230,7 @@ test_secrets_are_redacted_and_dotenv_omitted() {
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
-  printf '%s\n' '$ mysql -u root \\\\' '$ find . -print' "\$ mysql \\" '>   -pcontsecret1 db' >"$dir/capture"
+  printf '%s\n' "\$ mysql -u root \\\\" '$ find . -print' "\$ mysql \\" '>   -pcontsecret1 db' >"$dir/capture"
   out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/capture" </dev/null)
   assert_contains "$out" '> $ find . -print' "a row after one ending in an escaped backslash should be left unchanged"
   case "$out" in *contsecret1*) fail "a password on a row after an odd backslash reached the recap: $out" ;; esac
