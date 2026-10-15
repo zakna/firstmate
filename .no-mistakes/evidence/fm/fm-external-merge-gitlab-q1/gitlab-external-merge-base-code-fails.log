@@ -1,0 +1,8 @@
+not ok - gitlab details: task record lacks the merge details before pr=: window=fm-task-a
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-pr-check-security.mmel0Y/gitlab-external-merge-details/wt
+merge_origin=external
+merge_commit=unknown
+merge_parents=unknown
+merge_actor=unknown
+merged_at=unknown
+pr=https://gitlab.example/group/subgroup/project/-/merge_requests/17

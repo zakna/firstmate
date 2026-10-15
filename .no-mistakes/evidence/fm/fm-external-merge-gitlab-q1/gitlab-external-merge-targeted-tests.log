@@ -1,0 +1,3 @@
+ok - GitLab merge requests are followed on any instance and never wake falsely
+ok - an external merge records its commit, parents, actor, and time, or unknown
+ok - a GitLab external merge records its commit, parents, actor, and time, or unknown
