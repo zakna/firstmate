@@ -1214,11 +1214,19 @@ cmd_start() {
   fm_procevent_launch_floor_wait "$STATE" "$id" "$CLAIM_REG_IDENTITY" "$launch_floor"
   case "$?" in
     0) ;;
-    # A superseded generation leaves nothing behind. The runner marker is
-    # written before this wait, and a home sweep counts a marker with no owned
-    # claim as a preflight failure, so exiting without removing it would make
-    # that home refuse to sweep.
-    2) [ "$extension_owner" -eq 1 ] || rm -f -- "$runner"; exit 0 ;;
+    # A relisten source re-armed with its unchanged command while this runner
+    # waited is the same source continuing, so it is adopted here exactly as
+    # when the re-arm lands before relisten; exiting would end the only
+    # listener while its claim still looked live.
+    # Any other superseded generation leaves nothing behind. The runner marker
+    # is written before this wait, and a home sweep counts a marker with no
+    # owned claim as a preflight failure, so exiting without removing it would
+    # make that home refuse to sweep.
+    2)
+      adopt_relisten && continue
+      [ "$extension_owner" -eq 1 ] || rm -f -- "$runner"
+      exit 0
+      ;;
     *) die "cannot enforce the source launch floor: $id" ;;
   esac
   exec 7<&-
