@@ -238,6 +238,20 @@ test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   pass "recap: a row ending in two backslashes is not joined to the next row"
 }
 
+test_password_starting_with_redacted_text_is_redacted() {
+  local dir t out
+  dir=$(new_case redactedprefix)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"r1","name":"Bash","input":{"command":"mysql -p[redacted]hunter2 db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"r1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *hunter2*) fail "a password starting with [redacted] reached the recap: $out" ;; esac
+  assert_contains "$out" "mysql -p[redacted] db" "a password starting with [redacted] should be redacted whole"
+  pass "recap: a password that starts with [redacted] is redacted"
+}
+
 test_scrollback_fallback_for_other_harnesses() {
   local dir out esc
   dir=$(new_case scrollback)
@@ -398,6 +412,7 @@ test_secrets_are_redacted_and_dotenv_omitted
 test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
 test_even_backslashes_at_row_end_do_not_join_the_next_row
+test_password_starting_with_redacted_text_is_redacted
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
