@@ -929,7 +929,7 @@ fm_dod_note_reports_published_change() {  # <note>
 
 # 0 when this ship done: is one the named-head gate must accept or refuse.
 # Every no-mistakes done: is gated, and fm_dod_accept_ship_done refuses one
-# outright unless it names a PR URL. bin/fm-spawn.sh records a mode for every
+# outright unless it opens `PR https://...`. bin/fm-spawn.sh records a mode for every
 # ship, so an empty mode is a record that predates it: it is treated as
 # no-mistakes, the unregistered-project default, for the CI-ready and
 # published-change reports only.
@@ -944,16 +944,6 @@ fm_dod_should_gate_ship_done() {  # <kind> <mode> <line>
       fm_dod_note_reports_ci_ready "$note" || fm_dod_note_reports_published_change "$note" ;;
     *) return 1 ;;
   esac
-}
-
-# 0 when a done: note names a PR or change by its URL (`PR https://...`). In
-# no-mistakes mode only the /no-mistakes run opens that PR, so a done: note
-# without one reports work the pipeline never validated.
-fm_dod_note_names_pr_url() {  # <note>
-  case "$1" in
-    *"PR https://"*|*"PR http://"*) return 0 ;;
-  esac
-  return 1
 }
 
 # The PR/MR URL from a `done: PR <url>...` note, or empty.
@@ -1095,7 +1085,8 @@ fm_dod_accept_ship_done() {  # <kind> <mode> <worktree> <project> <line> [<state
   fm_dod_should_gate_ship_done "$kind" "$mode" "$line" || return 0
   case "$mode" in
     no-mistakes)
-      if ! fm_dod_note_names_pr_url "$(status_line_note "$line")"; then
+      url=$(fm_dod_pr_url_from_done_note "$(status_line_note "$line")") || url=
+      if [ "${url#https://}" = "$url" ]; then
         printf '%s\n' "a no-mistakes done names no PR URL, so the work has not been validated or shipped: run /no-mistakes, then report done: PR <url> from its result"
         return 1
       fi ;;

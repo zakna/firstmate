@@ -84,7 +84,7 @@ test_moved_branch_without_named_head_is_refused() {
 }
 
 test_no_mistakes_done_without_pr_url_is_refused() {
-  local repo wt reason rc
+  local repo wt reason rc note
   repo="$TMP_ROOT/preval-repo"
   wt="$TMP_ROOT/preval-wt"
   fm_git_worktree "$repo" "$wt" fm/preval
@@ -99,6 +99,10 @@ test_no_mistakes_done_without_pr_url_is_refused() {
     *"no PR URL"*"/no-mistakes"*) ;;
     *) fail "refusal did not name the missing PR URL and /no-mistakes: $reason" ;;
   esac
+  for note in 'done: implementation complete, see PR https://x/pull/1' 'done: PR http://x/pull/1'; do
+    accept_done ship no-mistakes "$wt" "$repo" "$note" >/dev/null \
+      && fail "no-mistakes done: without a leading PR https:// URL was accepted: $note"
+  done
   accept_done ship no-mistakes "$wt" "$repo" 'done: PR https://example.test/o/r/pull/9 checks green: test; read changed files: yes' \
     || fail "a pushed no-mistakes ready line with a PR URL was refused"
   accept_done ship direct-PR "$wt" "$repo" 'done: implementation complete' \
