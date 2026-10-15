@@ -130,20 +130,23 @@ if ! command -v sqlite3 >/dev/null 2>&1; then
   note_input no-mistakes absent "sqlite3 is not installed"
 elif [ ! -s "$NM_DB" ]; then
   note_input no-mistakes absent "no database at $NM_DB"
-elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.branch,
+else
+  nm_failed=
+  nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.branch,
       r.pr_url, r.status, r.created_at
-    FROM ($LANDED_RUNS) r JOIN repos p ON p.id = r.repo_id" \
-  && nm_query "$WORK/steps.json" "SELECT s.run_id, s.step_name AS step, s.status,
+    FROM ($LANDED_RUNS) r JOIN repos p ON p.id = r.repo_id" || nm_failed="$nm_failed runs"
+  nm_query "$WORK/steps.json" "SELECT s.run_id, s.step_name AS step, s.status,
       s.approval_reason, s.override_reason, s.skip_reason, s.completed_at
     FROM step_results s WHERE s.run_id IN ($WINDOW_RUNS)
       AND COALESCE(NULLIF(s.approval_reason, ''), NULLIF(s.override_reason, ''), NULLIF(s.skip_reason, ''), '') <> ''" \
-  && nm_query "$WORK/rounds.json" "SELECT s.run_id, s.step_name AS step, rd.round,
+    || nm_failed="$nm_failed step_results"
+  nm_query "$WORK/rounds.json" "SELECT s.run_id, s.step_name AS step, rd.round,
       rd.trigger_type, COALESCE(rd.selection_source, '') AS selection_source,
       COALESCE(NULLIF(rd.selected_finding_ids, ''), '[]') AS selected,
       COALESCE(NULLIF(rd.findings_json, ''), '{}') AS findings,
       COALESCE(NULLIF(rd.user_findings_json, ''), '{}') AS user_findings, rd.created_at
     FROM step_rounds rd JOIN step_results s ON s.id = rd.step_result_id
-    WHERE s.run_id IN ($WINDOW_RUNS)"; then
+    WHERE s.run_id IN ($WINDOW_RUNS)" || nm_failed="$nm_failed step_rounds"
   if jq '
     def parse_json: try fromjson catch null;
     def valid_selected($value):
@@ -185,7 +188,9 @@ elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.bran
     rounds_total=$(jq length "$WORK/rounds.json")
     rounds_kept=$(jq length "$WORK/rounds.valid.json")
     mv "$WORK/rounds.valid.json" "$WORK/rounds.json"
-    if [ "$rounds_total" -eq "$rounds_kept" ]; then
+    if [ -n "$nm_failed" ]; then
+      note_input no-mistakes error "could not query$nm_failed in $NM_DB; its schema may have changed; reads that succeeded are retained"
+    elif [ "$rounds_total" -eq "$rounds_kept" ]; then
       note_input no-mistakes read "$NM_DB: $(jq length "$WORK/runs.json") runs on landed tickets"
     else
       note_input no-mistakes error "$NM_DB: $((rounds_total - rounds_kept)) unreadable step_rounds payload(s); valid rows retained"
@@ -194,9 +199,6 @@ elif nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.bran
     printf '[]' > "$WORK/rounds.json"
     note_input no-mistakes error "could not validate step_rounds payloads in $NM_DB"
   fi
-else
-  printf '[]' > "$WORK/runs.json"; printf '[]' > "$WORK/steps.json"; printf '[]' > "$WORK/rounds.json"
-  note_input no-mistakes error "could not query $NM_DB; its schema may have changed"
 fi
 
 # --- pull-request review comments ------------------------------------------
@@ -403,6 +405,7 @@ read_steer_record() { # <record> <body-out>
          then fromdateiso8601 else error("invalid timestamp") end' \
     >/dev/null 2>&1 || return 1
   fm_task_inbox_body "$msg" > "$body" || return 1
+  grep -q '[^[:space:]]' "$body" || return 1
   printf '%s' "$at"
 }
 
@@ -501,7 +504,7 @@ jq -r '
   def quoted: "      " + (tostring | gsub("\r"; "") | gsub("\n"; "\n      "));
   def counts($key):
     (group_by(.[$key] // "") | map({k: (.[0][$key] // "" | one), n: length}) | sort_by(-.n, .k))
-    | map("| \(if .k == "" then "(none)" else .k end) | \(.n) |") | join("\n");
+    | map("| \(if .k == "" then "(none)" else .k | gsub("\\|"; "\\|") end) | \(.n) |") | join("\n");
   .records as $all
   | "# Feedback across landed tickets since \(.since)",
     "Landed set: tickets merged through a no-mistakes pipeline run only.",
