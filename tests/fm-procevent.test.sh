@@ -3531,6 +3531,52 @@ PACE_RACE_STAMPS=$(find "$HPACE_RACE/state/procevent" -maxdepth 1 -type f \
   || fail "a superseded sleeping runner recreated stale pacing state"
 pass "a superseded sleeping runner cannot recreate stale pacing state"
 
+# A relisten runner adopts a re-registration of its unchanged command whenever
+# that re-arm lands, including while it sleeps out the launch floor after an
+# empty window. Treating that re-arm as a superseding generation ended the only
+# listener while it still looked live, so nothing polled until a reconcile.
+HRELISTEN="$TMP_ROOT/relisten-rearm"; new_home "$HRELISTEN"
+RELISTEN_LOG="$TMP_ROOT/relisten-rearm.log"
+EMPTY_WINDOW_SOURCE="$TMP_ROOT/empty-window-source.sh"
+cat > "$EMPTY_WINDOW_SOURCE" <<'SH'
+#!/usr/bin/env bash
+printf 'launch\n' >> "$1"
+exit 75
+SH
+chmod +x "$EMPTY_WINDOW_SOURCE"
+pe_register "$HRELISTEN" remote-reply relisten-src -- "$EMPTY_WINDOW_SOURCE" "$RELISTEN_LOG" >/dev/null
+FM_PROCEVENT_LAUNCH_FLOOR_SECONDS=4 \
+  pe "$HRELISTEN" start relisten-src > "$TMP_ROOT/relisten-rearm.out" 2>&1 &
+RELISTEN_PID=$!
+wait_for "$RELISTEN_LOG" || fail "the relisten fixture never launched its source"
+# Re-arm only once the runner has adopted its unchanged registration and is
+# sleeping on that generation's launch-pacing stamp, so the re-arm cannot be
+# picked up by the relisten adoption that precedes the floor.
+relisten_stamp_prefix=$(printf '%s' "$HRELISTEN/state/procevent/relisten-src." \
+  | sed 's/[][\\.*^$+?(){}|]/\\&/g')
+relisten_floor_waiting=0
+for _ in $(seq 1 100); do
+  if pgrep -f "$relisten_stamp_prefix.*\.last-launch" >/dev/null 2>&1; then
+    relisten_floor_waiting=1
+    break
+  fi
+  sleep 0.05
+done
+[ "$relisten_floor_waiting" = 1 ] || fail "the relisten fixture never waited on its launch floor"
+pe_register "$HRELISTEN" remote-reply relisten-src -- "$EMPTY_WINDOW_SOURCE" "$RELISTEN_LOG" >/dev/null
+for _ in $(seq 1 100); do
+  [ "$(wc -l < "$RELISTEN_LOG" | tr -d ' ')" -ge 2 ] && break
+  kill -0 "$RELISTEN_PID" 2>/dev/null || break
+  sleep 0.1
+done
+[ "$(wc -l < "$RELISTEN_LOG" | tr -d ' ')" -ge 2 ] \
+  || fail "re-arming an unchanged relisten command during its launch floor ended the listener: $(cat "$TMP_ROOT/relisten-rearm.out")"
+pe "$HRELISTEN" list | awk '$1 == "relisten-src" { print $3 }' | grep -qx live \
+  || fail "the relisten runner did not keep the re-armed source"
+pe "$HRELISTEN" retire relisten-src >/dev/null
+wait "$RELISTEN_PID" 2>/dev/null || true
+pass "a relisten runner adopts an unchanged re-arm that lands during its launch floor"
+
 HCOMMIT="$TMP_ROOT/registration-commit"; new_home "$HCOMMIT"
 fm_test_track_procevent_home "$HCOMMIT"
 COMMIT_LOG="$TMP_ROOT/registration-commit.log"
