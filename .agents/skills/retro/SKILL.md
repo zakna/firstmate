@@ -29,8 +29,10 @@ The worker that writes the retro follows everything from "Worker procedure" on.
    Give the scout a task id that contains `retro`, so later retros can find this one.
 3. In the scout instructions, name the project, the ticket id, its pull request or landing commit, the delivering task's id, and the absolute path of this file, and tell the worker to follow "Worker procedure".
    Add nothing that this file already states.
+   The scout reads this home's defect-class register at `${FM_HOME:?}/data/retro-defect-classes.md` through "Worker procedure", so the instructions do not restate it.
 4. When the scout reports, handle it as any finished investigation.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
+   The supervisor also adds each new defect class the report proposes to the register, keeping the earliest meaning on a letter and never reusing one.
    The supervisor records each open workflow-level follow-up and each approved Process change in `${FM_HOME:?}/data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure
@@ -58,6 +60,8 @@ Open the pipeline database read-only.
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
 - The earlier retro reports with no `Project:` line anywhere, which were written before this skill: keep each one whose body links into the project's repository, and name every report found this way in your list of sources.
   `if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 && substr($0, 1, 9) == "# Retro: " { print FILENAME }' {} +; fi | while IFS= read -r f; do grep -q '^Project:' "$f" || grep -lE '(^|[^[:alnum:]_.-])<repository address>([^[:alnum:]_-]|$)' "$f"; done`, where `<repository address>` is the repository's web address without its scheme, such as `github.com/<owner>/<repo>`; for Gerrit, use `gerrit.example.com/(c/)?<project>` so both the repository root and canonical change URLs match.
+- This home's defect-class register, `${FM_HOME:?}/data/retro-defect-classes.md`: the lettered classes that name recurring defect shapes across retros.
+  It is captain-private, so cite classes by letter and name and never copy its text into a tracked file; when the file is absent, name defect shapes in plain words and propose the first register entries in the report.
 - This home's workflow follow-ups, `${FM_HOME:?}/data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
   Every retro re-verifies them, whatever its project; when the file is absent, treat it as empty.
 
@@ -141,7 +145,9 @@ So reconcile every row, selected or not, against the merged tree before counting
 ### 4. What cost time
 
 List at most ten cost items, ordered by cost, each with its cause: supervisor, instructions, pipeline, review configuration, or worker.
-Look in particular for these shapes.
+Label each cost item with its class from the register when one fits.
+When a defect fits no class, describe it plainly and propose a new class, with its one-line definition and the retros it appears in, for the supervisor to add; you do not edit the register yourself.
+Look in particular for these shapes when the register is absent or does not cover them.
 
 - A review comment, from a person or a bot, that an earlier ticket or an earlier round already received.
 - A defect a later round found that was present in the first round.
