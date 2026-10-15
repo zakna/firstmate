@@ -31,7 +31,7 @@ Append captain-approved remedies to the brief's `## Captain's intent` under the 
 Firstmate's re-validation order must tell the worker to write every firstmate-approved remedy in its own words to a file, pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, and confirm before re-running that the new intent contains every remedy in that file word for word.
 
 The `document` step runs after the review step approves a head, so its commits reach the PR without any review round.
-When a no-mistakes ship reports ready, read the reporting run's approved head from the `review_approved_head_sha` column of its row in the `runs` table of `~/.no-mistakes/state.sqlite`, opened read-only, since `no-mistakes axi status` does not print it.
+When a no-mistakes ship reports ready, read the reporting run's approved head from the `review_approved_head_sha` column of its row in the `runs` table of `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, opened read-only, since `no-mistakes axi status` does not print it.
 The ready head is unreviewed when any commit in `<review_approved_head>..<ready head>` changes a file matched by a `review.path_instructions` rule in the default branch's `.no-mistakes.yaml`, or carries exact text a gate decision required under `ask-user-authority`.
 An empty range means the review round covered the ready head.
 Do not treat an unreviewed head as ready or merge it - order the same worker one more validation run on that branch so a review round covers that head, and accept ready only from that run.
