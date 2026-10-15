@@ -505,4 +505,30 @@ test_worker_role_names_skill_and_fallback_file() {
 
 test_worker_role_names_skill_and_fallback_file
 
+# A `# Task` body larger than the pipe buffer must still parse under pipefail.
+# Piping the task into the reader let a reader that stopped early kill the
+# writer with SIGPIPE; the here-string in bin/fm-brief-heading-lib.sh avoids it.
+test_large_task_body_parses_under_pipefail() {
+  local brief out i
+  brief="$TMP_ROOT/large-task-brief.md"
+  {
+    printf '# Task\n## Captain'"'"'s intent\nsmall intent\n## Firstmate spec\n'
+    i=0
+    while [ "$i" -lt 20000 ]; do
+      printf 'filler line %d to push the task body past the pipe buffer\n' "$i"
+      i=$((i + 1))
+    done
+    printf '# Next\n'
+  } >"$brief"
+  [ "$(wc -c <"$brief")" -gt 1048576 ] || fail "large brief fixture is not larger than the pipe buffer"
+  out=$(set -o pipefail; fm_brief_task_heading_body "$brief" "## Captain's intent") \
+    || fail "large task body failed to parse under pipefail"
+  [ "$out" = "small intent" ] || fail "large task body returned the wrong intent: $out"
+  (set -o pipefail; fm_brief_task_heading_present "$brief" "## Captain's intent") \
+    || fail "large task body failed the present check under pipefail"
+  pass "large task body parses under pipefail"
+}
+
+test_large_task_body_parses_under_pipefail
+
 echo "all fm-dod-lib tests passed"
