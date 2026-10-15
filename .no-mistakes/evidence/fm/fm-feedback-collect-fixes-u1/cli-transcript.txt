@@ -1,0 +1,28 @@
+=== S1 whitespace-only steering body (#44) ===
+$ fm-feedback-collect.sh --since 2026-09-20 --out <tmp>/s1/feedback --nm-db <tmp>/s1/state.sqlite --home <tmp>/s1/home
+wrote <tmp>/s1/feedback.md and <tmp>/s1/feedback.json (12 records)
+exit=0
+[{"name":"steers","status":"error","detail":"could not read: task-a.inbox/handled/002.msg"}]
+[{"message":"001","text":"REAL-STEER"}]
+=== S2 pipes in file, severity and step cells (#45) ===
+$ fm-feedback-collect.sh --since 2026-09-20 --out <tmp>/s2/feedback --nm-db <tmp>/s2/state.sqlite --home <tmp>/s2/home
+wrote <tmp>/s2/feedback.md and <tmp>/s2/feedback.json (10 records)
+exit=0
+--- markdown table rows containing pipes:
+23:| rev\|iew | 5 |
+32:| warn\|ing | 1 |
+37:| a\|b\|c.md | 1 |
+=== S3 step_rounds read fails, runs+steps kept (#43) ===
+$ fm-feedback-collect.sh --since 2026-09-20 --out <tmp>/s3/feedback --nm-db <tmp>/s3/state.sqlite --home <tmp>/s3/home
+Error: in prepare, no such column: rd.trigger_type
+  CT s.run_id, s.step_name AS step, rd.round,       rd.trigger_type, COALESCE(rd
+                                      error here ---^
+wrote <tmp>/s3/feedback.md and <tmp>/s3/feedback.json (1 records)
+exit=0
+[{"name":"no-mistakes","status":"error","detail":"could not query step_rounds in <tmp>/s3/state.sqlite; its schema may have changed; reads that succeeded are retained"}]
+[{"source":"gate-answer","kind":"approval","ticket":"https://github.com/o/app/pull/7","text":"docs-only change, no runtime surface"}]
+=== S4 baseline healthy db still reports read ===
+$ fm-feedback-collect.sh --since 2026-09-20 --out <tmp>/s4/feedback --nm-db <tmp>/s4/state.sqlite --home <tmp>/s4/home
+wrote <tmp>/s4/feedback.md and <tmp>/s4/feedback.json (8 records)
+exit=0
+[{"name":"no-mistakes","status":"read","detail":"<tmp>/s4/state.sqlite: 2 runs on landed tickets"}]

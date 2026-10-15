@@ -1,0 +1,23 @@
+ok - collector gathers gate answers, unfixed findings, review comments, landed steers, and retro proposals
+ok - reused branch attempts retain their landing identities
+ok - empty forge pages remain successful reads
+jq: parse error: Invalid numeric literal at EOF at line 1, column 8
+ok - malformed forge data is reported as an error
+ok - corrupt round payloads are isolated and reported
+ok - absent inputs are named in the output instead of failing
+ok - an unreadable backlog is reported as a read error and collection continues
+ok - malformed steering records are reported without false reads
+ok - steers are skipped when the backlog is unavailable
+ok - steers are errors when the backlog cannot be read
+ok - a failed review-comment read is reported per pull request
+ok - an empty steering body is reported as unreadable
+Error: in prepare, no such column: p.upstream_url
+  SELECT r.run_id, p.upstream_url AS repo, r.branch,       r.pr_url, r.status, r
+                   ^--- error here
+ok - records kept after a failed runs read are labelled by run
+ok - a pipe in a Markdown table cell is escaped
+Error: in prepare, no such column: s.skip_reason
+  atus,       s.approval_reason, s.override_reason, s.skip_reason, s.completed_a
+                                      error here ---^
+ok - successful database reads survive one failed read
+ok - usage errors exit 2 and --help prints usage
