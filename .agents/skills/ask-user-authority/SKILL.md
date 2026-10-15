@@ -36,6 +36,8 @@ No brief, spec, or steer may hand that decision back to the worker; spawn, promo
    - repeated same-theme findings when incremental corrections are preserving a questionable abstraction rather than closing independent defects
    - destructive, irreversible, and genuinely security-sensitive choices, which always escalate under the stronger existing captain boundary
 5. Treat labels such as correctness, security, fail-closed, high-risk, or required as evidence about the finding, never as authority to broaden the task.
+6. For a `document`-step finding, the decision states the requirement the corrected text must meet, never exact replacement text, because the `document` step runs after review approval and no review round reads what it writes.
+   When the exact words are themselves required, such as wording the captain supplied, the decision also orders the re-review run that `validation-supervision` owns.
 
 ## File a declined finding's author note
 
