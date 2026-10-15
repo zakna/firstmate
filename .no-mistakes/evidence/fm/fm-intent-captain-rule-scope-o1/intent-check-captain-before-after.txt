@@ -1,0 +1,55 @@
+[base] The captain wants exports in UTF-8.
+  -> exit 0
+[target] The captain wants exports in UTF-8.
+intent-check: line 1: direct address: The captain wants exports in UTF-8.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d31489/launch-brief.md
+  -> exit 1
+[base] Keep the captain's column order.
+  -> exit 0
+[target] Keep the captain's column order.
+intent-check: line 1: direct address: Keep the captain's column order.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d21262/launch-brief.md
+  -> exit 1
+[base] Exports are written in UTF-8, captain.
+intent-check: line 1: direct address: Exports are written in UTF-8, captain.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d21188/launch-brief.md
+  -> exit 1
+[target] Exports are written in UTF-8, captain.
+intent-check: line 1: direct address: Exports are written in UTF-8, captain.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d20930/launch-brief.md
+  -> exit 1
+[base] Captain, write exports in UTF-8.
+intent-check: line 1: direct address: Captain, write exports in UTF-8.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d16301/launch-brief.md
+  -> exit 1
+[target] Captain, write exports in UTF-8.
+intent-check: line 1: direct address: Captain, write exports in UTF-8.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d4746/launch-brief.md
+  -> exit 1
+[base] Make exports UTF-8.
+  -> exit 0
+[target] Make exports UTF-8.
+  -> exit 0
+[base] Keep the fleet manifest.
+  -> exit 0
+[target] Keep the fleet manifest.
+  -> exit 0
+[base] Keep the supervisor restart logic.
+intent-check: line 1: fleet vocabulary "supervisor": Keep the supervisor restart logic.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d13075/launch-brief.md
+  -> exit 1
+[target] Keep the supervisor restart logic.
+intent-check: line 1: fleet vocabulary "supervisor": Keep the supervisor restart logic.
+intent-check: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/d17143/launch-brief.md
+  -> exit 1
+[base] Keep the `captain` field name.
+  -> exit 0
+[target] Keep the `captain` field name.
+  -> exit 0
+[base] scrub (mixed brief)
+Make exports UTF-8. The captain wants the column order kept.
+  -> exit 0
+[target] scrub (mixed brief)
+intent-scrub: line 1: direct address: Make exports UTF-8. The captain wants the column order kept.
+intent-scrub: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-intent-live.xSIUXF/scrub/launch-brief.md
+  -> exit 1
