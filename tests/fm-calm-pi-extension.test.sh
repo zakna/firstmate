@@ -2662,8 +2662,8 @@ TS
       pane=$(cat "$TMP_ROOT/queued-escape-pane")
       assert_not_contains "$pane" "MONITOR_${label}_ONE" "Pi Calm exposed a hidden notification after Escape"
       assert_not_contains "$pane" "FIRSTMATE_OP" "Pi Calm exposed operational text after Escape"
-      # Pi before 0.87 drains the retained queue in its own aborted-run loop;
-      # only newer Pi needs Calm to start and announce a replacement turn.
+      # Pi before 0.87.1 drains the retained queue in its own aborted-run loop;
+      # only Pi 0.87.1 and newer needs Calm to start and announce a replacement turn.
       if node -e 'const v=process.argv[1].match(/(\d+)\.(\d+)\.(\d+)/); process.exit(v && (+v[1]>0 || +v[2]>87 || (+v[2]===87 && +v[3]>=1)) ? 0 : 1)' "$version"; then
         grep -Fxq 'Firstmate supervision continues in a new turn.' "$sessions/$label/status.log" \
           || fail "Pi Calm restarted a turn without announcing it after Escape"
