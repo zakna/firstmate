@@ -1075,6 +1075,63 @@ FIELDS
   FM_PR_RECORD_MERGED=$merged
 }
 
+# Reads a merged GitLab merge request's merge details into the same
+# FM_PR_RECORD_MERGE_* fields the GitHub reader fills: the merge commit, its
+# parent count, the merging user's username, and the merge time. The commit's
+# parents come from a second read of the merge commit, because the merge request
+# record carries no parent list. Fails on a merge request that is not merged or
+# on any unreadable record; the caller validates each value field by field.
+fm_pr_gitlab_read_merge_details() {  # <host> <path> <number>
+  local host=$1 path=$2 number=$3 project_url json fields line encoded commit_json
+  local state='' commit='' actor='' at='' parents=''
+  # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+  FM_PR_RECORD_MERGE_COMMIT=
+  FM_PR_RECORD_MERGE_PARENTS=
+  FM_PR_RECORD_MERGE_ACTOR=
+  FM_PR_RECORD_MERGED_AT=
+  command -v glab >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  project_url="https://$host/$path"
+  json=$(GITLAB_HOST="$host" glab mr view "$number" -R "$project_url" -F json 2>/dev/null) \
+    && [ -n "$json" ] || return 1
+  fields=$(printf '%s' "$json" | jq -r '
+    if type == "object" then
+      "state=" + (.state // ""),
+      "merge_commit=" + (.merge_commit_sha // ""),
+      "merge_actor=" + (.merged_by.username // ""),
+      "merged_at=" + ((.merged_at // "") | sub("\\.[0-9]+"; ""))
+    else
+      error("invalid merge request")
+    end' 2>/dev/null) || return 1
+  while IFS= read -r line; do
+    case "$line" in
+      state=*) state=${line#state=} ;;
+      merge_commit=*) commit=${line#merge_commit=} ;;
+      merge_actor=*) actor=${line#merge_actor=} ;;
+      merged_at=*) at=${line#merged_at=} ;;
+    esac
+  done <<FIELDS
+$fields
+FIELDS
+  [ "$state" = merged ] || return 1
+  if [[ "$commit" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]; then
+    encoded=${path//\//%2F}
+    if commit_json=$(GITLAB_HOST="$host" glab api "projects/$encoded/repository/commits/$commit" 2>/dev/null) \
+      && parents=$(printf '%s' "$commit_json" | jq -r '
+        if type == "object" and (.id == "'"$commit"'") and (.parent_ids | type == "array")
+        then .parent_ids | length else error("invalid commit") end' 2>/dev/null); then
+      # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+      FM_PR_RECORD_MERGE_PARENTS=$parents
+    fi
+  fi
+  # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+  FM_PR_RECORD_MERGE_COMMIT=$commit
+  # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+  FM_PR_RECORD_MERGE_ACTOR=$actor
+  # shellcheck disable=SC2034 # Read by bin/fm-merge-authority-lib.sh.
+  FM_PR_RECORD_MERGED_AT=$at
+}
+
 # gerrit-axi resolves its server from the current directory's origin remote
 # first, so the host is passed explicitly from the parsed identity and a read
 # outside a clone still reaches the right server. A change number is

@@ -236,6 +236,28 @@ SH
 printf '%s\n' "$*" >> "$FM_TEST_GLAB_LOG"
 [ "${FM_TEST_GLAB_FAIL:-0}" = 0 ] || exit 1
 [ "${FM_TEST_GLAB_SLEEP:-0}" = 0 ] || sleep "$FM_TEST_GLAB_SLEEP"
+case " $* " in
+  *" api projects/"*"/repository/commits/"*)
+    # The merge commit read, answered with its parent list.
+    [ "${FM_TEST_GLAB_COMMIT_FAIL:-0}" = 0 ] || exit 1
+    last=${!#}
+    printf '{"id":"%s","parent_ids":%s}\n' "${FM_TEST_GLAB_COMMIT_ID-${last##*/}}" \
+      "${FM_TEST_GLAB_PARENT_IDS-[\"1111111111111111111111111111111111111111\",\"2222222222222222222222222222222222222222\"]}"
+    exit 0
+    ;;
+  *" -F json"*)
+    [ "${FM_TEST_GLAB_JSON:-0}" != 0 ] || { printf 'title:\tfixture merge request\nstate:\t%s\nauthor:\tsomeone\n' "${FM_TEST_GLAB_STATE:-opened}"; exit 0; }
+    # The merge request record, answered in glab's JSON shape only when a case
+    # asks for it, because the merge path's refusal case needs plain output.
+    [ "${FM_TEST_GLAB_RECORD_FAIL:-0}" = 0 ] || exit 1
+    printf '{"state":"%s","merge_commit_sha":"%s","merged_by":{"username":"%s"},"merged_at":"%s"}\n' \
+      "${FM_TEST_GLAB_STATE:-opened}" \
+      "${FM_TEST_GLAB_MERGE_COMMIT-93c689e0123456789abcdef0123456789abcdef0}" \
+      "${FM_TEST_GLAB_MERGE_ACTOR-jane.doe_x}" \
+      "${FM_TEST_GLAB_MERGED_AT-2026-09-20T10:00:00.123Z}"
+    exit 0
+    ;;
+esac
 printf 'title:\tfixture merge request\nstate:\t%s\nauthor:\tsomeone\n' "${FM_TEST_GLAB_STATE:-opened}"
 SH
   # gerrit-axi, reproducing the real CLI's contract: one JSON record on stdout
@@ -3049,6 +3071,71 @@ test_external_merge_records_the_forge_merge_details() {
   pass "an external merge records its commit, parents, actor, and time, or unknown"
 }
 
+test_gitlab_external_merge_records_the_forge_merge_details() {
+  local dir state url meta expected
+  url=https://gitlab.example/group/subgroup/project/-/merge_requests/17
+
+  dir=$(make_case gitlab-external-merge-details)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GLAB_LOG="$dir/glab.log" FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 \
+    run_merged_poll_cycle "$dir"
+  [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
+    || fail "gitlab details: external merge outcome changed: $(merged_ledger_row "$state" task-a)"
+  expected=$(printf '%s\n' merge_origin=external \
+    merge_commit=93c689e0123456789abcdef0123456789abcdef0 merge_parents=2 \
+    merge_actor=jane.doe_x merged_at=2026-09-20T10:00:00Z "pr=$url")
+  [ "$(grep -A5 '^merge_origin=' "$meta")" = "$expected" ] \
+    || fail "gitlab details: task record lacks the merge details before pr=: $(cat "$meta")"
+  grep -qF "mr view 17 -R https://gitlab.example/group/subgroup/project -F json" "$dir/glab.log" \
+    || fail "gitlab details: the merge request record was not read by project URL"
+  grep -qF "api projects/group%2Fsubgroup%2Fproject/repository/commits/93c689e0123456789abcdef0123456789abcdef0" "$dir/glab.log" \
+    || fail "gitlab details: the merge commit was not read by encoded project path"
+  assert_poll_absent "$state" task-a
+
+  # An unreadable record records unknown, and an unreadable commit records only
+  # the parents unknown; both leave the outcome delivery unchanged.
+  dir=$(make_case gitlab-external-merge-details-unreadable)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GLAB_RECORD_FAIL=1 FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
+    || fail "gitlab unreadable: a failed detail read changed the outcome"
+  expected=$(printf '%s\n' merge_origin=external merge_commit=unknown merge_parents=unknown \
+    merge_actor=unknown merged_at=unknown "pr=$url")
+  [ "$(grep -A5 '^merge_origin=' "$meta")" = "$expected" ] \
+    || fail "gitlab unreadable: a failed read did not record unknown: $(cat "$meta")"
+
+  dir=$(make_case gitlab-external-merge-details-commit-unreadable)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GLAB_COMMIT_FAIL=1 FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  if ! { grep -qxF merge_parents=unknown "$meta" && grep -qxF merge_actor=jane.doe_x "$meta" \
+    && grep -qxF merge_commit=93c689e0123456789abcdef0123456789abcdef0 "$meta"; }; then
+    fail "gitlab commit unreadable: only the parents should be unknown: $(cat "$meta")"
+  fi
+
+  dir=$(make_case gitlab-external-merge-details-invalid)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GLAB_MERGE_ACTOR='bad actor' FM_TEST_GLAB_MERGED_AT='yesterday' \
+    FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  if ! { grep -qxF merge_actor=unknown "$meta" && grep -qxF merged_at=unknown "$meta" \
+    && grep -qxF merge_parents=2 "$meta"; }; then
+    fail "gitlab invalid: forge values were not validated field by field: $(cat "$meta")"
+  fi
+
+  pass "a GitLab external merge records its commit, parents, actor, and time, or unknown"
+}
+
 test_authority_persistence_refuses_rebound_metadata() {
   local dir state url_a url_b rc
   url_a=https://github.com/o/r/pull/1
@@ -3555,6 +3642,7 @@ test_self_merge_and_poll_publish_one_outcome
 test_merged_poll_row_carries_the_merge_authority
 test_merged_poll_row_names_no_authority_when_no_record_grants_one
 test_external_merge_records_the_forge_merge_details
+test_gitlab_external_merge_records_the_forge_merge_details
 test_authority_persistence_refuses_rebound_metadata
 test_authority_persists_before_control_unlock
 test_teardown_cannot_race_authority_consumption

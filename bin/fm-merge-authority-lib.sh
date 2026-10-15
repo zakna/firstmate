@@ -216,29 +216,47 @@ fm_merge_authority_remove_if_matches() {  # <state> <task-id> <provider> <host> 
   return "$status"
 }
 
-fm_merge_external_read() {  # <provider> <path> <number>
-  local provider=$1 path=$2 number=$3 record commit parents actor at
+fm_merge_external_read() {  # <provider> <path> <number> [<host>]
+  local provider=$1 path=$2 number=$3 host=${4:-} record commit parents actor at actor_pattern
   local LC_ALL=C
   FM_MERGE_EXTERNAL_COMMIT=unknown
   FM_MERGE_EXTERNAL_PARENTS=unknown
   FM_MERGE_EXTERNAL_ACTOR=unknown
   FM_MERGE_EXTERNAL_AT=unknown
-  [ "$provider" = github ] || return 0
-  # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
-  record=$(fm_run_timed 10 bash -c '
-    . "$1"
-    fm_pr_github_read_record "$2" "$3" "$4" || exit 1
-    [ "$FM_PR_RECORD_MERGED" = true ] || exit 1
-    printf "%s\n" "$FM_PR_RECORD_MERGE_COMMIT" "$FM_PR_RECORD_MERGE_PARENTS" \
-      "$FM_PR_RECORD_MERGE_ACTOR" "$FM_PR_RECORD_MERGED_AT"
-  ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "${path%%/*}" "${path#*/}" "$number" \
-    </dev/null 2>/dev/null) || return 0
+  case "$provider" in
+    github)
+      actor_pattern='^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$'
+      # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
+      record=$(fm_run_timed 10 bash -c '
+        . "$1"
+        fm_pr_github_read_record "$2" "$3" "$4" || exit 1
+        [ "$FM_PR_RECORD_MERGED" = true ] || exit 1
+        printf "%s\n" "$FM_PR_RECORD_MERGE_COMMIT" "$FM_PR_RECORD_MERGE_PARENTS" \
+          "$FM_PR_RECORD_MERGE_ACTOR" "$FM_PR_RECORD_MERGED_AT"
+      ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "${path%%/*}" "${path#*/}" "$number" \
+        </dev/null 2>/dev/null) || return 0
+      ;;
+    gitlab)
+      [ -n "$host" ] || return 0
+      # GitLab usernames may also carry dots and underscores.
+      actor_pattern='^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$'
+      # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
+      record=$(fm_run_timed 20 bash -c '
+        . "$1"
+        fm_pr_gitlab_read_merge_details "$2" "$3" "$4" || exit 1
+        printf "%s\n" "$FM_PR_RECORD_MERGE_COMMIT" "$FM_PR_RECORD_MERGE_PARENTS" \
+          "$FM_PR_RECORD_MERGE_ACTOR" "$FM_PR_RECORD_MERGED_AT"
+      ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "$host" "$path" "$number" \
+        </dev/null 2>/dev/null) || return 0
+      ;;
+    *) return 0 ;;
+  esac
   { IFS= read -r commit; IFS= read -r parents; IFS= read -r actor; IFS= read -r at; } <<RECORD
 $record
 RECORD
   [[ "$commit" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] && FM_MERGE_EXTERNAL_COMMIT=$commit
   [[ "$parents" =~ ^[0-9]{1,3}$ ]] && FM_MERGE_EXTERNAL_PARENTS=$parents
-  [[ "$actor" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$ ]] && FM_MERGE_EXTERNAL_ACTOR=$actor
+  [[ "$actor" =~ $actor_pattern ]] && FM_MERGE_EXTERNAL_ACTOR=$actor
   [[ "$at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] && FM_MERGE_EXTERNAL_AT=$at
   return 0
 }
@@ -250,7 +268,7 @@ fm_merge_external_record() {  # <state> <task-id> <provider> <host> <path> <numb
   [ -d "$state" ] && [ ! -L "$state" ] || return 1
   state_device=$(fm_pr_file_device "$state") || return 1
   meta="$state/$id.meta"
-  fm_merge_external_read "$provider" "$path" "$number"
+  fm_merge_external_read "$provider" "$path" "$number" "$host"
   lock=$(fm_meta_lock_path "$meta") || return 1
   fm_lock_acquire_wait "$lock" || return 1
   fm_pr_metadata_identity_parse "$meta" \
