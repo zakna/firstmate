@@ -189,7 +189,9 @@ else
     rounds_kept=$(jq length "$WORK/rounds.valid.json")
     mv "$WORK/rounds.valid.json" "$WORK/rounds.json"
     if [ -n "$nm_failed" ]; then
-      note_input no-mistakes error "could not query$nm_failed in $NM_DB; its schema may have changed; reads that succeeded are retained"
+      dropped=
+      [ "$rounds_total" -eq "$rounds_kept" ] || dropped="; $((rounds_total - rounds_kept)) unreadable step_rounds payload(s) dropped"
+      note_input no-mistakes error "could not query$nm_failed in $NM_DB; its schema may have changed; reads that succeeded are retained$dropped"
     elif [ "$rounds_total" -eq "$rounds_kept" ]; then
       note_input no-mistakes read "$NM_DB: $(jq length "$WORK/runs.json") runs on landed tickets"
     else
@@ -460,7 +462,8 @@ jq -n --arg since "$SINCE" \
   --slurpfile rounds "$WORK/rounds.json" --slurpfile comments "$WORK/comments.json" \
   --slurpfile steers "$WORK/steers.json" --slurpfile proposals "$WORK/proposals.json" --slurpfile inputs <(jq -s . "$INPUTS") '
   ($runs[0] | map({key: .run_id, value: .}) | from_entries) as $run
-  | def ticket($id): ($run[$id] // {}) | (.pr_url // "\(.repo) \(.branch)");
+  | def ticket($id): $run[$id] as $r
+      | if $r == null then "run \($id)" else ($r.pr_url // "\($r.repo) \($r.branch)") end;
     def finding($r; $kind; $sel):
       {source: "finding", kind: $kind, ticket: ticket($r.run_id), run: $r.run_id, step: $r.step,
        round: $r.round, selection: $sel, id: .id, severity: (.severity // "unknown"),

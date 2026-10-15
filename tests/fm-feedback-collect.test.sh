@@ -463,6 +463,28 @@ test_partial_database_reads_are_kept() {
   pass 'successful database reads survive one failed read'
 }
 
+test_failed_runs_read_keeps_run_labels() {
+  local dir="$TMP_ROOT/failed-runs-read"
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  sqlite3 "$dir/state.sqlite" <<SQL
+ALTER TABLE repos RENAME COLUMN upstream_url TO remote_url;
+INSERT INTO step_rounds VALUES
+  ('rd-bad-selected', 's-review-2', 2, 'initial', 'user', 'not-json', '{}', '{}', $IN);
+SQL
+  "$COLLECT" --since 2026-09-20 --out "$dir/feedback" --nm-db "$dir/state.sqlite" \
+    --home "$dir/home" >/dev/null || fail 'collector failed when the runs read failed'
+  jq -e '
+    ([.inputs[] | select(.name == "no-mistakes")][0] | .status == "error"
+      and (.detail | contains("runs")) and (.detail | contains("1 unreadable step_rounds payload")))
+    and ([.records[] | select(.source == "finding" and .text == "DECLINED-ONE")] | length == 1)
+    and ([.records[] | select(.run != null)] | length > 0
+      and all(.ticket == "run \(.run)"))
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "records kept after a failed runs read lost their run labels: $(jq -c . "$dir/feedback.json")"
+  pass 'records kept after a failed runs read are labelled by run'
+}
+
 test_usage_errors() {
   local code
   "$COLLECT" --since 2026-13 --out "$TMP_ROOT/x" >/dev/null 2>&1; code=$?
@@ -480,7 +502,7 @@ for test_name in test_collects_every_source_in_the_window test_reused_branch_kee
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
   test_malformed_steer_records_are_reported test_missing_backlog_skips_steers \
   test_unreadable_backlog_blocks_steers test_forge_read_failure_is_reported \
-  test_empty_steer_body_is_unreadable test_pipe_in_table_cell_is_escaped \
+  test_empty_steer_body_is_unreadable test_failed_runs_read_keeps_run_labels test_pipe_in_table_cell_is_escaped \
   test_partial_database_reads_are_kept test_usage_errors; do
   ( "$test_name" ) || failures=$((failures + 1))
 done
