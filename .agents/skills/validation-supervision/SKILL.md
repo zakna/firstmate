@@ -30,6 +30,11 @@ When approved review remedies must be covered by a later validation run, whether
 Append captain-approved remedies to the brief's `## Captain's intent` under the `AGENTS.md` section 7 mid-task rule; never put remedies firstmate approves under `ask-user-authority` there.
 Firstmate's re-validation order must tell the worker to write every firstmate-approved remedy in its own words to a file, pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, and confirm before re-running that the new intent contains every remedy in that file word for word.
 
+The `document` step runs after the review step approves a head, so its commits, whose subjects start with `no-mistakes(document):`, reach the PR without any review round.
+When a no-mistakes ship reports ready, list those commits on its branch; the ready head is unreviewed when any of them changed a file matched by a `review.path_instructions` rule in the default branch's `.no-mistakes.yaml`, or carries exact text a gate decision required under `ask-user-authority`.
+Do not treat an unreviewed head as ready or merge it: order the same worker one more validation run on that branch so a review round covers that head, and accept ready only from that run.
+If that run's `document` step again commits under the same condition, escalate to the captain rather than ordering a third run.
+
 Judge validation by the resolved state line from [`bin/fm-crew-state.sh`](../../../bin/fm-crew-state.sh), whose header owns outcome mappings and CI-monitor/daemon exceptions, never by shell liveness, the last status event, or a raw run record.
 Workers parked at approval or fix-review must follow the active gate help.
 A worker hand-editing, committing, aborting, or restarting during an active validation run duplicates pipeline ownership outside the supersession sequence above; steer it back to the gate response flow.
