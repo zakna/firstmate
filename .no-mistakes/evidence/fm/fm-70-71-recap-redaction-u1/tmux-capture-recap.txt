@@ -1,0 +1,9 @@
+# scrollback = real 'tmux capture-pane -e -p -S - -E -' (private socket) of a pane that printed: $ mysql -h db <red>\<reset> / >   -pTMUXLIVESECRET prod / 397 blank rows; the -p row sits exactly at the 400-row cutoff
+### base 528d61b
+Long lines are cut short and credential-shaped strings are redacted.
+
+> >   -pTMUXLIVESECRET prod
+### target 225296e
+
+> $ mysql -h db \
+> >   -p[redacted] prod
