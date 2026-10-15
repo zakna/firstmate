@@ -122,10 +122,12 @@ fi
 JQ_DEFS='
 # A whole (nested, quoted, or backtick) command substitution, so a secret value read from one does not leak past its first space.
 def cmdsub: "(?<sub>\\$\\((?:\\g<sub>|[^()\"\u0027\\\\]|\\\\.|\"(?:[^\"\\\\]|\\\\.)*\"|\u0027[^\u0027]*\u0027)*\\)?)|`(?:[^`\\\\]|\\\\.)*`?";
+# One double-quoted string, which may hold command substitutions with quotes of their own.
+def dquote: "\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?";
 # One shell word of $bare characters, escapes, quotes, and command substitutions.
-def shword($bare): "(?:" + cmdsub + "|\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|" + $bare + ")+";
+def shword($bare): "(?:" + cmdsub + "|" + dquote + "|\\$?\u0027[^\u0027]*\u0027?|\\\\.|" + $bare + ")+";
 # One secret value token: a command substitution, one quoted string, or a run of $bare characters.
-def secret($bare): "(?:" + cmdsub + "|\"[^\"]*\"?|\u0027[^\u0027]*\u0027?|" + $bare + "+)";
+def secret($bare): "(?:" + cmdsub + "|" + dquote + "|\u0027[^\u0027]*\u0027?|" + $bare + "+)";
 # Repeats until stable so each attached -p value in one command is redacted, not only the first;
 # \u0001 (removed from input by strip) marks a value already redacted, so a password that starts with [redacted] is still redacted.
 def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)" + shword("[^\\s\"\u0027\\\\;&|<>]"); "\(.f)\u0001") | if . == $in then . else mysqlp end;
