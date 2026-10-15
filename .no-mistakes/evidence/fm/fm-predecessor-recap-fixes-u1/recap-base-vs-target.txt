@@ -1,0 +1,64 @@
+===== base =====
+## S1 #69 scrollback: even backslash run (\\) must NOT join next row; odd (\) must
+> $ mysql -u root \\
+> $ find . -p[redacted]
+> $ mysql \
+> >   -p[redacted] db
+## S1b triple backslash (odd) continues; quad (even) does not
+> $ echo a \\\
+>   -pX
+> $ mysql \\\
+>   -p[redacted] db
+> $ ls \\\\
+> $ whoami
+## S2 #65 password starting with [redacted]
+- tool call Bash: mysql -p[redacted]hunter2 db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mariadb -p[redacted][redacted]zzz
+## S3 #64 shell operators after attached -p
+- tool call Bash: mysql -p[redacted] echo after
+- tool call Bash: mysqldump -p[redacted]
+- tool call Bash: mysql -p[redacted] | tee out & mysql -p[redacted] < in.sql
+- tool call Bash: mysql -p[redacted] ok
+- tool call Bash: mysql -p[redacted]
+## S4 regressions: quoted/escaped/repeat values still fully redacted
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -u x -p[redacted] db; mysqladmin -p[redacted] status
+- tool call Bash: grep -p [redacted] file
+- tool call Bash: mysql -p [redacted]
+## S5 adversarial: literal U+0001 in input cannot forge the marker
+- tool call Bash: mysql -p[redacted] db
+===== target =====
+## S1 #69 scrollback: even backslash run (\\) must NOT join next row; odd (\) must
+> $ mysql -u root \\
+> $ find . -print
+> $ mysql \
+> >   -p[redacted] db
+## S1b triple backslash (odd) continues; quad (even) does not
+> $ echo a \\\
+>   -pX
+> $ mysql \\\
+>   -p[redacted] db
+> $ ls \\\\
+> $ whoami
+## S2 #65 password starting with [redacted]
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mariadb -p[redacted]
+## S3 #64 shell operators after attached -p
+- tool call Bash: mysql -p[redacted]; echo after
+- tool call Bash: mysqldump -p[redacted]>dump.sql
+- tool call Bash: mysql -p[redacted] | tee out & mysql -p[redacted] < in.sql
+- tool call Bash: mysql -p[redacted]&&echo ok
+- tool call Bash: mysql -p[redacted]||true
+## S4 regressions: quoted/escaped/repeat values still fully redacted
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -p[redacted] db
+- tool call Bash: mysql -u x -p[redacted] db; mysqladmin -p[redacted] status
+- tool call Bash: grep -p [redacted] file
+- tool call Bash: mysql -p [redacted]
+## S5 adversarial: literal U+0001 in input cannot forge the marker
+- tool call Bash: mysql -p[redacted] db
