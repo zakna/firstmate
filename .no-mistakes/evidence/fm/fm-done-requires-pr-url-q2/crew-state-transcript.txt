@@ -1,0 +1,30 @@
+### mode=no-mistakes status line: done: implementation complete   (branch pushed to origin)
+$ bin/fm-crew-state.sh nm-nourl
+state: blocked · source: status-log · a no-mistakes done names no PR URL, so the work has not been validated or shipped: run /no-mistakes, then report done: PR <url> from its result
+rc=0
+
+### mode=no-mistakes status line: done: implementation complete, see PR https://github.com/o/r/pull/1   (branch pushed to origin)
+$ bin/fm-crew-state.sh nm-midurl
+state: blocked · source: status-log · a no-mistakes done names no PR URL, so the work has not been validated or shipped: run /no-mistakes, then report done: PR <url> from its result
+rc=0
+
+### mode=no-mistakes status line: done: PR http://github.com/o/r/pull/1 checks green   (branch pushed to origin)
+$ bin/fm-crew-state.sh nm-http
+state: blocked · source: status-log · a no-mistakes done names no PR URL, so the work has not been validated or shipped: run /no-mistakes, then report done: PR <url> from its result
+rc=0
+
+### mode=no-mistakes status line: done: PR https://github.com/o/r/pull/1 checks green: test; read changed files: yes   (branch pushed to origin)
+$ bin/fm-crew-state.sh nm-ready
+state: done · source: status-log · PR https://github.com/o/r/pull/1 checks green: test; read changed files: yes
+rc=0
+
+### mode=no-mistakes status line: done: PR https://github.com/o/r/pull/2 no CI: test step 3/3 scenarios live   (branch pushed to origin)
+$ bin/fm-crew-state.sh nm-noci
+state: done · source: status-log · PR https://github.com/o/r/pull/2 no CI: test step 3/3 scenarios live
+rc=0
+
+### mode=direct-PR status line: done: implementation complete   (branch pushed to origin)
+$ bin/fm-crew-state.sh dpr-plain
+state: done · source: status-log · implementation complete
+rc=0
+

@@ -1,0 +1,20 @@
+$ FM_HOME=$LAB bin/fm-promote.sh scout-promo-no-mistakes --mode no-mistakes --yolo off
+wrote ship instructions for mode=no-mistakes: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/scout-promo-no-mistakes/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE bin/fm-send.sh scout-promo-no-mistakes "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/scout-promo-no-mistakes/ship-instructions.md)"
+rc=0
+--- ship-instructions first line:
+Delivery: this task is finished only when the /no-mistakes run you start has opened a PR; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that PR's https:// URL is refused.
+--- last line:
+Delivery: this task is finished only when the /no-mistakes run you start has opened a PR; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that PR's https:// URL is refused.
+--- '^Delivery: ' count: 2
+
+$ FM_HOME=$LAB bin/fm-promote.sh scout-promo-direct-PR --mode direct-PR --yolo off
+wrote ship instructions for mode=direct-PR: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/scout-promo-direct-PR/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE bin/fm-send.sh scout-promo-direct-PR "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/scout-promo-direct-PR/ship-instructions.md)"
+rc=0
+--- ship-instructions first line:
+Your scout task has been promoted to a ship task, mode=direct-PR. Your window, worktree, and context stay as they are; only the contract below changes.
+--- last line:
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+--- '^Delivery: ' count: 0
+

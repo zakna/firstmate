@@ -1,0 +1,60 @@
+$ FM_HOME=$LAB bin/fm-brief.sh nmgh-t1 some-proj --mode no-mistakes
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/nmgh-t1/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+--- first line:
+Delivery: this task is finished only when the /no-mistakes run you start has opened a PR; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that PR's https:// URL is refused.
+--- last line:
+Delivery: this task is finished only when the /no-mistakes run you start has opened a PR; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that PR's https:// URL is refused.
+--- '^Delivery: ' line count: 2
+--- DoD excerpt:
+Delivery contract: mode=no-mistakes
+Ship branch: fm/nmgh-t1
+The task is complete only when the /no-mistakes run you start has opened a PR for your branch and reached the return point below.
+As soon as your implementation is committed on your branch, run /no-mistakes yourself to validate it and ship a PR; do not append `done:` first and do not wait for firstmate to tell you.
+A `done:` line that names no PR URL is refused and read as blocked, not finished.
+
+$ FM_HOME=$LAB bin/fm-brief.sh nmger-t1 some-proj --mode no-mistakes --forge gerrit
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/nmger-t1/brief.md (ship, mode=no-mistakes forge=gerrit shape=squash; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+--- first line:
+Delivery: this task is finished only after the /no-mistakes run you start has passed and you have published its change; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that change's https:// URL is refused.
+--- last line:
+Delivery: this task is finished only after the /no-mistakes run you start has passed and you have published its change; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that change's https:// URL is refused.
+--- '^Delivery: ' line count: 2
+--- DoD excerpt:
+Delivery contract: mode=no-mistakes forge=gerrit shape=squash
+Ship branch: fm/nmger-t1
+This project's review server is Gerrit: it has no pull requests and no forge CI the pipeline can watch, so **no-mistakes runs here as a review pass that ends at a ready branch**, and you then publish that branch as one change.
+Pass `--skip push,pr,ci` on every `no-mistakes axi run` for this task, and skip nothing else: `review`, `test`, `document`, and `lint` are the whole point of the run.
+Those three are the only steps that reach a forge, and skipping them is a supported outcome, not a degraded one.
+
+$ FM_HOME=$LAB bin/fm-brief.sh dpr-t1 some-proj --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/dpr-t1/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+--- first line:
+You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
+--- last line:
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+--- '^Delivery: ' line count: 0
+--- DoD excerpt:
+Delivery contract: mode=direct-PR
+Ship branch: fm/dpr-t1
+This task ships **direct-PR**: you raise the PR yourself, without the no-mistakes pipeline.
+The task is complete only when committed on your branch.
+When it is implemented and committed, push your branch and open a PR with `gh-axi` that is ready for review, not a draft.
+
+$ FM_HOME=$LAB bin/fm-brief.sh lo-t1 some-proj --mode local-only
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.T4z8CE/data/lo-t1/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+rc=0
+--- first line:
+You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
+--- last line:
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+--- '^Delivery: ' line count: 0
+--- DoD excerpt:
+Delivery contract: mode=local-only
+Ship branch: fm/lo-t1
+This task ships **local-only**: no remote, no PR, no pipeline.
+The task is complete only when committed on your branch `fm/lo-t1`. Do NOT push, do NOT open a PR, do NOT merge.
+A `done:` is accepted when the named head is on this project's shared local branch, not only on a detached copy; the check tests that head, not merely that a branch moved.
+
