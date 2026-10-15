@@ -30,12 +30,12 @@ When approved review remedies must be covered by a later validation run, whether
 Append captain-approved remedies to the brief's `## Captain's intent` under the `AGENTS.md` section 7 mid-task rule; never put remedies firstmate approves under `ask-user-authority` there.
 Firstmate's re-validation order must tell the worker to write every firstmate-approved remedy in its own words to a file, pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, and confirm before re-running that the new intent contains every remedy in that file word for word.
 
-The `document` step runs after the review step approves a head, so its commits, whose subjects start with `no-mistakes(document):`, reach the PR without any review round.
-When a no-mistakes ship reports ready, read the reporting run's submitted head from `branch_sync.pipeline.submitted_head` in `no-mistakes axi status --run <id>`.
-List only the `no-mistakes(document):` commits in `<submitted_head>..<ready head>`, since this run's review covered every earlier commit.
-The ready head is unreviewed when any of them changed a file matched by a `review.path_instructions` rule in the default branch's `.no-mistakes.yaml`, or carries exact text a gate decision required under `ask-user-authority`.
-Do not treat an unreviewed head as ready or merge it: order the same worker one more validation run on that branch so a review round covers that head, and accept ready only from that run.
-If that run's `document` step again commits under the same condition, escalate to the captain rather than ordering a third run.
+The `document` step runs after the review step approves a head, so its commits reach the PR without any review round.
+When a no-mistakes ship reports ready, read the reporting run's approved head from the `review_approved_head_sha` column of its row in the `runs` table of `~/.no-mistakes/state.sqlite`, opened read-only, since `no-mistakes axi status` does not print it.
+The ready head is unreviewed when any commit in `<review_approved_head>..<ready head>` changes a file matched by a `review.path_instructions` rule in the default branch's `.no-mistakes.yaml`, or carries exact text a gate decision required under `ask-user-authority`.
+An empty range means the review round covered the ready head.
+Do not treat an unreviewed head as ready or merge it - order the same worker one more validation run on that branch so a review round covers that head, and accept ready only from that run.
+If that run's ready head is again unreviewed, escalate to the captain rather than ordering a third run.
 
 Judge validation by the resolved state line from [`bin/fm-crew-state.sh`](../../../bin/fm-crew-state.sh), whose header owns outcome mappings and CI-monitor/daemon exceptions, never by shell liveness, the last status event, or a raw run record.
 Workers parked at approval or fix-review must follow the active gate help.
