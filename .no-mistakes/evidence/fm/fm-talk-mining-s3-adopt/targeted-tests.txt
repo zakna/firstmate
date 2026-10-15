@@ -1,0 +1,9 @@
+ok - fm-brief.sh: --branch-prefix value is validated against embedded spaces and a leading dash
+Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.6aTpLv/branch-prefix-shell-safe-marker)brief-branch-safe-g3'
+ok - fm-brief.sh: ref-format-valid shell metacharacters stay literal in generated branch commands
+ok - fm-brief.sh: every crewmate scaffold forbids administering the shared worktree pool
+ok - fm-brief.sh: ship briefs require an existing automated-review comment inventory
+fm-brief exit=
+# all fm-task-delivery tests passed
+fm-task-delivery exit=
+(both scripts exited 0; fm-brief: 41 ok, 0 not ok; fm-task-delivery: all passed)

@@ -1,0 +1,41 @@
+=== fm-brief.sh ln-no-mistakes-t1 demo --mode no-mistakes
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-no-mistakes-t1/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note section and what follows:
+154:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-no-mistakes-t1/landing-note.md` with three short answers:
+155-- (a) what this change made harder to change next;
+156-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+157-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+158-That note is task material outside your worktree: never commit it.
+159-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+160-   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+=== fm-brief.sh ln-direct-pr-t1 demo --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-direct-pr-t1/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note section and what follows:
+107:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-direct-pr-t1/landing-note.md` with three short answers:
+108-- (a) what this change made harder to change next;
+109-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+110-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+111-That note is task material outside your worktree: never commit it.
+112-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+113-   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+=== fm-brief.sh ln-local-only-t1 demo --mode local-only
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-local-only-t1/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+--- landing-note section and what follows:
+102:Before the `done:` line that finishes this task - the ready report, not an earlier pipeline handoff - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-local-only-t1/landing-note.md` with three short answers:
+103-- (a) what this change made harder to change next;
+104-- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or `none`;
+105-- (c) one fact you needed that this brief or the project's `AGENTS.md` did not give you, or `none`.
+106-That note is task material outside your worktree: never commit it.
+107-When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+108-   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.
+=== gerrit forge
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-gerrit-t1/brief.md (ship, mode=no-mistakes forge=gerrit shape=squash; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+1
+=== scout (adversarial: must NOT carry landing note)
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.aoIPsr/data/ln-scout-t1/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+landing-note mentions: 0

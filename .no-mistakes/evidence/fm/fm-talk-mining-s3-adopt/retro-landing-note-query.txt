@@ -1,0 +1,10 @@
+Fixture: old-a1 (before retro, data meta), new-live-a2 (state meta), new-clean-a3 (data meta), other-proj-a4, no-meta-a5, new-prefix-a6 (project=/x/projects/demo-fork)
+=== R=<previous retro report>  (expect new-live-a2, new-clean-a3)
+$FM_HOME/data/new-clean-a3/landing-note.md
+$FM_HOME/data/new-live-a2/landing-note.md
+=== R= empty (no previous retro; expect old-a1, new-live-a2, new-clean-a3)
+$FM_HOME/data/new-clean-a3/landing-note.md
+$FM_HOME/data/new-live-a2/landing-note.md
+$FM_HOME/data/old-a1/landing-note.md
+=== retro query from the skill finds the previous retro report:
+$FM_HOME/data/retro-old/report.md

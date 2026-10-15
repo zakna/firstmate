@@ -1,0 +1,18 @@
+path: .agents/skills/*/SKILL.md
+path: skills/*/SKILL.md
+path: tests/**
+path: bin/**
+path: .claude/mods/**
+cheat-rule entries: ['tests/**', 'bin/**', '.claude/mods/**'] identical text: True
+  covers 'assertion weakened or removed': True
+  covers 'newly skipped or deleted': True
+  covers 'fixed value that only matches the test data': True
+  covers 'mock or stub of the unit': True
+  covers 'expected value changed to fit new output': True
+  tests/fm-brief.test.sh: cheat-rule applies = True
+  tests/lib/x/y.sh: cheat-rule applies = True
+  bin/fm-dod-lib.sh: cheat-rule applies = True
+  bin/backends/tmux.sh: cheat-rule applies = True
+  .claude/mods/foo/index.mjs: cheat-rule applies = True
+  docs/architecture.md: cheat-rule applies = False
+  AGENTS.md: cheat-rule applies = False
