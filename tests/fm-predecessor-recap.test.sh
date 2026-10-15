@@ -227,6 +227,7 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   pass "recap: credential-shaped strings are redacted and .env contents omitted"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
 test_attached_password_command_substitution_is_redacted_whole() {
   local dir t out
   dir=$(new_case attachedsub)
