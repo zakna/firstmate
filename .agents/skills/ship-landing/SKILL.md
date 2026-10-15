@@ -26,7 +26,7 @@ File its tidy (b) as a backlog item only when it is concrete: structure only wit
 Its fact (c) needs no filing, because the note stays with the task's records and the `retro` skill reads it as a source of the project's next retro.
 The landing note is on trial: when ten landed tickets have notes, retire it if fewer than two of them gave a concrete tidy, by queueing a change that removes it from `bin/fm-dod-lib.sh` and this skill.
 
-The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of the feature that named it, and record it as an ordinary backlog dependency of that next feature.
+The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of that planned next feature, and record it as an ordinary backlog dependency of that next feature.
 Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
 
 Tear down a ship task only after landing is confirmed.
