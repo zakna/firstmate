@@ -83,15 +83,29 @@ test_moved_branch_without_named_head_is_refused() {
   pass "a moved remote branch that lacks the named head is refused"
 }
 
-test_no_mistakes_prevalidation_done_is_not_gated() {
-  local repo wt
+test_no_mistakes_done_without_pr_url_is_refused() {
+  local repo wt mode reason rc
   repo="$TMP_ROOT/preval-repo"
   wt="$TMP_ROOT/preval-wt"
   fm_git_worktree "$repo" "$wt" fm/preval
-  git -C "$wt" commit -q --allow-empty -m 'only in the disposable copy'
-  accept_done ship no-mistakes "$wt" "$repo" 'done: implementation complete' \
-    || fail "no-mistakes pre-validation done: must not require named-head reachability"
-  pass "no-mistakes pre-validation done: is not gated"
+  git -C "$wt" commit -q --allow-empty -m 'pushed, but never validated'
+  # The named head is reachable outside the copy, so only the missing PR URL
+  # can refuse this done.
+  git -C "$wt" update-ref refs/remotes/origin/fm/preval "$(git -C "$wt" rev-parse HEAD)"
+  for mode in no-mistakes ''; do
+    rc=0
+    reason=$(accept_done ship "$mode" "$wt" "$repo" 'done: implementation complete') || rc=$?
+    [ "$rc" -eq 1 ] || fail "no-mistakes done: without a PR URL was accepted (mode '${mode}')"
+    case "$reason" in
+      *"no PR URL"*"/no-mistakes"*) ;;
+      *) fail "refusal did not name the missing PR URL and /no-mistakes (mode '${mode}'): $reason" ;;
+    esac
+  done
+  accept_done ship no-mistakes "$wt" "$repo" 'done: PR https://example.test/o/r/pull/9 checks green: test; read changed files: yes' \
+    || fail "a pushed no-mistakes ready line with a PR URL was refused"
+  accept_done ship direct-PR "$wt" "$repo" 'done: implementation complete' \
+    || fail "the PR URL rule leaked into direct-PR mode"
+  pass "no-mistakes done: without a PR URL is refused"
 }
 
 test_local_only_linked_branch_is_accepted() {
@@ -465,7 +479,7 @@ EOF
 
 test_scout_done_is_not_gated
 test_unpushed_ship_done_is_refused
-test_no_mistakes_prevalidation_done_is_not_gated
+test_no_mistakes_done_without_pr_url_is_refused
 test_remote_containing_named_head_is_accepted
 test_moved_branch_without_named_head_is_refused
 test_free_text_sha_is_not_the_named_head
