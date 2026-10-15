@@ -308,6 +308,42 @@ test_quoted_command_substitution_with_inner_quotes_is_redacted_whole() {
   pass "recap: a quoted command substitution with inner quotes is redacted whole"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_compound_secret_word_is_redacted_to_the_next_unquoted_space() {
+  local dir t out
+  dir=$(new_case compoundword)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w1","name":"Bash","input":{"command":"PASSWORD=$(pass)cwa run && API_TOKEN=$(cwb)$(cwc) run && cmd --password $(cwd)cwe next"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"w2","name":"Bash","input":{"command":"mysql -p $(cwf)cwg db && TOKEN=pre$(cwh i)cwj run && SECRET=$(cwk)\"cwl cwm\" run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"w2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *cwa* | *cwb* | *cwc* | *cwd* | *cwe* | *cwf* | *cwg* | *cwh* | *cwj* | *cwk* | *cwl* | *cwm*) fail "part of a compound secret word reached the recap: $out" ;; esac
+  assert_contains "$out" "PASSWORD=[redacted] run && API_TOKEN=[redacted] run && cmd --password [redacted] next" "text joined to a command substitution should be redacted with it"
+  assert_contains "$out" "mysql -p [redacted] db && TOKEN=[redacted] run && SECRET=[redacted] run" "a bare prefix or quoted suffix around a command substitution should be redacted with it"
+  pass "recap: a compound secret word is redacted up to the next unquoted space"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_arithmetic_expansion_is_redacted_whole_in_secret_values() {
+  local dir t out
+  dir=$(new_case arithmetic)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"a1","name":"Bash","input":{"command":"MYSQL_PASSWORD=$((123456)) mysql db && mysql -p $((345678)) db && mysql -p$((456789)) db"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"a1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"a2","name":"Bash","input":{"command":"API_KEY=$(echo $((7 + 8)) x) run"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"a2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *123456* | *345678* | *456789* | *"7 + 8"*) fail "an arithmetic-expansion secret reached the recap: $out" ;; esac
+  assert_contains "$out" "MYSQL_PASSWORD=[redacted] mysql db && mysql -p [redacted] db && mysql -p[redacted] db" "an arithmetic expansion should be redacted whole"
+  assert_contains "$out" "API_KEY=[redacted] run" "an arithmetic expansion inside a command substitution should be redacted whole"
+  pass "recap: an arithmetic expansion is redacted whole in secret values"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -532,6 +568,8 @@ test_attached_password_command_substitution_is_redacted_whole
 test_separated_flag_and_assignment_command_substitutions_are_redacted_whole
 test_quoted_secret_does_not_pair_with_a_later_secret_quote
 test_quoted_command_substitution_with_inner_quotes_is_redacted_whole
+test_compound_secret_word_is_redacted_to_the_next_unquoted_space
+test_arithmetic_expansion_is_redacted_whole_in_secret_values
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
