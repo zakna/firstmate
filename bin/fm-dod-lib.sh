@@ -732,6 +732,19 @@ When this task fixes a bug, first add a test that reproduces the bug and fails, 
 EOF
 }
 
+# The landing note every ship writes before its ready report, whatever its mode.
+# ship-landing owns what firstmate does with it at landing, and the retro skill
+# reads it as a source.
+fm_landing_note_block() {  # <task-data-dir>
+  cat <<EOF
+Before the \`done:\` line that finishes this task - the ready report, not an earlier pipeline handoff - write \`$1/landing-note.md\` with three short answers:
+- (a) what this change made harder to change next;
+- (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or \`none\`;
+- (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.
+That note is task material outside your worktree: never commit it.
+EOF
+}
+
 fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<base>] [<data-dir>]
   local mode=$1 id=$2 forge=${4:-none} base=${5:-}
   local branch=${3:-fm/$id} pr_base='' nm_base='' base_q intent_dir=${6:-data}/$2
@@ -860,6 +873,7 @@ EOF
       echo "error: fm_dod_block: unknown delivery mode '$mode'" >&2
       return 1 ;;
   esac
+  fm_landing_note_block "$intent_dir"
   fm_bug_fix_test_contract
 }
 
