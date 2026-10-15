@@ -21,6 +21,14 @@ A captain instruction to merge is explicit authority; `yolo` is the only standin
 For any custom `state/<id>.check.sh` you write yourself, keep it an ordinary single-link mode-`0700` file, print one line only when firstmate should wake, print nothing otherwise, finish before `FM_CHECK_TIMEOUT`, then bind its current bytes with `bin/fm-check-register.sh <id>` before the watcher may execute it.
 Retire a custom check only through `bin/fm-check-unregister.sh <id>` (or `bin/fm-teardown.sh` for a spawned task); never hand-compose an `rm` with `$STATE`/`$ID`.
 
+At landing, read the task's landing note, `${FM_HOME:?}/data/<id>/landing-note.md`, whose questions `bin/fm-dod-lib.sh` owns.
+File its tidy (b) as a backlog item only when it is concrete: structure only with no behaviour change, about an hour, naming its files.
+Its fact (c) needs no filing, because the note stays with the task's records and the `retro` skill reads it as a source of the project's next retro.
+The landing note is on trial: when ten landed tickets have notes, retire it if fewer than two of them gave a concrete tidy, by queueing a change that removes it from `bin/fm-dod-lib.sh` and this skill.
+
+The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of the feature that named it, and record it as an ordinary backlog dependency of that next feature.
+Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
+
 Tear down a ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
 Never force teardown without explicit discard authority.

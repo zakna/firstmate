@@ -216,6 +216,8 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
+    assert_grep "write \`$home/data/$id/landing-note.md\` with three short answers" "$brief" \
+      "$id: brief missing the landing-note step with its task-data path"
     assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$brief" \
       "$id: brief missing the failing-bug-test-first rule"
     assert_grep "Never edit, weaken, skip, or delete that test to make it pass" "$brief" \
