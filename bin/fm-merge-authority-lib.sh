@@ -44,13 +44,15 @@
 #   merge_parents=<parent count of the merge commit> | unknown
 #   merge_actor=<login of the merging account> | unknown
 #   merged_at=<ISO-8601 UTC merge time> | unknown
-# A merge through bin/fm-pr-merge.sh writes none of these. Only GitHub is read,
+# A merge through bin/fm-pr-merge.sh writes none of these. GitHub is read
 # through the one GraphQL record read in bin/fm-pr-lib.sh, bounded by 10
+# seconds. GitLab is read through two glab calls in bin/fm-pr-lib.sh, the merge
+# request view and the merge commit for its parents, bounded together by 20
 # seconds. Another forge, a failed or timed-out read, and any value that fails
-# validation record unknown. The
-# record is best effort and runs after the outcome is published, while the poll
-# still holds the task lifecycle lock that teardown needs: its failure is only
-# logged and never blocks, retries, or changes that delivery.
+# validation record unknown. The record is best effort and runs after the
+# outcome is published, while the poll still holds the task lifecycle lock that
+# teardown needs, so teardown can wait up to that read bound: its failure is
+# only logged and never blocks, retries, or changes that delivery.
 # bin/fm-teardown.sh carries the fields into the backlog Done note.
 #
 # Sourced by those scripts and by tests. No side effects on source beyond its
@@ -239,7 +241,7 @@ fm_merge_external_read() {  # <provider> <path> <number> [<host>]
     gitlab)
       [ -n "$host" ] || return 0
       # GitLab usernames may also carry dots and underscores.
-      actor_pattern='^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$'
+      actor_pattern='^[A-Za-z0-9_.][A-Za-z0-9._-]{0,254}$'
       # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
       record=$(fm_run_timed 20 bash -c '
         . "$1"

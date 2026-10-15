@@ -3133,6 +3133,15 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
     fail "gitlab invalid: forge values were not validated field by field: $(cat "$meta")"
   fi
 
+  dir=$(make_case gitlab-external-merge-details-underscore-actor)
+  state="$dir/home/state"
+  meta="$state/task-a.meta"
+  write_poll_meta "$state" task-a "$url"
+  seed_canonical_poll "$dir" task-a "$url"
+  FM_TEST_GLAB_MERGE_ACTOR=_svc FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  grep -qxF merge_actor=_svc "$meta" \
+    || fail "gitlab underscore actor: a valid GitLab username was not recorded: $(cat "$meta")"
+
   pass "a GitLab external merge records its commit, parents, actor, and time, or unknown"
 }
 
