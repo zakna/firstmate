@@ -11,11 +11,11 @@ TMP_ROOT=$(fm_test_tmproot fm-intent-check)
 fm_git_identity fmtest fmtest@example.invalid
 CHECK="$ROOT/bin/fm-intent-check.sh"
 
-# A project repository whose own files use the word "pipeline" but none of the
-# fleet terms, with a github.com origin.
+# A project repository whose own files use the word "pipeline" and the fleet
+# terms "captain" and "fleet", with a github.com origin.
 REPO="$TMP_ROOT/repo"
 git init -q "$REPO"
-printf 'The build pipeline caches the captain dependency list.\n' > "$REPO/README.md"
+printf 'The build pipeline caches the captain dependency list and the fleet manifest.\n' > "$REPO/README.md"
 git -C "$REPO" add README.md
 git -C "$REPO" commit -q -m init
 git -C "$REPO" remote add origin https://github.com/acme/widgets.git
@@ -101,12 +101,37 @@ The owner said: "ship it".
 
 test_repository_vocabulary_is_not_fleet_vocabulary() {
   local dir="$TMP_ROOT/vocab" out
-  write_launch_brief "$dir" 'Pin the captain dependency list. Keep the supervisor restart logic.'
-  out=$(run_check "$dir" 'Pin the captain dependency list.') \
+  write_launch_brief "$dir" 'Keep the pipeline cache. Keep the fleet manifest. Keep the supervisor restart logic.'
+  out=$(run_check "$dir" 'Keep the pipeline cache.') \
     || fail "a term the repository itself uses was refused: $out"
+  out=$(run_check "$dir" 'Keep the fleet manifest.') \
+    || fail "a fleet term the repository itself uses was refused: $out"
   out=$(run_check "$dir" 'Keep the supervisor restart logic.') && fail "a foreign fleet term passed"
   assert_contains "$out" 'fleet vocabulary "supervisor"' "foreign fleet term was not named"
   pass "only fleet terms the repository does not use are refused"
+}
+
+test_any_captain_sentence_is_refused_even_where_the_repository_uses_the_word() {
+  local dir="$TMP_ROOT/captain-word" sentence out rc
+  # The fixture repository's own README uses the word "captain".
+  git -C "$REPO" grep -q -i -w captain || fail "fixture repository no longer uses the word captain"
+  for sentence in \
+    'The captain wants exports in UTF-8.' \
+    'Pin the captain dependency list.' \
+    "Keep the captain's column order." \
+    'Exports are written in UTF-8, captain.' \
+    'Captain, write exports in UTF-8.'; do
+    write_launch_brief "$dir" "$sentence"
+    out=$(run_check "$dir" "$sentence")
+    rc=$?
+    [ "$rc" -eq 1 ] || fail "captain sentence exited $rc, want 1: $sentence: $out"
+    assert_contains "$out" "line 1: direct address: $sentence" "captain sentence was not refused as direct address"
+  done
+  write_launch_brief "$dir" 'Make exports UTF-8. The captain wants the column order kept.'
+  out=$(run_check "$dir" 'Make exports UTF-8.') || fail "a clean sentence beside a captain sentence was refused: $out"
+  out=$(cd "$REPO" && "$ROOT/bin/fm-intent-check.sh" scrub "$dir" 2>&1) && fail "scrub kept a captain sentence: $out"
+  assert_contains "$out" 'direct address' "scrub did not name the captain sentence"
+  pass "a sentence containing the word captain is refused in a repository that uses it"
 }
 
 test_examples_and_inline_code_are_exempt() {
@@ -292,6 +317,7 @@ test_product_sentences_are_not_refused
 test_each_forbidden_class_names_the_line
 test_a_mentioned_quote_is_not_an_attributed_quote
 test_repository_vocabulary_is_not_fleet_vocabulary
+test_any_captain_sentence_is_refused_even_where_the_repository_uses_the_word
 test_examples_and_inline_code_are_exempt
 test_issue_reference_is_required_and_never_invented
 test_scrub_refuses_instead_of_dropping

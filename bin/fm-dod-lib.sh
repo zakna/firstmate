@@ -86,14 +86,14 @@
 # file and in brief.md's `## Captain's intent`, so a relaunch agrees, before the
 # worker reruns the check, or the worker stops. It refuses speaker labels,
 # direct address (an opening `please`, `yourself`, `you must`, `you should`,
-# `you will`, `you need to`, `your branch`, `your worktree`, or a vocative
-# captain), attributed quotes, fleet terms the repository does not use, and
-# any sentence outside the authorized words; fenced and indented examples and
-# inline code are exempt from all but the last. It requires `Refs #<n>` for
-# every issue of the repository's github.com origin the brief links by URL and
-# refuses a reference that is not this repository's issue the brief names. It
-# does not authenticate the content of --resolved substance beyond those
-# classes, nor catch a worker-directed imperative without those words.
+# `you will`, `you need to`, `your branch`, `your worktree`, or any
+# sentence naming the captain), attributed quotes, fleet terms the repository
+# does not use, and any sentence outside the authorized words; fenced and
+# indented examples and inline code are exempt from all but the last. It
+# requires `Refs #<n>` for every issue of the repository's github.com origin the
+# brief links by URL and refuses a reference that is not this repository's issue
+# the brief names. It does not authenticate the content of --resolved substance
+# beyond those classes, nor catch a worker-directed imperative without those words.
 # The string passed must be self-sufficient - it plus the codebase reconstructs
 # roughly the same specification - so a report, decision, or PR the intent
 # refers to is written into it as substance, never left as a pointer.
@@ -329,7 +329,8 @@ fm_brief_intent_address_line() {  # <file>
 # The pipeline publishes the `--intent` string as the pull request body, so the
 # words a worker may pass are checked before the run starts. One term per line;
 # a term the repository's own tracked files already use is that project's
-# vocabulary rather than the fleet's and is not refused there.
+# vocabulary rather than the fleet's and is not refused there, except that any
+# sentence naming the captain is still refused as direct address.
 FM_INTENT_FLEET_TERMS='captain
 firstmate
 first mate
@@ -484,7 +485,7 @@ fm_intent_scan() {  # <mode> <terms> <slug> <linked> <mentioned> <file-args...>
       who = "(captain|captain'"'"'s (words|ask|intent)|the user|user|firstmate|first mate|supervisor|operator|owner|crewmate|worker|assistant|me)"
       if (t ~ ("^\\[" who "\\]") || t ~ ("^" who "[*_]*[ \t]*:"))
         return "speaker label"
-      if (t ~ /^please([^a-z]|$)/ || has_word(l, "(yourself|yourselves|you must|you should|you will|you'"'"'ll|you need to|your branch|your worktree)") || t ~ /^captain[ \t]*,/ || l ~ /[,;][ \t]*captain[ \t]*[,.!?]/)
+      if (t ~ /^please([^a-z]|$)/ || has_word(l, "(yourself|yourselves|you must|you should|you will|you'"'"'ll|you need to|your branch|your worktree)") || has_word(l, "captain"))
         return "direct address"
       if (unit ~ /^[ \t]*>/ || l ~ /(^|[^a-z])(said|says|say|saying|wrote|words|asked|told|replied|answered|quoted|approved|authori[sz]ed)[ \t]*[,:]?[ \t]*("|\342\200\234)/ || l ~ /("|\342\200\235)[ \t]*,?[ \t]*(said|says|wrote|asked|replied|answered)([^a-z]|$)/)
         return "quote"
