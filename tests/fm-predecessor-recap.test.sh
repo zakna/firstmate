@@ -227,6 +227,17 @@ test_secrets_are_redacted_and_dotenv_omitted() {
   pass "recap: credential-shaped strings are redacted and .env contents omitted"
 }
 
+test_even_backslashes_at_row_end_do_not_join_the_next_row() {
+  local dir out
+  dir=$(new_case evenbackslash)
+  printf '%s\n' '$ mysql -u root \\\\' '$ find . -print' "\$ mysql \\" '>   -pcontsecret1 db' >"$dir/capture"
+  out=$("$RECAP" --harness codex --worktree "$dir/wt" --scrollback "$dir/capture" </dev/null)
+  assert_contains "$out" '> $ find . -print' "a row after one ending in an escaped backslash should be left unchanged"
+  case "$out" in *contsecret1*) fail "a password on a row after an odd backslash reached the recap: $out" ;; esac
+  assert_contains "$out" ">   -p[redacted] db" "a row after an odd trailing backslash should still continue the command"
+  pass "recap: a row ending in two backslashes is not joined to the next row"
+}
+
 test_scrollback_fallback_for_other_harnesses() {
   local dir out esc
   dir=$(new_case scrollback)
@@ -386,6 +397,7 @@ test_transcript_truncated_and_bounded
 test_secrets_are_redacted_and_dotenv_omitted
 test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
+test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_scrollback_fallback_for_other_harnesses
 test_only_the_predecessor_account_root_is_read
 test_unknown_start_reads_no_transcript
