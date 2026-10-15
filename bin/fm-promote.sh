@@ -279,12 +279,15 @@ EOF
     printf '%s\n' "$PROMOTION_ASK_USER_BLOCK"
   fi
   printf '\n'
-  fm_dod_block "$MODE" "$ID" "$BRANCH" "$FORGE" "$BASE_BRANCH" "$DATA"
+  fm_dod_block "$MODE" "$ID" "$BRANCH" "$FORGE" "$BASE_BRANCH" "$DATA" || return 1
+  # The same closing delivery line a no-mistakes ship brief ends with.
+  [ "$MODE" != no-mistakes ] || printf '\n%s\n' "$(fm_nm_delivery_line "$FORGE")"
 }
 mkdir -p "$DATA/$ID"
 [ ! -d "$INSTRUCTIONS" ] || { echo "error: ship instructions path is a directory: $INSTRUCTIONS" >&2; exit 1; }
 TMP="$DATA/$ID/.ship-instructions.md.${BASHPID:-$$}"
 {
+  [ "$MODE" != no-mistakes ] || printf '%s\n\n' "$(fm_nm_delivery_line "$FORGE")"
   cat <<EOF
 Your scout task has been promoted to a ship task, mode=$MODE. Your window, worktree, and context stay as they are; only the contract below changes.
 

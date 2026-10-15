@@ -15,7 +15,7 @@ For a GitHub PR with a recorded head, its `review comments: <n> inline on head <
 That blocked reading is the gate working, not a stuck worker, so steer the worker on the commit the refusal names rather than waiting.
 A direct-PR worker pushes that commit to its PR branch, and a local-only worker commits it on its ship branch.
 A no-mistakes worker re-validates it with /no-mistakes so the pipeline stays the one publisher; it never pushes from its copy.
-In no-mistakes mode the earlier `done [at=<epoch>]: {summary}` is the pipeline handoff and is not gated.
+In no-mistakes mode the worker starts /no-mistakes itself, so a `done:` that names no PR URL reads blocked; steer the worker to run /no-mistakes rather than treating it as ready.
 A no-mistakes ready signal is not ready while `validation-supervision`'s rule for commits in `<review_approved_head>..<ready head>` still requires a re-review run.
 Tell the captain the PR's full `https://...` URL copied from the worker's ready line, the resolved checks-green crew-state line, or the task's `pr=` metadata, a concise outcome summary, and the no-mistakes risk level when applicable.
 A captain instruction to merge is explicit authority; `yolo` is the only standing routine merge authority.

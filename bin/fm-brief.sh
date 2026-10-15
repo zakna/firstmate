@@ -91,6 +91,9 @@
 # whose explicit --mode or registered forge disagrees, so an adjusted brief and the
 # recorded task metadata cannot drift apart.
 # Ship briefs begin with a worktree-isolation assertion before the branch step.
+# A no-mistakes ship brief's first and last lines are fm_nm_delivery_line from
+# bin/fm-dod-lib.sh: the worker runs /no-mistakes itself, and a done: without
+# the PR URL is refused.
 # Both crewmate scaffolds carry one shared rule against administering the
 # infrastructure every lane shares - the no-mistakes daemon and the worktree pool
 # their own slot came from - so ship and scout cannot drift apart. A secondmate
@@ -691,8 +694,16 @@ case "$MODE" in
 esac
 RULE1=$(fm_ship_rule_one "$MODE" "$ID" "$BRANCH" "$FORGE" "$BASE_BRANCH") || exit 1
 DOD=$(fm_dod_block "$MODE" "$ID" "$BRANCH" "$FORGE" "$BASE_BRANCH" "$DATA") || exit 1
+# A no-mistakes ship brief opens and closes with the same delivery line.
+NM_DELIVERY=
+if [ "$MODE" = no-mistakes ]; then
+  NM_DELIVERY=$(fm_nm_delivery_line "$FORGE")
+  printf '%s\n\n' "$NM_DELIVERY" > "$BRIEF"
+else
+  : > "$BRIEF"
+fi
 
-cat > "$BRIEF" <<EOF
+cat >> "$BRIEF" <<EOF
 You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
 
 $TASK_SECTION
@@ -747,6 +758,7 @@ A correction edits only the wrong text: do not run \`$FM_ROOT/bin/fm-ensure-agen
 $DOD
 EOF
 append_brief_include
+[ -z "$NM_DELIVERY" ] || printf '\n%s\n' "$NM_DELIVERY" >> "$BRIEF"
 if [ "$FORGE" = none ]; then
   echo "scaffolded: $BRIEF (ship, mode=$MODE; replace {TASK} and {FIRSTMATE_SPEC})"
 else

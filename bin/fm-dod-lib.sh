@@ -22,10 +22,12 @@
 # (secondmate ledger-first publish of a child done). A ship `done:` is not
 # accepted while the named head exists only in the worker's disposable copy.
 # The check tests that head, not whether some branch moved. In no-mistakes
-# mode the pre-validation `done: {summary}` is the pipeline handoff and is
-# not gated; only the later CI-ready `done: PR <url> checks green` (or
-# `done: PR <url> no CI:` when the repository declares no CI) is, or on a
-# Gerrit project the later `done: PR <change url> published for review`. The
+# mode the worker starts /no-mistakes itself after its implementation commit,
+# with no earlier handoff done:, so a done: that names no PR URL is refused
+# before any head is read; the ready report is the CI-ready
+# `done: PR <url> checks green` (or `done: PR <url> no CI:` when the repository
+# declares no CI), or on a Gerrit project `done: PR <change url> published for
+# review`. The
 # named head is the worker copy's HEAD, except that a done naming the task's
 # recorded pr= passes when the forge holds that head: a forge-reported
 # pr_head= in no-mistakes mode, or a recorded merge
@@ -738,12 +740,27 @@ EOF
 # reads it as a source.
 fm_landing_note_block() {  # <task-data-dir>
   cat <<EOF
-Before the \`done:\` line that finishes this task - the ready report, not an earlier pipeline handoff - write \`$1/landing-note.md\` with three short answers:
+Before the \`done:\` line that finishes this task - the ready report - write \`$1/landing-note.md\` with three short answers:
 - (a) what this change made harder to change next;
 - (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or \`none\`;
 - (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.
 That note is task material outside your worktree: never commit it.
 EOF
+}
+
+# The one-line no-mistakes delivery rule bin/fm-brief.sh writes as both the
+# first and the last line of a no-mistakes ship brief, so a worker that skims
+# the Definition of done still meets it. fm_dod_accept_ship_done enforces it.
+fm_nm_delivery_line() {  # [<forge>]
+  if [ "${1:-none}" = gerrit ]; then
+    cat <<'EOF'
+Delivery: this task is finished only after the /no-mistakes run you start has passed and you have published its change; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that change's https:// URL is refused.
+EOF
+  else
+    cat <<'EOF'
+Delivery: this task is finished only when the /no-mistakes run you start has opened a PR; run /no-mistakes yourself as soon as your implementation is committed, because a `done:` line without that PR's https:// URL is refused.
+EOF
+  fi
 }
 
 fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<base>] [<data-dir>]
@@ -781,10 +798,9 @@ Ship branch: $branch
 This project's review server is Gerrit: it has no pull requests and no forge CI the pipeline can watch, so **no-mistakes runs here as a review pass that ends at a ready branch**, and you then publish that branch as one change.
 Pass \`--skip push,pr,ci\` on every \`no-mistakes axi run\` for this task, and skip nothing else: \`review\`, \`test\`, \`document\`, and \`lint\` are the whole point of the run.
 Those three are the only steps that reach a forge, and skipping them is a supported outcome, not a degraded one.
-The task is complete only when committed on your branch.
-When you believe it is complete, append \`done [at=<epoch>]: {summary}\` to the status file and stop.
-Firstmate will then instruct you to run /no-mistakes to validate.
-That first \`done:\` is the handoff that starts the pipeline; it is not a request to publish.
+The task is complete only when the /no-mistakes run you start has passed and you have published its result as a change.
+As soon as your implementation is committed on your branch, run /no-mistakes yourself to validate it; do not append \`done:\` first and do not wait for firstmate to tell you.
+A \`done:\` line that names no change URL is refused and read as blocked, not finished.
 
 EOF
       fm_nm_driving_block "$forge" "$intent_dir"
@@ -842,10 +858,10 @@ EOF
 # Definition of done
 Delivery contract: mode=no-mistakes
 Ship branch: $branch
-The task is complete only when committed on your branch.
-When you believe it is complete, append \`done [at=<epoch>]: {summary}\` to the status file and stop.
-Firstmate will then instruct you to run /no-mistakes to validate and ship a PR.
-That first \`done:\` is the handoff that starts the pipeline, which owns the push; it is not a request to push from this copy.
+The task is complete only when the /no-mistakes run you start has opened a PR for your branch and reached the return point below.
+As soon as your implementation is committed on your branch, run /no-mistakes yourself to validate it and ship a PR; do not append \`done:\` first and do not wait for firstmate to tell you.
+A \`done:\` line that names no PR URL is refused and read as blocked, not finished.
+The pipeline owns the push; never push from this copy.
 ${nm_base}
 EOF
       fm_nm_driving_block "$forge" "$intent_dir"
@@ -911,19 +927,32 @@ fm_dod_note_reports_published_change() {  # <note>
 }
 
 # 0 when this ship done: is one the named-head gate must accept or refuse.
-# no-mistakes pre-validation done: is the pipeline handoff and is not gated.
-# Empty mode is treated as no-mistakes, the unregistered-project default.
+# Every no-mistakes done: is gated, and fm_dod_accept_ship_done refuses one
+# outright unless it names a PR URL. bin/fm-spawn.sh records a mode for every
+# ship, so an empty mode is a record that predates it: it is treated as
+# no-mistakes, the unregistered-project default, for the CI-ready and
+# published-change reports only.
 fm_dod_should_gate_ship_done() {  # <kind> <mode> <line>
   local note
   [ "$1" = ship ] || return 1
   [ "$(status_line_verb "$3")" = "done" ] || return 1
   note=$(status_line_note "$3")
   case "$2" in
-    direct-PR|local-only) return 0 ;;
-    no-mistakes|'')
+    direct-PR|local-only|no-mistakes) return 0 ;;
+    '')
       fm_dod_note_reports_ci_ready "$note" || fm_dod_note_reports_published_change "$note" ;;
     *) return 1 ;;
   esac
+}
+
+# 0 when a done: note names a PR or change by its URL (`PR https://...`). In
+# no-mistakes mode only the /no-mistakes run opens that PR, so a done: note
+# without one reports work the pipeline never validated.
+fm_dod_note_names_pr_url() {  # <note>
+  case "$1" in
+    *"PR https://"*|*"PR http://"*) return 0 ;;
+  esac
+  return 1
 }
 
 # The PR/MR URL from a `done: PR <url>...` note, or empty.
@@ -1063,6 +1092,13 @@ fm_dod_named_head_reachable_outside_worktree() {  # <worktree> <project> <mode> 
 fm_dod_accept_ship_done() {  # <kind> <mode> <worktree> <project> <line> [<state> <id> <meta>]
   local kind=$1 mode=$2 wt=$3 project=$4 line=$5 state=${6:-} id=${7:-} meta=${8:-} url sha gerrit
   fm_dod_should_gate_ship_done "$kind" "$mode" "$line" || return 0
+  case "$mode" in
+    no-mistakes)
+      if ! fm_dod_note_names_pr_url "$(status_line_note "$line")"; then
+        printf '%s\n' "a no-mistakes done names no PR URL, so the work has not been validated or shipped: run /no-mistakes, then report done: PR <url> from its result"
+        return 1
+      fi ;;
+  esac
   if url=$(fm_dod_pr_url_from_done_note "$(status_line_note "$line")") \
     && fm_dod_recorded_pr_on_forge "$state" "$id" "$meta" "$mode" "$url"; then
     return 0

@@ -269,7 +269,7 @@ test_ship_mode_is_explicit_not_registry() {
   brief="$home/data/brief-explicit-a5/brief.md"
   grep -qx "Delivery contract: mode=no-mistakes" "$brief" \
     || fail "registered direct-PR posture overrode the explicit --mode"
-  assert_grep "Firstmate will then instruct you to run /no-mistakes" "$brief" \
+  assert_grep "run /no-mistakes yourself to validate it and ship a PR" "$brief" \
     "explicit no-mistakes brief did not render the pipeline definition of done"
 
   # An unregistered project is not a blocker either, because nothing is looked up.
@@ -278,6 +278,33 @@ test_ship_mode_is_explicit_not_registry() {
   grep -qx "Delivery contract: mode=local-only" "$home/data/brief-explicit-a6/brief.md" \
     || fail "unregistered project did not honour the explicit --mode"
   pass "fm-brief.sh: the explicit ship mode wins over the registered posture"
+}
+
+# A no-mistakes ship brief opens and closes with the delivery line, so a worker
+# that skims the Definition of done still meets the PR URL requirement; the
+# other modes carry no such line.
+test_no_mistakes_brief_first_and_last_line_name_delivery() {
+  local home brief mode first last
+  home="$TMP_ROOT/delivery-line-home"
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-delivery-d1 some-proj --mode no-mistakes >/dev/null 2>&1 \
+    || fail "no-mistakes brief should scaffold"
+  brief="$home/data/brief-delivery-d1/brief.md"
+  first=$(sed -n 1p "$brief")
+  last=$(tail -n 1 "$brief")
+  case "$first" in
+    "Delivery: "*"/no-mistakes"*"PR"*"https:// URL is refused.") ;;
+    *) fail "no-mistakes brief does not open with the delivery line: $first" ;;
+  esac
+  [ "$last" = "$first" ] || fail "no-mistakes brief does not close with the delivery line: $last"
+  assert_no_grep "Firstmate will then instruct you to run /no-mistakes" "$brief" \
+    "no-mistakes brief still hands off with a done: before the pipeline"
+  for mode in direct-PR local-only; do
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "brief-delivery-$mode" some-proj --mode "$mode" >/dev/null 2>&1 \
+      || fail "$mode brief should scaffold"
+    assert_no_grep "^Delivery: " "$home/data/brief-delivery-$mode/brief.md" \
+      "$mode brief carries the no-mistakes delivery line"
+  done
+  pass "fm-brief.sh: a no-mistakes brief opens and closes with the delivery line"
 }
 
 # yolo is firstmate's merge authority and never reaches the worker, and a scout
@@ -1590,6 +1617,7 @@ test_help_includes_entire_header
 test_ship_modes_generate_clean_briefs
 test_ship_mode_is_required_and_closed_set
 test_ship_mode_is_explicit_not_registry
+test_no_mistakes_brief_first_and_last_line_name_delivery
 test_delivery_flags_are_refused_where_they_do_not_apply
 test_faster_paths_use_configured_authority_without_stacked_review
 test_no_mistakes_dod_wording
