@@ -1,0 +1,4 @@
+0000000    -       t   o   o   l       c   a   l   l       B   a   s   h
+0000020    :       m   y   s   q   l       -   p   [   r   e   d   a   c
+0000040    t   e   d   ]       d   b  \n                                
+> mysql -p[redacted] db
