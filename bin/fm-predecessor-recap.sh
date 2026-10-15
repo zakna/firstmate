@@ -64,7 +64,8 @@
 # mysql* or mariadb* client command, where each value is the whole shell word,
 # with its quotes, substitutions and groups at any depth, escapes, and line
 # continuations, except that outside a mysql command a quote or backtick after
-# the value's first character ends it, and a case pattern ) ends a $(...) early,
+# the value's first character ends it, unless that backtick directly follows a
+# closed backtick substitution, and a case pattern ) ends a $(...) early,
 # and a value never closed runs to the end) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
@@ -128,14 +129,14 @@ JQ_DEFS='
 # It follows quotes, $(...), $((...)), ${...}, backticks, <(...) and >(...), a (...) that starts the word, and backslash escapes
 # and line continuations, at any depth; a case pattern ) inside $(...) closes it early.
 # Outside any of those, the word ends at whitespace or a character in $stop, and when $anyquote is false a quote or backtick after
-# the first character ends it too, unless a backtick directly follows a closed substitution, so the closing quote of a secret
+# the first character ends it too, unless a backtick directly follows a closed backtick substitution, so the closing quote of a secret
 # inside a quoted string or Markdown code span never pairs with the quote of a later one.
 # A quote or substitution that is never closed runs to the end of the text, so an unbalanced value is redacted rather than leaked.
 def wordend($c; $i; $stop; $anyquote):
   ($c | length) as $n
   | (" \t\n\r" + $stop) as $ends
   | def push($t; $w): .st += [$t] | .i += $w;
-    def pop: .st |= .[:-1] | .i += 1 | if .st == [] then .after = .i end;
+    def pop: .st[-1] as $t | .st |= .[:-1] | .i += 1 | if .st == [] and $t == "b" then .after = .i end;
     {i: $i, st: [], done: false, after: -1}
   | until(.done or .i >= $n;
       .i as $k | $c[$k] as $ch | ($c[$k + 1] // "") as $nx | (.st[-1] // "") as $top

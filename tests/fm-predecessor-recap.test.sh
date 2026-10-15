@@ -454,10 +454,14 @@ test_inline_code_secret_keeps_the_following_prose() {
   t=$(transcript_path "$dir" s1)
   {
     entry assistant "$dir/wt" '[{"type":"text","text":"I set `API_KEY=foo` in the env, then ran `make test` and it passed."}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"Run `export TOKEN=$(cat ~/.tok)` first, then run `make test` and it passes."}]'
+    entry assistant "$dir/wt" '[{"type":"text","text":"Set `API_KEY=\"abc\"` in .env, then run `make` to build it all."}]'
   } >"$t"
   out=$(run_recap "$dir")
-  case "$out" in *foo*) fail "an inline-code secret reached the recap: $out" ;; esac
+  case "$out" in *foo* | *.tok* | *abc*) fail "an inline-code secret reached the recap: $out" ;; esac
   assert_contains "$out" 'I set `API_KEY=[redacted]` in the env, then ran `make test` and it passed.' "a backtick after a bare secret should end it, not open a substitution"
+  assert_contains "$out" 'Run `export TOKEN=[redacted]` first, then run `make test` and it passes.' "a backtick after a closed \$(...) secret should end it, not open a substitution"
+  assert_contains "$out" 'Set `API_KEY=[redacted]` in .env, then run `make` to build it all.' "a backtick after a closed quoted secret should end it, not open a substitution"
   pass "recap: an inline-code secret keeps the following prose"
 }
 
