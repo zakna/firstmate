@@ -1556,6 +1556,46 @@ SH
   pass "the automatic --changed bound gives the slow watcher suite at least 1500s"
 }
 
+# The supervision-host suite runs about 1757s under CI load, past the default
+# automatic bound, so a local --changed run gets its own larger bound for it
+# alone (the stub records the bound the runner hands it).
+test_changed_bound_exempts_slow_supervision_host_suite() {
+  local tmp repo script bound rc
+  tmp=$(mktemp -d)
+  repo="$tmp/repo"
+  script=tests/fm-supervision-host.test.sh
+  mkdir -p "$repo/bin" "$repo/tests"
+  cp "$RUNNER" "$repo/bin/fm-test-run.sh"
+  cp "$ROOT/tests/git-config-helpers.sh" "$repo/tests/"
+  cat >"$repo/bin/fm-timeout-lib.sh" <<'SH'
+fm_run_timed() {
+  printf '%s\n' "$1" >bound-secs
+  shift
+  "$@"
+}
+SH
+  cat >"$repo/$script" <<'SH'
+#!/usr/bin/env bash
+echo "ok - healthy but slow supervision host suite"
+SH
+  chmod +x "$repo/bin/fm-test-run.sh" "$repo/$script"
+  git -C "$repo" init -q
+  git -C "$repo" add .
+  git -C "$repo" -c user.name=test -c user.email=test@example.invalid commit -qm baseline
+  printf '\n' >>"$repo/$script"
+  set +e
+  (cd "$repo" && bin/fm-test-run.sh --changed --base HEAD) >"$tmp/out" 2>"$tmp/err"
+  rc=$?
+  set -e
+  [ "$rc" -eq 0 ] || fail "healthy changed supervision host suite must pass, got $rc: $(cat "$tmp/out" "$tmp/err")"
+  [ -s "$repo/bound-secs" ] || fail "changed supervision host suite did not run under a bound: $(cat "$tmp/out")"
+  bound=$(cat "$repo/bound-secs")
+  [ "$bound" -ge 1800 ] \
+    || fail "automatic --changed bound for $script must exceed its ~1757s CI runtime, got ${bound}s"
+  rm -rf "$tmp"
+  pass "the automatic --changed bound gives the supervision host suite its own larger bound"
+}
+
 test_max_wall_ms_is_a_result_not_advice() {
   local tmp repo runner fast rc summary_duration budget_duration
   tmp=$(mktemp -d "${TMPDIR:-/tmp}/fm-test-run-budget.XXXXXX")
@@ -1863,6 +1903,7 @@ test_changed_shared_fixture_selects_its_readers
 test_concurrent_runs_are_ordered_longest_first
 test_per_script_timeout_bounds_a_hang
 test_changed_bound_gives_slow_watcher_suites_headroom
+test_changed_bound_exempts_slow_supervision_host_suite
 test_max_wall_ms_is_a_result_not_advice
 test_jobs_parallel_scheduler_and_failure_propagation
 test_herdr_ci_family_run_has_a_step_timeout
