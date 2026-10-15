@@ -61,9 +61,9 @@
 # passwords, the whole value of any key/token/secret/password/credential
 # assignment, quoted or not, and the value after a space-separated credential
 # flag such as --password, --token, or -p, and the value attached to -p in any
-# mysql* or mariadb* client command, where a value given as a $(...), $((...)),
-# or backtick substitution is redacted whole, with any unquoted text joined to
-# it up to the next space) become [redacted], and a tool call
+# mysql* or mariadb* client command, where each value is the whole shell word,
+# with its quotes, substitutions at any depth, escapes, and line continuations,
+# and a value never closed runs to the end) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
 # item larger than the whole bound is cut to fit it.
@@ -122,19 +122,58 @@ fi
 # Shared jq definitions: scrubbing, one-line collapse, and the byte bound.
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
-# A whole (nested, quoted, or backtick) command substitution, so a secret value read from one does not leak past its first space.
-def cmdsub: "(?<sub>\\$\\(\\((?:[^()]|\\([^()]*\\))*\\)\\)|\\$\\((?:\\g<sub>|[^()\"\u0027\\\\]|\\\\.|\"(?:[^\"\\\\]|\\\\.)*\"|\u0027[^\u0027]*\u0027)*\\)?)|`(?:[^`\\\\]|\\\\.)*`?";
-# One double-quoted string, which may hold command substitutions with quotes of their own.
-def dquote: "\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?";
-# One shell word of $bare characters, escapes, quotes, and command substitutions.
-def shword($bare): "(?:" + cmdsub + "|" + dquote + "|\\$?\u0027[^\u0027]*\u0027?|\\\\.|" + $bare + ")+";
-# One secret value: a word that starts with a substitution or quoted string and may continue with more substitutions or bare characters,
-# or a run of bare characters and substitutions; a quote after the start never opens a string, so it cannot pair with the quote of a later secret.
-# Must follow cmdsub, whose sub group the second alternative calls.
-def secret($bare): "(?:(?:" + cmdsub + "|" + dquote + "|\u0027[^\u0027]*\u0027?)(?:\\g<sub>|(?!\\$\\(|`)" + $bare + ")*|(?:\\g<sub>|(?!\\$\\(|`)" + $bare + ")+)";
+# A small shell-word scanner over $c, an array of one-character strings: the index just past the word that starts at $i.
+# It follows quotes, $(...), $((...)), backticks, <(...) and >(...), and backslash escapes and line continuations, at any depth.
+# Outside any of those, the word ends at whitespace or a character in $stop, and when $anyquote is false a quote after the
+# first character ends it too, so the closing quote of a secret inside a quoted string never pairs with the quote of a later one.
+# A quote or substitution that is never closed runs to the end of the text, so an unbalanced value is redacted rather than leaked.
+def wordend($c; $i; $stop; $anyquote):
+  ($c | length) as $n
+  | (" \t\n\r" + $stop) as $ends
+  | def push($t; $w): .st += [$t] | .i += $w;
+    def pop: .st |= .[:-1] | .i += 1;
+    {i: $i, st: [], done: false}
+  | until(.done or .i >= $n;
+      .i as $k | $c[$k] as $ch | ($c[$k + 1] // "") as $nx | (.st[-1] // "") as $top
+      | if $top == "s" then if $ch == "\u0027" then pop else .i += 1 end
+        elif $ch == "\\" then .i += 2
+        elif $top == "a" then if $ch == "\u0027" then pop else .i += 1 end
+        elif $top == "b" then if $ch == "`" then pop else .i += 1 end
+        elif $ch == "$" and $nx == "(" then push("p"; 2)
+        elif $ch == "`" then push("b"; 1)
+        elif $top == "d" then if $ch == "\"" then pop else .i += 1 end
+        elif $top == "p" then
+          if $ch == ")" then pop
+          elif $ch == "(" then push("p"; 1)
+          elif $ch == "$" and $nx == "\u0027" then push("a"; 2)
+          elif $ch == "\u0027" then push("s"; 1)
+          elif $ch == "\"" then push("d"; 1)
+          else .i += 1 end
+        elif ($ch == "<" or $ch == ">") and $nx == "(" and ($stop | index($ch) | not) then push("p"; 2)
+        elif ($anyquote or $k == $i) and $ch == "$" and $nx == "\u0027" then push("a"; 2)
+        elif ($anyquote or $k == $i) and $ch == "$" and $nx == "\"" then push("d"; 2)
+        elif ($anyquote or $k == $i) and $ch == "\u0027" then push("s"; 1)
+        elif ($anyquote or $k == $i) and $ch == "\"" then push("d"; 1)
+        elif $ch == "\u0027" or $ch == "\"" or ($ends | index($ch)) then .done = true
+        else .i += 1 end)
+  | [.i, $n] | min;
+# Replaces the word after each \u0002 mark with \u0001, or drops the mark when no word follows it;
+# a mark inside an earlier replaced word goes with that word.
+def markwords($stop; $anyquote):
+  if test("\u0002") | not then . else
+    [explode[] | [.] | implode] as $c
+    | reduce ($c | indices("\u0002"))[] as $m ({out: [], pos: 0};
+        if $m < .pos then .
+        else wordend($c; $m + 1; $stop; $anyquote) as $e
+          | .out += $c[.pos:$m] + (if $e > $m + 1 then ["\u0001"] else [] end)
+          | .pos = ([$e, $m + 1] | max) end)
+    | .out + $c[.pos:] | join("") end;
+# Redacts the whole shell word after each match of $re, which names what it keeps as f.
+# \u0001 and \u0002 are removed from input by strip, so neither can be forged by it.
+def redactafter($re; $flags; $stop; $anyquote): gsub($re; "\(.f)\u0002"; $flags) | markwords($stop; $anyquote) | gsub("\u0001"; "[redacted]");
 # Repeats until stable so each attached -p value in one command is redacted, not only the first;
-# \u0001 (removed from input by strip) marks a value already redacted, so a password that starts with [redacted] is still redacted.
-def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)" + shword("[^\\s\"\u0027\\\\;&|<>]"); "\(.f)\u0001") | if . == $in then . else mysqlp end;
+# \u0001 marks a value already redacted, so a password that starts with [redacted] is still redacted.
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)(?![\\s;&|<>]|$)"; "\(.f)\u0002") | markwords(";&|<>"; true) | if . == $in then . else mysqlp end;
 def mysqlpall: mysqlp | gsub("\u0001"; "[redacted]");
 # A row is continued when an odd run of trailing backslashes escapes the newline; an even run escapes itself.
 def cont: test("(^|[^\\\\])(\\\\\\\\)*\\\\$");
@@ -160,9 +199,9 @@ def scrub:
   | gsub("(?<b>bearer\\s+)[A-Za-z0-9._~+/-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<b>authorization\\s*:\\s*basic\\s+)[A-Za-z0-9+/._~-]+=*"; "\(.b)[redacted]"; "i")
   | gsub("(?<s>://[^/\\s:@]+:)[^/\\s@]+@"; "\(.s)[redacted]@")
-  | gsub("(?<k>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)" + secret("[^\\s\"\u0027,;}]"); "\(.k)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))" + secret("[^\\s\"\u0027]"); "\(.f)[redacted]"; "i")
-  | gsub("(?<f>(^|[\\s\"\u0027(])-p\\s+)" + secret("[^\\s\"\u0027]"); "\(.f)[redacted]")
+  | redactafter("(?<f>[A-Za-z0-9_.-]*(key|token|secret|passwd|password|credential)[A-Za-z0-9_.-]*[\"\u0027]?\\s*[:=]\\s*)"; "i"; ",;}"; false)
+  | redactafter("(?<f>(^|[\\s\"\u0027(=])--?(password|passwd|pass|pwd|token|access-token|auth-token|api-key|apikey|secret|client-secret|key)(\\s+|=))"; "i"; ""; false)
+  | redactafter("(?<f>(^|[\\s\"\u0027(])-p\\s+)"; ""; ""; false)
   | mysqlpall;
 def oneline: gsub("\\s+"; " ") | sub("^ "; "") | sub(" $"; "");
 def clip: .[0:4000];
