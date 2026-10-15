@@ -62,7 +62,9 @@
 # assignment, quoted or not, and the value after a space-separated credential
 # flag such as --password, --token, or -p, and the value attached to -p in any
 # mysql* or mariadb* client command, where each value is the whole shell word,
-# with its quotes, substitutions at any depth, escapes, and line continuations,
+# with its quotes, substitutions and groups at any depth, escapes, and line
+# continuations, except that outside a mysql command a quote or backtick after
+# the value's first character ends it, and a case pattern ) ends a $(...) early,
 # and a value never closed runs to the end) become [redacted], and a tool call
 # that touches a `.env` file has its input and its result omitted.
 # The oldest items are dropped until the body fits --max-bytes, and a newest
@@ -123,16 +125,18 @@ fi
 # shellcheck disable=SC2016 # jq variables and interpolation, not shell expansion
 JQ_DEFS='
 # A small shell-word scanner over $c, an array of one-character strings: the index just past the word that starts at $i.
-# It follows quotes, $(...), $((...)), backticks, <(...) and >(...), and backslash escapes and line continuations, at any depth.
-# Outside any of those, the word ends at whitespace or a character in $stop, and when $anyquote is false a quote after the
-# first character ends it too, so the closing quote of a secret inside a quoted string never pairs with the quote of a later one.
+# It follows quotes, $(...), $((...)), ${...}, backticks, <(...) and >(...), a (...) that starts the word, and backslash escapes
+# and line continuations, at any depth; a case pattern ) inside $(...) closes it early.
+# Outside any of those, the word ends at whitespace or a character in $stop, and when $anyquote is false a quote or backtick after
+# the first character ends it too, unless a backtick directly follows a closed substitution, so the closing quote of a secret
+# inside a quoted string or Markdown code span never pairs with the quote of a later one.
 # A quote or substitution that is never closed runs to the end of the text, so an unbalanced value is redacted rather than leaked.
 def wordend($c; $i; $stop; $anyquote):
   ($c | length) as $n
   | (" \t\n\r" + $stop) as $ends
   | def push($t; $w): .st += [$t] | .i += $w;
-    def pop: .st |= .[:-1] | .i += 1;
-    {i: $i, st: [], done: false}
+    def pop: .st |= .[:-1] | .i += 1 | if .st == [] then .after = .i end;
+    {i: $i, st: [], done: false, after: -1}
   | until(.done or .i >= $n;
       .i as $k | $c[$k] as $ch | ($c[$k + 1] // "") as $nx | (.st[-1] // "") as $top
       | if $top == "s" then if $ch == "\u0027" then pop else .i += 1 end
@@ -140,21 +144,23 @@ def wordend($c; $i; $stop; $anyquote):
         elif $top == "a" then if $ch == "\u0027" then pop else .i += 1 end
         elif $top == "b" then if $ch == "`" then pop else .i += 1 end
         elif $ch == "$" and $nx == "(" then push("p"; 2)
-        elif $ch == "`" then push("b"; 1)
+        elif $ch == "$" and $nx == "{" then push("c"; 2)
+        elif $ch == "`" and ($top != "" or $anyquote or $k == $i or .after == $k) then push("b"; 1)
         elif $top == "d" then if $ch == "\"" then pop else .i += 1 end
-        elif $top == "p" then
-          if $ch == ")" then pop
-          elif $ch == "(" then push("p"; 1)
+        elif $top == "p" or $top == "c" then
+          if $ch == (if $top == "p" then ")" else "}" end) then pop
+          elif $top == "p" and $ch == "(" then push("p"; 1)
           elif $ch == "$" and $nx == "\u0027" then push("a"; 2)
           elif $ch == "\u0027" then push("s"; 1)
           elif $ch == "\"" then push("d"; 1)
           else .i += 1 end
         elif ($ch == "<" or $ch == ">") and $nx == "(" and ($stop | index($ch) | not) then push("p"; 2)
+        elif $k == $i and $ch == "(" then push("p"; 1)
         elif ($anyquote or $k == $i) and $ch == "$" and $nx == "\u0027" then push("a"; 2)
         elif ($anyquote or $k == $i) and $ch == "$" and $nx == "\"" then push("d"; 2)
         elif ($anyquote or $k == $i) and $ch == "\u0027" then push("s"; 1)
         elif ($anyquote or $k == $i) and $ch == "\"" then push("d"; 1)
-        elif $ch == "\u0027" or $ch == "\"" or ($ends | index($ch)) then .done = true
+        elif $ch == "\u0027" or $ch == "\"" or $ch == "`" or ($ends | index($ch)) then .done = true
         else .i += 1 end)
   | [.i, $n] | min;
 # Replaces the word after each \u0002 mark with \u0001, or drops the mark when no word follows it;

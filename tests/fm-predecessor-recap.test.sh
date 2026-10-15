@@ -447,6 +447,35 @@ test_unbalanced_secret_value_is_redacted_to_the_end() {
   pass "recap: an unbalanced secret value is redacted to the end"
 }
 
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_inline_code_secret_keeps_the_following_prose() {
+  local dir t out
+  dir=$(new_case inlinecode)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"text","text":"I set `API_KEY=foo` in the env, then ran `make test` and it passed."}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *foo*) fail "an inline-code secret reached the recap: $out" ;; esac
+  assert_contains "$out" 'I set `API_KEY=[redacted]` in the env, then ran `make test` and it passed.' "a backtick after a bare secret should end it, not open a substitution"
+  pass "recap: an inline-code secret keeps the following prose"
+}
+
+# shellcheck disable=SC2016 # literal shell text inside JSON fixtures
+test_parameter_expansion_and_array_secrets_are_redacted_whole() {
+  local dir t out
+  dir=$(new_case paramarray)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"g1","name":"Bash","input":{"command":"PASSWORD=${X:-gpa gpb} run && PASSWORDS=(gpc gpd gpe) go && TOKEN=\"${A:-\"gpf gpg\"}\" end"}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"g1","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *gpa* | *gpb* | *gpc* | *gpd* | *gpe* | *gpf* | *gpg*) fail "part of a parameter-expansion or array secret reached the recap: $out" ;; esac
+  assert_contains "$out" "PASSWORD=[redacted] run && PASSWORDS=[redacted] go && TOKEN=[redacted] end" "a \${...} or (...) secret should be redacted whole"
+  pass "recap: parameter-expansion and array secrets are redacted whole"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -679,6 +708,8 @@ test_process_substitution_inside_command_substitution_is_redacted_whole
 test_adjacent_backtick_substitutions_are_redacted_whole
 test_escaped_newline_inside_substitution_is_redacted_whole
 test_unbalanced_secret_value_is_redacted_to_the_end
+test_inline_code_secret_keeps_the_following_prose
+test_parameter_expansion_and_array_secrets_are_redacted_whole
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
