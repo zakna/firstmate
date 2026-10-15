@@ -122,7 +122,7 @@ fi
 JQ_DEFS='
 # Repeats until stable so each attached -p value in one command is redacted, not only the first;
 # \u0001 (removed from input by strip) marks a value already redacted, so a password that starts with [redacted] is still redacted.
-def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)(?:\\$?\"[^\"]*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\;&|<>])+"; "\(.f)\u0001") | if . == $in then . else mysqlp end;
+def mysqlp: . as $in | gsub("(?<f>\\b(mysql\\w*|mariadb(-\\w+)?)\\b(?:[^|;&\n\"\u0027]|\\\\\n|\"[^\"]*\"|\u0027[^\u0027]*\u0027)*?(?:[ \\t]|\\\\\n)-p)(?!\u0001)(?:(?<sub>\\$\\((?:\\g<sub>|[^()\"\u0027\\\\]|\\\\.|\"(?:[^\"\\\\]|\\\\.)*\"|\u0027[^\u0027]*\u0027)*\\)?)|`(?:[^`\\\\]|\\\\.)*`?|\\$?\"(?:[^\"\\\\$]|\\\\.|\\g<sub>|\\$)*\"?|\\$?\u0027[^\u0027]*\u0027?|\\\\.|[^\\s\"\u0027\\\\;&|<>])+"; "\(.f)\u0001") | if . == $in then . else mysqlp end;
 def mysqlpall: mysqlp | gsub("\u0001"; "[redacted]");
 # A row is continued when an odd run of trailing backslashes escapes the newline; an even run escapes itself.
 def cont: test("(^|[^\\\\])(\\\\\\\\)*\\\\$");
