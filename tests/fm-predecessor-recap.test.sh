@@ -270,6 +270,23 @@ test_separated_flag_and_assignment_command_substitutions_are_redacted_whole() {
   pass "recap: separated -p, credential flag, and secret assignment command substitutions are redacted whole"
 }
 
+test_quoted_secret_does_not_pair_with_a_later_secret_quote() {
+  local dir t out
+  dir=$(new_case quotepair)
+  t=$(transcript_path "$dir" s1)
+  {
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c1","name":"Bash","input":{"command":"echo \"--token=abc\" && cmd --password=\"qpa qpb\""}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c1","content":"ok"}]'
+    entry assistant "$dir/wt" '[{"type":"tool_use","id":"c2","name":"Bash","input":{"command":"export TOKEN=abc\"; curl --password=\"qpc qpd\""}}]'
+    entry user "$dir/wt" '[{"type":"tool_result","tool_use_id":"c2","content":"ok"}]'
+  } >"$t"
+  out=$(run_recap "$dir")
+  case "$out" in *qpa* | *qpb* | *qpc* | *qpd*) fail "a quoted secret after an earlier quoted secret reached the recap: $out" ;; esac
+  assert_contains "$out" "echo \"--token=[redacted]\" && cmd --password=[redacted]" "a closing quote after a secret should not open a quoted value"
+  assert_contains "$out" "export TOKEN=[redacted]\"; curl --password=[redacted]" "a stray quote after a secret should not swallow the next secret"
+  pass "recap: a quoted secret does not pair its closing quote with a later secret"
+}
+
 test_even_backslashes_at_row_end_do_not_join_the_next_row() {
   local dir out
   dir=$(new_case evenbackslash)
@@ -492,6 +509,7 @@ test_attached_short_password_is_redacted_for_mysql_only
 test_attached_short_password_quoting_and_repeats_are_redacted
 test_attached_password_command_substitution_is_redacted_whole
 test_separated_flag_and_assignment_command_substitutions_are_redacted_whole
+test_quoted_secret_does_not_pair_with_a_later_secret_quote
 test_even_backslashes_at_row_end_do_not_join_the_next_row
 test_password_starting_with_redacted_text_is_redacted
 test_attached_password_keeps_a_following_shell_operator
