@@ -662,6 +662,9 @@ EOF
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"
+  (cd "$home/projects/fm" && FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-dot . --mode direct-PR >/dev/null 2>&1)
+  assert_grep "# Existing building blocks" "$home/data/brief-blocks-dot/brief.md" \
+    "a relative project directory was resolved against the registry instead of the directory"
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout fm --scout >/dev/null 2>&1
   assert_no_grep "Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
     "scout brief received the ship building blocks"

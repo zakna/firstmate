@@ -641,9 +641,11 @@ EOF
 # Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing otherwise.
 fm_building_blocks_block() {  # <fm-home> <project-name-or-dir>
   local dir='' table rows
-  if [ -d "$1/projects/$2" ]; then dir="$1/projects/$2"
-  elif [ -d "$2" ]; then dir=$2
-  else return 0; fi
+  case "$2" in
+    */*|.|..) [ -d "$2" ] && dir=$2 ;;
+    *) [ -d "$1/projects/$2" ] && dir="$1/projects/$2" ;;
+  esac
+  [ -n "$dir" ] || return 0
   table="$dir/docs/scripts.md"
   [ -r "$table" ] || return 0
   rows=$(awk -F'|' '
