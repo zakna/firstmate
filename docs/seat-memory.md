@@ -45,7 +45,7 @@ Rejected: a separate session store - a second source of truth
 UNVERIFIED: none
 ```
 
-The `Seats:` line names the seats the brief listed (task seats or likely areas) that the work touched, and may be empty for a ship. A scout, which changes no product files, names the listed seats it investigated, else the top-level directory of each area it investigated.
+The `Seats:` line names the seats the brief listed (task seats or likely areas) that the work touched, and may be empty for a ship; a `none` on it names no seat. A scout, which changes no product files, names the listed seats it investigated, else the top-level directory of each area it investigated.
 Each `##` heading is one decision, followed by its reason, the options rejected, and any fact relied on but not checked.
 
 ## Where everything lives

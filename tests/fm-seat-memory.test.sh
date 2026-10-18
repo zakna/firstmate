@@ -396,6 +396,23 @@ test_archive_honours_an_explicit_empty_seats_line() {
   pass "an explicit empty Seats: line names no seat instead of falling back to the brief"
 }
 
+test_archive_treats_a_none_seat_as_no_seat() {
+  local home data out
+  home=$(new_home archive-none on)
+  data=$home/data
+  write_record "$data" t-none-scout 'None' 'Looked around'
+  printf '%s\n' '# Seat decisions' 'Task seats: docs' > "$data/t-none-scout/brief.md"
+  out=$(fm_seat_archive "$data" proj t-none-scout scout)
+  [ -z "$out" ] || fail "a Seats: none line must not be indexed (got '$out')"
+  write_record "$data" t-none-mixed 'none spawn' 'Kept spawn'
+  out=$(fm_seat_archive "$data" proj t-none-mixed scout)
+  [ "$out" = spawn ] || fail "a none token must be dropped beside real seats (got '$out')"
+  if grep -q "$(printf '\t')[Nn]one$(printf '\t')" "$data/seats/proj/index.tsv" 2>/dev/null; then
+    fail "the index must never hold a none seat"
+  fi
+  pass "a none token on the Seats: line names no seat"
+}
+
 test_changed_paths_leave_out_what_the_branch_took_from_its_base() {
   local proj wt out up rebased
   proj=$TMP_ROOT/rebase-proj
@@ -493,6 +510,7 @@ test_spawn_infers_the_feed_from_the_filled_brief
 test_spawn_falls_back_to_the_newest_records_across_seats
 test_spawn_rebuilds_an_explicit_seat_section
 test_archive_honours_an_explicit_empty_seats_line
+test_archive_treats_a_none_seat_as_no_seat
 test_changed_paths_leave_out_what_the_branch_took_from_its_base
 test_changed_paths_count_both_sides_of_a_rename
 test_project_name_with_a_space_is_encoded

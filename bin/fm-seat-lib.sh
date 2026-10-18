@@ -138,13 +138,15 @@ fm_seat_for_path() {  # <seats-file> <path>
   printf '%s\n' "$seat"
 }
 
-# Valid seat names from a `<label> a b c` line (first match), one per line.
+# Valid seat names from a `<label> a b c` line (first match), one per line;
+# a `none` token names no seat.
 fm_seat_names_from_line() {  # <file> <label>
   [ -f "$1" ] || return 0
   local line name
   line=$(grep -m1 "^$2[[:space:]]" "$1" 2>/dev/null) || return 0
   line=${line#"$2"}
   for name in $(printf '%s' "$line" | tr ',' ' '); do
+    case "$name" in [Nn][Oo][Nn][Ee]) continue ;; esac
     fm_seat_name_valid "$name" && printf '%s\n' "$name"
   done
   return 0
