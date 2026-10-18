@@ -642,9 +642,16 @@ fm_project_is_firstmate() {  # <fm-root> <fm-home> <project>
   a=$(cd "$dir" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || a=''
   b=$(cd "$root" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || b=''
   [ -z "$a" ] || [ "$a" != "$b" ] || return 0
-  a=$(git -C "$dir" remote get-url origin 2>/dev/null) || a=''
-  b=$(git -C "$root" remote get-url origin 2>/dev/null) || b=''
+  a=$(fm_origin_identity "$dir")
+  b=$(fm_origin_identity "$root")
   [ -n "$a" ] && [ "$a" = "$b" ]
+}
+
+# <dir>'s origin URL as host/owner/repo, so the SSH, HTTPS, and `.git`-suffixed
+# forms of one repository compare equal.
+fm_origin_identity() {  # <dir>
+  git -C "$1" remote get-url origin 2>/dev/null \
+    | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#/+$##; s#\.git$##'
 }
 
 # The "Existing building blocks" section of a Firstmate ship brief: the shared
@@ -675,15 +682,21 @@ $rows
 EOF
 }
 
+# 0 when <mode>/<forge> has no PR, so the reuse report goes in the landing note.
+fm_reuse_in_landing_note() {  # <mode> <forge>
+  case "$1:${2:-none}" in
+    local-only:*|*:gerrit) return 0 ;;
+  esac
+  return 1
+}
+
 # The one line every ship definition of done carries: reuse is checked before a
 # new helper is written, and the report names what was found. The destination is
 # the one this delivery mode actually has: a PR description, or the landing note
 # where there is no PR (local-only, Gerrit).
 fm_existing_helper_rule() {  # <mode> <forge>
   local where='in the PR description'
-  case "$1:${2:-none}" in
-    local-only:*|*:gerrit) where='in your landing note' ;;
-  esac
+  fm_reuse_in_landing_note "$1" "$2" && where='as answer (d) of your landing note'
   printf 'Before adding a helper, search for an existing one and name the one you reused, or the search that found none, %s.\n' "$where"
 }
 
@@ -794,12 +807,18 @@ EOF
 # The landing note every ship writes before its ready report, whatever its mode.
 # ship-landing owns what firstmate does with it at landing, and the retro skill
 # reads it as a source.
-fm_landing_note_block() {  # <task-data-dir>
+fm_landing_note_block() {  # <task-data-dir> <mode> <forge>
+  local count=three reuse=''
+  if fm_reuse_in_landing_note "$2" "$3"; then
+    count=four
+    reuse="
+- (d) the existing helper you reused, or the search that found none."
+  fi
   cat <<EOF
-Before the \`done:\` line that finishes this task - the ready report - write \`$1/landing-note.md\` with three short answers:
+Before the \`done:\` line that finishes this task - the ready report - write \`$1/landing-note.md\` with $count short answers:
 - (a) what this change made harder to change next;
 - (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or \`none\`;
-- (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.
+- (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.$reuse
 That note is task material outside your worktree: never commit it.
 EOF
 }
@@ -948,7 +967,7 @@ EOF
       return 1 ;;
   esac
   fm_existing_helper_rule "$mode" "$forge"
-  fm_landing_note_block "$intent_dir"
+  fm_landing_note_block "$intent_dir" "$mode" "$forge"
   fm_bug_fix_test_contract
 }
 

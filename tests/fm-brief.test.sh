@@ -216,7 +216,7 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
-    assert_grep "write \`$home/data/$id/landing-note.md\` with three short answers" "$brief" \
+    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = local-only ] && echo four || echo three) short answers" "$brief" \
       "$id: brief missing the landing-note step with its task-data path"
     assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$brief" \
       "$id: brief missing the failing-bug-test-first rule"
@@ -658,8 +658,16 @@ EOF
     "$home/data/brief-blocks-no-mistakes/brief.md" "PR-based definition of done lost the reuse rule"
   assert_grep "name the one you reused, or the search that found none, in the PR description." \
     "$home/data/brief-blocks-direct-PR/brief.md" "direct-PR definition of done lost the reuse rule"
-  assert_grep "name the one you reused, or the search that found none, in your landing note." \
+  assert_grep "name the one you reused, or the search that found none, as answer (d) of your landing note." \
     "$home/data/brief-blocks-local-only/brief.md" "local-only definition of done named a PR it forbids"
+  assert_grep "- (d) the existing helper you reused, or the search that found none." \
+    "$home/data/brief-blocks-local-only/brief.md" "local-only landing note has no slot for the reuse report"
+  assert_no_grep "- (d) the existing helper you reused" \
+    "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
+  git -C "$home/projects/fm" remote set-url origin "git@example.invalid:firstmate"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh fm --mode direct-PR >/dev/null 2>&1
+  assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh/brief.md" \
+    "a registered clone with an SSH origin was not recognised as Firstmate"
   FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"
