@@ -1,0 +1,7 @@
+Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-brief.rPDJFi/branch-prefix-shell-safe-marker)brief-branch-safe-g3'
+ok - fm-brief.sh: ref-format-valid shell metacharacters stay literal in generated branch commands
+ok - fm-brief.sh: every crewmate scaffold forbids administering the shared worktree pool
+ok - fm-brief.sh: ship briefs require an existing automated-review comment inventory
+ok - fm-promote: a promoted worker receives the same mode-specific delivery contract a briefed one does
+ok - fm-promote: promoted ships get the existing building blocks only for Firstmate's own repository
+# all fm-task-delivery tests passed
