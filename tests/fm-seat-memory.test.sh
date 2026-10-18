@@ -12,7 +12,8 @@
 #   4. Spawn: with the flag a Claude launch carries --session-id and the task
 #      record names the same id; without it neither appears.
 #   5. Spawn feed: a brief naming no seat gets the feed at launch for the seats
-#      its filled task text names, else the newest records across all seats;
+#      its filled task text names, offered as likely areas, never `root` or
+#      a heading word, else the newest records across all seats;
 #      a brief scaffolded with --seat or --path keeps its own section.
 # bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh and
 # the recap's use of the id in tests/fm-predecessor-recap.test.sh.
@@ -297,23 +298,36 @@ test_spawn_infers_the_feed_from_the_filled_brief() {
   meta=${rec%%|*}
   lb=${meta%/state/*}/data/infer-name-z1/launch-brief.md
   out=$(cat "$lb")
-  assert_contains "$out" $'# Seat decisions\nTask seats: teardown' "a known seat named in the task must be inferred"
+  assert_contains "$out" $'# Seat decisions\nLikely areas of this project, matched from this task\'s text: teardown' "a known seat named in the task must be inferred"
   assert_contains "$out" "  ## Teardown decision" "the inferred seat's record must be fed"
   case "$out" in *"Launch decision"* | *"Docs decision"*) fail "other seats' records must be left out: $out" ;; esac
+  ! printf '%s\n' "$out" | grep -q '^Task seats:' || fail "inferred seats must not become the task's seats: $out"
   write_record "${meta%/state/*}/data" infer-name-z1 "" "Untagged"
   out=$(fm_seat_archive "${meta%/state/*}/data" infer-name-proj infer-name-z1 ship)
-  [ "$out" = teardown ] || fail "an untagged record must take the launch brief's inferred seats (got '$out')"
+  [ "$out" != teardown ] || fail "an untagged record must not be indexed under an inferred seat"
 
   rec=$(run_spawn_case infer-path on "Fix the flag parsing in \`bin/fm-spawn.sh\`." "" seed_spawn_seats)
   meta=${rec%%|*}
   out=$(cat "${meta%/state/*}/data/infer-path-z1/launch-brief.md")
-  assert_contains "$out" "Task seats: launcher" "a path in the task must map through its seat definition"
+  assert_contains "$out" "matched from this task's text: launcher" "a path in the task must map through its seat definition"
   assert_contains "$out" "  ## Launch decision" "the path's seat record must be fed"
   pass "a spawn infers the task's seats from its filled brief by seat name and defined path"
 }
 
+seed_spawn_generic_seats() {  # <data> <project-key>
+  seed_spawn_seats "$@"
+  write_record "$1" t-root root "Root decision"
+  index_line "$1" "$2" 1000000004 root t-root
+  write_record "$1" t-intent intent "Intent decision"
+  index_line "$1" "$2" 1000000005 intent t-intent
+}
+
 test_spawn_falls_back_to_the_newest_records_across_seats() {
   local rec meta out
+  rec=$(run_spawn_case infer-generic on "Find the root cause of the greeting bug." "" seed_spawn_generic_seats)
+  meta=${rec%%|*}
+  out=$(cat "${meta%/state/*}/data/infer-generic-z1/launch-brief.md")
+  assert_contains "$out" "across all its seats" "neither root nor a heading word may be inferred as a seat: $out"
   rec=$(run_spawn_case infer-none on "Improve the wording of the greeting." "" seed_spawn_seats)
   meta=${rec%%|*}
   out=$(cat "${meta%/state/*}/data/infer-none-z1/launch-brief.md")
@@ -339,6 +353,17 @@ test_spawn_keeps_an_explicit_seat_section() {
   pass "a brief scaffolded with --seat or --path keeps exactly its named seats at launch"
 }
 
+test_feed_without_matching_records_has_no_lead_in() {
+  local home out
+  home=$(new_home feed-empty on)
+  write_record "$home/data" t-other docs "Other"
+  index_line "$home/data" proj 1000000001 docs t-other
+  out=$(CONFIG=$home/config fm_seat_feed_block "$home/data" proj spawn)
+  assert_contains "$out" "No earlier task left a decision record for these seats." "a seat with no record must say so"
+  case "$out" in *"Below are"*) fail "a feed with no entries must not carry the lead-in: $out" ;; esac
+  pass "a feed whose seats have no record says so instead of a dangling lead-in"
+}
+
 test_path_maps_to_longest_defined_prefix_else_first_component
 test_archive_indexes_named_seats_once
 test_archive_falls_back_to_brief_then_changed_paths
@@ -349,5 +374,6 @@ test_spawn_records_the_claude_session_id_only_with_the_flag
 test_spawn_infers_the_feed_from_the_filled_brief
 test_spawn_falls_back_to_the_newest_records_across_seats
 test_spawn_keeps_an_explicit_seat_section
+test_feed_without_matching_records_has_no_lead_in
 
 echo "# all fm-seat-memory tests passed"
