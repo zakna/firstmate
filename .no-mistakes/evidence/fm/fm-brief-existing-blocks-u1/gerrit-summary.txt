@@ -1,0 +1,4 @@
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-gerrit-no-mistakes/brief.md (ship, mode=no-mistakes forge=gerrit shape=squash; replace {TASK} and {FIRSTMATE_SPEC})
+gerrit/no-mistakes: name the one you reused, or the search that found none, as answer (d) of your landing note | with four short answers | (d)=1 | blocks=1
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-gerrit-direct-PR/brief.md (ship, mode=direct-PR forge=gerrit shape=squash; replace {TASK} and {FIRSTMATE_SPEC})
+gerrit/direct-PR: name the one you reused, or the search that found none, as answer (d) of your landing note | with four short answers | (d)=1 | blocks=1

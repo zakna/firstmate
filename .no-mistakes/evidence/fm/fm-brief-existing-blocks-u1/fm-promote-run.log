@@ -1,0 +1,14 @@
+== fm-promote.sh p-fm-https --mode local-only --yolo off (project=fm-https)
+promoted p-fm-https to ship mode=local-only yolo=off (teardown protection restored)
+wrote ship instructions for mode=local-only: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/p-fm-https/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba bin/fm-send.sh p-fm-https "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/p-fm-https/ship-instructions.md)"
+exit=0
+  ship-instructions.md: blocks=1 reuse=as answer (d) of your landing note answers=with four short answers
+  brief.md: blocks=1 reuse=as answer (d) of your landing note answers=with four short answers
+== fm-promote.sh p-other --mode local-only --yolo off (project=other)
+promoted p-other to ship mode=local-only yolo=off (teardown protection restored)
+wrote ship instructions for mode=local-only: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/p-other/ship-instructions.md
+next: FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba bin/fm-send.sh p-other "$(cat /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/p-other/ship-instructions.md)"
+exit=0
+  ship-instructions.md: blocks=0 reuse=as answer (d) of your landing note answers=with four short answers
+  brief.md: blocks=0 reuse=as answer (d) of your landing note answers=with four short answers

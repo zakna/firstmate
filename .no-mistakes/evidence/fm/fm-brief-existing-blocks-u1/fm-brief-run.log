@@ -1,0 +1,12 @@
+== fm-brief.sh t-direct-PR fm-https --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-direct-PR/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+== fm-brief.sh t-local-only fm-https --mode local-only
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+== fm-brief.sh t-no-mistakes fm-https --mode no-mistakes
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+== fm-brief.sh t-port fm-sshport --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-port/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+== fm-brief.sh t-other other --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-other/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+== fm-brief.sh t-scout fm-https --scout
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.1Hatba/data/t-scout/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})

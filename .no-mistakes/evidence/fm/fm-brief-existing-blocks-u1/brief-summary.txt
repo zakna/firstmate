@@ -1,0 +1,6 @@
+### t-direct-PR: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
+### t-local-only: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, as answer (d) of your landing note | landing: with four short answers | (d): 1
+### t-no-mistakes: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
+### t-port: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
+### t-other: building-blocks=0 rows=0 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
+### t-scout: building-blocks=0 rows=0 reuse-rule:  | landing:  | (d): 0
