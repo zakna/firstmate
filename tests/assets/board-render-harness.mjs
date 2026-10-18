@@ -3,9 +3,14 @@
 // asserted through the real template rather than by reading its source.
 //
 // Usage: node board-render-harness.mjs <built-board.html>
+// Optional environment, for the appearance toggle:
+//   BOARD_RENDER_STORED_THEME  value already remembered in browser storage
+//   BOARD_RENDER_NO_STORAGE=1  browser storage is unavailable
+//   BOARD_RENDER_CLICK=<id>    click that element once the page has rendered
 // Prints one JSON document:
 //   { stats:[{n,label}], underway:[{title,sub,badges}],
-//     charted:[{title,sub,badges,pickable}], empty, more, error }
+//     charted:[{title,sub,badges,pickable}], empty, more, error,
+//     theme:{attribute,light_pressed,dark_pressed,stored} }
 import { readFileSync } from "node:fs";
 
 const html = readFileSync(process.argv[2], "utf8");
@@ -24,6 +29,7 @@ class Node {
     this.type = "";
     this.value = "";
     this.checked = false;
+    this.listeners = {};
     this.classList = {
       add: (c) => { this.className = (this.className + " " + c).trim(); },
       contains: (c) => this.className.split(/\s+/).includes(c),
@@ -36,8 +42,11 @@ class Node {
   }
   set textContent(v) { this._text = String(v); this.children = []; }
   appendChild(n) { n.parentNode = this; this.children.push(n); return n; }
-  setAttribute(k, v) { this.attributes[k] = v; }
-  addEventListener() {}
+  setAttribute(k, v) { this.attributes[k] = String(v); }
+  removeAttribute(k) { delete this.attributes[k]; }
+  getAttribute(k) { return k in this.attributes ? this.attributes[k] : null; }
+  addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
+  dispatch(type) { for (const fn of this.listeners[type] || []) fn({ type, preventDefault() {} }); }
   querySelectorAll(sel) {
     const want = sel.replace(/^\./, "").replace(/:checked$/, "");
     const checkedOnly = sel.endsWith(":checked");
@@ -60,7 +69,9 @@ dataNode.textContent = html
   .split("</script>")[0];
 byId.set("bearings-data", dataNode);
 
+const root = new Node("html");
 globalThis.document = {
+  documentElement: root,
   createElement: (tag) => new Node(tag),
   // Lazily mint any element the page asks for: the shim tracks whatever ids
   // the shipped template actually uses instead of pinning a fixed list.
@@ -78,11 +89,20 @@ globalThis.document = {
     return byId.get(id);
   },
 };
+const storage = new Map();
+if (process.env.BOARD_RENDER_STORED_THEME) storage.set("fm-bearings-board.theme", process.env.BOARD_RENDER_STORED_THEME);
 globalThis.window = {};
+if (process.env.BOARD_RENDER_NO_STORAGE !== "1") {
+  globalThis.window.localStorage = {
+    getItem: (k) => (storage.has(k) ? storage.get(k) : null),
+    setItem: (k, v) => { storage.set(k, String(v)); },
+  };
+}
 globalThis.TextEncoder = TextEncoder;
 
 const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
 new Function(script)();
+if (process.env.BOARD_RENDER_CLICK) document.getElementById(process.env.BOARD_RENDER_CLICK).dispatch("click");
 
 const badgesOf = (row) =>
   row.children
@@ -122,5 +142,12 @@ const errorText = [...byId.entries()]
 const empty = ch.children.filter((c) => c.className.includes("bb-empty")).map((c) => c.textContent);
 const more = ch.children.filter((c) => c.className.includes("bb-morechip")).map((c) => c.textContent);
 
+const theme = {
+  attribute: root.getAttribute("data-theme"),
+  light_pressed: byId.get("bb-theme-light")?.getAttribute("aria-pressed") ?? null,
+  dark_pressed: byId.get("bb-theme-dark")?.getAttribute("aria-pressed") ?? null,
+  stored: storage.has("fm-bearings-board.theme") ? storage.get("fm-bearings-board.theme") : null,
+};
+
 process.stdout.write(
-  JSON.stringify({ stats, underway, charted, empty, more, error: errorText }) + "\n");
+  JSON.stringify({ stats, underway, charted, empty, more, error: errorText, theme }) + "\n");
