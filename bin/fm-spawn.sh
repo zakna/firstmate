@@ -534,7 +534,9 @@
 # record names its conversation; a relaunch keeps earlier ids in
 # claude_prior_session_ids= (bin/fm-seat-lib.sh). With the flag, a ship or
 # scout launch brief whose source names no seat also gains a "# Seat decisions"
-# section inferred from its filled `# Task` text (fm_seat_launch_feed).
+# section inferred from its filled `# Task` text (fm_seat_launch_feed), and one
+# scaffolded with --seat or --path has that section rebuilt from the current
+# index (fm_seat_launch_source).
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -3302,7 +3304,8 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   # pre-scope briefs and relaunches. Charters never enter this worker path.
   SOURCE_BRIEF=$BRIEF
   SEAT_FEED=
-  if SEAT_PROJECT=$(fm_seat_project_key "$PROJ_ABS"); then
+  SEAT_PROJECT=$(fm_seat_project_key "$PROJ_ABS") || SEAT_PROJECT=
+  if [ -n "$SEAT_PROJECT" ]; then
     SEAT_FEED=$(fm_seat_launch_feed "$DATA" "$SEAT_PROJECT" "$SOURCE_BRIEF")
   fi
   BRIEF="$DATA/$ID/launch-brief.md"
@@ -3310,7 +3313,7 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   {
     fm_brief_worker_role "$STATE" "$ID" "$FM_ROOT" &&
       printf '\n' &&
-      cat "$SOURCE_BRIEF" &&
+      fm_seat_launch_source "$DATA" "$SEAT_PROJECT" "$SOURCE_BRIEF" &&
       if [ -n "$SEAT_FEED" ]; then
         printf '\n%s\n' "$SEAT_FEED"
       fi &&

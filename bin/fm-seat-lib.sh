@@ -12,8 +12,10 @@
 # without this library:
 #   bin/fm-brief.sh     fm_seat_feed_block (the "# Seat decisions" section
 #                       for seats named with --seat or --path)
-#   bin/fm-spawn.sh     fm_seat_launch_feed (that section inferred from the
-#                       filled brief when it names no seat)
+#   bin/fm-spawn.sh     fm_seat_launch_source (that section rebuilt from the
+#                       current index at launch) and fm_seat_launch_feed (that
+#                       section inferred from the filled brief when it names
+#                       no seat)
 #   bin/fm-dod-lib.sh   fm_seat_decisions_dod_block ship (ship and promoted ship)
 #   bin/fm-brief.sh     fm_seat_decisions_dod_block scout
 #   bin/fm-spawn.sh     fm_seat_session_uuid (claude --session-id and
@@ -21,7 +23,8 @@
 #   bin/fm-teardown.sh  fm_seat_archive (index the task's decision record)
 #
 # Concepts, ported from OpenRig without any OpenRig dependency: a rig is a
-# registered project, keyed by its clone directory name; a seat is a named,
+# registered project, keyed by its clone directory name (fm_seat_project_key
+# owns the encoding of a name a seat name could not hold); a seat is a named,
 # durable area of that project (a module or subsystem) that outlives every
 # worker and accumulates that area's decision records. Workers stay disposable,
 # one worktree per task.
@@ -41,10 +44,10 @@
 # anything below it), else to its first path component, else to `root` for a
 # top-level file.
 #
-# Seats of one task: the record's first `Seats:` line, else the brief's
-# `Task seats:` line (written by fm_seat_feed_block for --seat/--path; seats
-# inferred at spawn never write one), together with, for a ship, the seats
-# of the files its branch changed, mapped as above
+# Seats of one task: the record's first `Seats:` line, even an empty one,
+# else the brief's `Task seats:` line (written by fm_seat_feed_block for
+# --seat/--path; seats inferred at spawn never write one), together with, for
+# a ship, the seats of the files its branch changed, mapped as above
 # (fm_seat_changed_path_seats owns the range). The path mapping is the one
 # source for changed areas, since a worker never sees seats.txt.
 #
@@ -68,12 +71,37 @@ fm_seat_name_valid() {  # <name>
   return 0
 }
 
-# The project key: the clone directory name of a project name or path.
+# The project key: the clone directory name of a project name or path, as
+# is when it is a valid seat name. Otherwise each byte outside letters,
+# digits, dots, underscores, and dashes, and a leading dot, underscore, or
+# dash, is written as %XX, so `my app` keys as `my%20app` and no key is `.`
+# or `..` or holds a `/`.
 fm_seat_project_key() {  # <project-name-or-path>
-  local key=${1%/}
+  local key=${1%/} out='' c i=0 LC_ALL=C
   key=${key##*/}
-  fm_seat_name_valid "$key" || return 1
-  printf '%s' "$key"
+  [ -n "$key" ] || return 1
+  if fm_seat_name_valid "$key"; then
+    printf '%s' "$key"
+    return 0
+  fi
+  while [ "$i" -lt "${#key}" ]; do
+    c=${key:$i:1}
+    case "$i:$c" in
+      0:[._-]) out="$out%$(printf '%s' "$c" | od -An -tx1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')" ;;
+      *:[A-Za-z0-9._-]) out="$out$c" ;;
+      *) out="$out%$(printf '%s' "$c" | od -An -tx1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')" ;;
+    esac
+    i=$((i + 1))
+  done
+  printf '%s' "$out"
+}
+
+# 0 when <key> is a key fm_seat_project_key can print.
+fm_seat_project_key_valid() {  # <key>
+  case "$1" in
+    ''|[!A-Za-z0-9%]*|*[!A-Za-z0-9._%-]*) return 1 ;;
+  esac
+  return 0
 }
 
 fm_seat_dir() {  # <data-dir> <project-key>
@@ -122,41 +150,92 @@ fm_seat_names_from_line() {  # <file> <label>
   return 0
 }
 
-# Seats for the paths this branch changed, one per line. The range starts at
-# the merge base with <base-ref>; when that is HEAD itself (the branch already
-# landed by fast-forward or merge commit) or there is no base, it starts at the
-# branch's oldest reflog entry, where `git checkout -b` created it.
+# Seats for the paths this branch changed, one per line, each side of a
+# rename included. The range starts at the merge base with <base-ref>. When
+# that is HEAD itself (the branch already landed by fast-forward or merge
+# commit) or there is no base, the range starts at the newest of these that
+# HEAD contains, so commits the branch only took in by a rebase or a reset
+# are left out:
+#   - the merge base of HEAD with the newest <base-ref> reflog entry that
+#     does not contain HEAD, which is the base just before the landing;
+#   - from the branch's own reflog, the `onto` commit of its newest rebase,
+#     else its oldest entry, where `git checkout -b` created it, when no
+#     other rewrite (an entry that does not contain the one before it, other
+#     than a `commit (amend)`) came after that point.
+# With neither, the branch has no changed-path seats.
 fm_seat_changed_path_seats() {  # <seats-file> <worktree> [<base-ref>]
-  local defs=$1 wt=$2 base=${3:-} head br start='' f
+  local defs=$1 wt=$2 base=${3:-} head start='' f
   [ -d "$wt" ] || return 0
   head=$(git -C "$wt" rev-parse --verify -q HEAD 2>/dev/null) || return 0
   [ -z "$base" ] || start=$(git -C "$wt" merge-base HEAD "$base" 2>/dev/null) || start=
   if [ -z "$start" ] || [ "$start" = "$head" ]; then
-    start=
-    br=$(git -C "$wt" symbolic-ref --quiet --short HEAD 2>/dev/null) || br=
-    [ -z "$br" ] || start=$(git -C "$wt" reflog show --format=%H "refs/heads/$br" -- 2>/dev/null | tail -n 1)
-    [ -z "$start" ] || git -C "$wt" merge-base --is-ancestor "$start" HEAD 2>/dev/null || start=
+    start=$(fm_seat_landed_start "$wt" "$base")
   fi
   [ -n "$start" ] || return 0
-  git -C "$wt" diff --name-only "$start" HEAD 2>/dev/null | while IFS= read -r f; do
+  git -C "$wt" diff --no-renames --name-only "$start" HEAD 2>/dev/null | while IFS= read -r f; do
     [ -n "$f" ] && fm_seat_for_path "$defs" "$f"
   done
   return 0
 }
 
-# Index the task's decision record under each of its seats. Idempotent: an
-# existing (seat, task) line is kept, so a retried teardown adds nothing. A
-# task without a non-empty record indexes nothing. Prints each indexed seat.
+# The range start fm_seat_changed_path_seats uses once HEAD is in its base.
+fm_seat_landed_start() {  # <worktree> [<base-ref>]
+  local wt=$1 base=${2:-} br sha msg prev='' prevmsg='' onbase='' onbranch='' rewrote=0 ref
+  if [ -n "$base" ]; then
+    ref=$(git -C "$wt" rev-parse --symbolic-full-name "$base" 2>/dev/null) || ref=
+    [ -n "$ref" ] || ref=$base
+    while IFS= read -r sha; do
+      [ -n "$sha" ] || continue
+      git -C "$wt" merge-base --is-ancestor HEAD "$sha" 2>/dev/null && continue
+      onbase=$(git -C "$wt" merge-base HEAD "$sha" 2>/dev/null) || onbase=
+      break
+    done <<EOF
+$(git -C "$wt" reflog show --format=%H "$ref" -- 2>/dev/null)
+EOF
+  fi
+  br=$(git -C "$wt" symbolic-ref --quiet --short HEAD 2>/dev/null) || br=
+  if [ -n "$br" ]; then
+    while IFS=' ' read -r sha msg; do
+      [ -n "$sha" ] || continue
+      case "$msg" in
+        'rebase (finish): '*' onto '*)
+          [ "$rewrote" -eq 1 ] || onbranch=${msg##* onto }
+          break ;;
+      esac
+      if [ -n "$prev" ] && [ "$rewrote" -eq 0 ] && ! git -C "$wt" merge-base --is-ancestor "$sha" "$prev" 2>/dev/null; then
+        case "$prevmsg" in 'commit (amend):'*) ;; *) rewrote=1 ;; esac
+      fi
+      prev=$sha prevmsg=$msg onbranch=$sha
+    done <<EOF
+$(git -C "$wt" reflog show --format='%H %gs' "refs/heads/$br" -- 2>/dev/null)
+EOF
+    [ "$rewrote" -eq 0 ] || onbranch=
+    [ -z "$onbranch" ] || git -C "$wt" merge-base --is-ancestor "$onbranch" HEAD 2>/dev/null || onbranch=
+  fi
+  if [ -n "$onbase" ] && [ -n "$onbranch" ]; then
+    if git -C "$wt" merge-base --is-ancestor "$onbase" "$onbranch" 2>/dev/null; then
+      printf '%s' "$onbranch"
+    else
+      printf '%s' "$onbase"
+    fi
+  else
+    printf '%s' "$onbase$onbranch"
+  fi
+}
+
 fm_seat_archive() {  # <data-dir> <project-key> <task-id> <kind> [<worktree> <base-ref>]
   local data=$1 project=$2 id=$3 kind=$4 wt=${5:-} base=${6:-}
   local record="$1/$3/decisions.md" dir index defs seats seat now
   [ -f "$record" ] && [ ! -L "$record" ] && [ -s "$record" ] || return 0
-  fm_seat_name_valid "$project" && fm_seat_name_valid "$id" || return 0
+  fm_seat_project_key_valid "$project" && fm_seat_name_valid "$id" || return 0
   dir=$(fm_seat_dir "$data" "$project")
   index="$dir/index.tsv"
   defs="$dir/seats.txt"
-  seats=$(fm_seat_names_from_line "$record" 'Seats:')
-  [ -n "$seats" ] || seats=$(fm_seat_names_from_line "$data/$id/brief.md" 'Task seats:')
+  if grep -Eq '^Seats:([[:space:]]|$)' "$record" 2>/dev/null; then
+    seats=$(fm_seat_names_from_line "$record" 'Seats:')
+  else
+    seats=$(fm_seat_names_from_line "$data/$id/brief.md" 'Task seats:')
+  fi
   seats=$(printf '%s\n%s\n' "$seats" "$(fm_seat_changed_path_seats "$defs" "$wt" "$base")")
   seats=$(printf '%s\n' "$seats" | awk 'NF && !seen[$0]++')
   [ -n "$seats" ] || return 0
@@ -228,7 +307,7 @@ fm_seat_infer() {  # <data-dir> <project-key> <text>
 
 # The "# Seat decisions" section a launch brief adds, or nothing when the flag
 # is off or the brief already carries a `Task seats:` line from --seat or
-# --path. Its seats are inferred from the brief's `# Task` body, heading lines
+# --path (fm_seat_launch_source rebuilds that one). Its seats are inferred from the brief's `# Task` body, heading lines
 # excluded, and offered as likely areas; when none match, it holds the
 # project's newest records across all seats.
 fm_seat_launch_feed() {  # <data-dir> <project-key> <brief>
@@ -242,6 +321,29 @@ fm_seat_launch_feed() {  # <data-dir> <project-key> <brief>
     # shellcheck disable=SC2086  # seat names hold no whitespace or glob characters
     fm_seat_feed_block "$1" "$2" --inferred $seats
   fi
+}
+
+# The source brief as its launch brief carries it: unchanged, except that a
+# "# Seat decisions" section naming `Task seats:` (from --seat or --path) is
+# rebuilt in place from the current index, so a brief that waited for a free
+# slot still gets the newest records. The section runs from its heading to
+# the next `# ` heading, and the blank lines before that heading stay as they
+# were; every record line in it is indented, so none ends it.
+fm_seat_launch_source() {  # <data-dir> <project-key-or-empty> <brief>
+  local seats fresh
+  if [ -z "$2" ] || ! fm_seat_memory_enabled || ! grep -q '^Task seats:' "$3" 2>/dev/null; then
+    cat "$3"
+    return
+  fi
+  seats=$(fm_seat_names_from_line "$3" 'Task seats:')
+  # shellcheck disable=SC2086  # seat names hold no whitespace or glob characters
+  fresh=$(fm_seat_feed_block "$1" "$2" $seats) || return
+  FM_SEAT_FRESH=$fresh awk '
+    !done && $0 == "# Seat decisions" { print ENVIRON["FM_SEAT_FRESH"]; skip = 1; done = 1; next }
+    skip && /^[[:space:]]*$/ { gap = gap "\n"; next }
+    skip && /^# / { printf "%s", gap; skip = 0 }
+    skip { gap = ""; next }
+    { print }' "$3"
 }
 
 # The "# Seat decisions" brief section, or nothing when the flag is off. With

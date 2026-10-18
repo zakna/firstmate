@@ -24,6 +24,7 @@ With the flag present:
 - Cleanup of a ship or scout task indexes that record under its seats in `data/seats/<project>/index.tsv`.
 - Every ship and scout launch carries a `# Seat decisions` section with its seats' newest records, newest first and bounded in size, each with the path of its full record.
   - A brief scaffolded with `--seat <seat>` or `--path <path>` carries the section for exactly those seats.
+    The section is rebuilt from the index when the worker launches, so a brief that waited for a free slot still gets the records written in the meantime.
   - A brief scaffolded with neither gets the section when the worker launches, from its filled `# Task` text, headings excluded: each known seat (one defined in `seats.txt` or already in the index, other than `root`) whose name appears in that text as a word, and the defined seat of each path the text names.
     These inferred seats are offered as likely areas only; they never become the task's `Task seats:` line.
   - When nothing in that text matches, the section holds the project's newest records across all seats, within the same size bound.
@@ -58,6 +59,7 @@ Everything stays in the home's private `data/` tree, never in a project's `AGENT
 | `data/seats/<project>/seats.txt` | Optional seat definitions, one per line: a seat name followed by the project paths it covers |
 
 `<project>` is the project's clone directory name.
+A name that is not a valid seat name, such as one with a space or `#`, is written with each such byte as `%XX`, so `my app` becomes `my%20app`.
 The index points at each task's own record rather than copying it.
 
 ## How a task finds its seats
@@ -65,7 +67,9 @@ The index points at each task's own record rather than copying it.
 A seat name is letters, digits, dots, underscores, and dashes, starting with a letter or digit.
 A path belongs to the seat whose defined path in `seats.txt` is its longest match, else to its top-level directory, else to `root` for a top-level file.
 
-At cleanup, a record's seats are its `Seats:` line, else the brief's `Task seats:` line from `--seat` or `--path`, together with, for a ship, the seats of the files its branch changed.
+At cleanup, a record's seats are its `Seats:` line, even an empty one, else the brief's `Task seats:` line from `--seat` or `--path`, together with, for a ship, the seats of the files its branch changed.
+A renamed file counts under the seats of both its old and its new path.
+Files the branch only took in from its base, through a rebase or a sync, do not count, also after the branch has landed.
 A scout's scratch changes are not its product, so a scout without either line is not indexed.
 
 `bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds, and file formats.

@@ -2,8 +2,11 @@
 # tests/fm-seat-memory.test.sh - opt-in seat memory (bin/fm-seat-lib.sh):
 #   1. Seat indexing: a path maps to its longest defined prefix, else its first
 #      component, else `root`; a decision record is indexed under the seats its
-#      `Seats:` line names, else the brief's `Task seats:`, else the paths its
-#      branch changed, once per seat however often teardown runs.
+#      `Seats:` line names, even an empty one, else the brief's `Task seats:`,
+#      joined for a ship with the seats of the paths its branch changed (both
+#      sides of a rename, never what it only took in from its base, also after
+#      a fast-forward landing), once per seat however often teardown runs; a
+#      project name with a space is encoded, not refused.
 #   2. Brief feed bounds: newest first, one entry per task, at most the
 #      configured record count, line count, and bytes, with every record line
 #      indented so it cannot forge a machine-read brief line.
@@ -14,7 +17,8 @@
 #   5. Spawn feed: a brief naming no seat gets the feed at launch for the seats
 #      its filled task text names, offered as likely areas, never `root` or
 #      a heading word, else the newest records across all seats;
-#      a brief scaffolded with --seat or --path keeps its own section.
+#      a brief scaffolded with --seat or --path keeps its own seats, with
+#      the section rebuilt from the index at launch.
 # bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh.
 set -u
 
@@ -356,14 +360,115 @@ test_spawn_falls_back_to_the_newest_records_across_seats() {
   pass "an unmatched task gets the project's newest records across all seats, and a flag-off launch none"
 }
 
-test_spawn_keeps_an_explicit_seat_section() {
+test_spawn_rebuilds_an_explicit_seat_section() {
   local rec meta out
-  rec=$(run_spawn_case infer-override on "Make Teardown faster." $'# Seat decisions\nTask seats: docs' seed_spawn_seats)
+  rec=$(run_spawn_case infer-override on "Make Teardown faster." $'# Seat decisions\nTask seats: docs\nNo earlier task left a decision record for these seats.\n\n# Setup\nKeep this line.' seed_spawn_seats)
   meta=${rec%%|*}
   out=$(cat "${meta%/state/*}/data/infer-override-z1/launch-brief.md")
   [ "$(printf '%s\n' "$out" | grep -c '^# Seat decisions')" = 1 ] || fail "an explicit seat section must not gain an inferred one: $out"
   case "$out" in *"Teardown decision"*) fail "an explicit seat must override inference: $out" ;; esac
-  pass "a brief scaffolded with --seat or --path keeps exactly its named seats at launch"
+  assert_contains "$out" "  ## Docs decision" "a record indexed after scaffolding must reach the launch: $out"
+  case "$out" in *"No earlier task left"*) fail "the scaffold-time section must be replaced: $out" ;; esac
+  assert_contains "$out" $'\n\n# Setup\nKeep this line.' "the brief after the section must stay as it was: $out"
+  pass "a brief scaffolded with --seat or --path keeps its named seats, rebuilt from the index at launch"
+}
+
+test_archive_honours_an_explicit_empty_seats_line() {
+  local home data proj wt out
+  home=$(new_home archive-empty-line on)
+  data=$home/data
+  proj=$TMP_ROOT/empty-line-proj
+  wt=$TMP_ROOT/empty-line-wt
+  fm_git_worktree "$proj" "$wt" fm/t-empty-line
+  mkdir -p "$wt/bin"
+  printf 'x\n' > "$wt/bin/tool.sh"
+  git -C "$wt" add -A
+  git -C "$wt" commit -q -m change
+  for id in t-empty-line t-empty-scout; do
+    mkdir -p "$data/$id"
+    printf '%s\n' 'Seats:' '' '## Kept it small' 'Reason: r' > "$data/$id/decisions.md"
+    printf '%s\n' '# Seat decisions' 'Task seats: docs' > "$data/$id/brief.md"
+  done
+  out=$(fm_seat_archive "$data" proj t-empty-line ship "$wt" main)
+  [ "$out" = bin ] || fail "an empty Seats: line must leave only the changed-path seats (got '$out')"
+  out=$(fm_seat_archive "$data" proj t-empty-scout scout)
+  [ -z "$out" ] || fail "a scout with an empty Seats: line must not be indexed (got '$out')"
+  pass "an explicit empty Seats: line names no seat instead of falling back to the brief"
+}
+
+test_changed_paths_leave_out_what_the_branch_took_from_its_base() {
+  local proj wt out up rebased
+  proj=$TMP_ROOT/rebase-proj
+  wt=$TMP_ROOT/rebase-wt
+  fm_git_worktree "$proj" "$wt" fm/t-rebase
+  mkdir -p "$wt/tools" "$proj/docs"
+  printf 'x\n' > "$wt/tools/a.sh"
+  git -C "$wt" add -A
+  git -C "$wt" commit -q -m task
+  printf 'y\n' > "$proj/docs/upstream.md"
+  git -C "$proj" add -A
+  git -C "$proj" commit -q -m upstream
+  git -C "$wt" rebase -q main
+  git -C "$proj" merge -q --ff-only fm/t-rebase
+  out=$(fm_seat_changed_path_seats "$TMP_ROOT/none.txt" "$wt" main | sort -u | tr '\n' ' ')
+  [ "$out" = "tools " ] || fail "a rebased branch landed by fast-forward must keep only its own seats (got '$out')"
+
+  wt=$TMP_ROOT/reset-wt
+  git -C "$proj" worktree add --quiet -b fm/t-reset "$wt" main
+  mkdir -p "$wt/lib" "$proj/other"
+  printf 'z\n' > "$wt/lib/b.sh"
+  git -C "$wt" add -A
+  git -C "$wt" commit -q -m task2
+  printf 'w\n' > "$proj/other/up.md"
+  git -C "$proj" add -A
+  git -C "$proj" commit -q -m upstream2
+  up=$(git -C "$proj" rev-parse HEAD)
+  git -C "$wt" checkout -q --detach
+  git -C "$wt" rebase -q "$up"
+  rebased=$(git -C "$wt" rev-parse HEAD)
+  git -C "$wt" checkout -q fm/t-reset
+  git -C "$wt" reset -q --hard "$rebased"
+  git -C "$proj" merge -q --ff-only fm/t-reset
+  out=$(fm_seat_changed_path_seats "$TMP_ROOT/none.txt" "$wt" main | sort -u | tr '\n' ' ')
+  [ "$out" = "lib " ] || fail "a branch synced by reset and landed by fast-forward must keep only its own seats (got '$out')"
+  pass "changed-path seats leave out what a branch only took from its base, after a rebase or a reset"
+}
+
+test_changed_paths_count_both_sides_of_a_rename() {
+  local proj wt out
+  proj=$TMP_ROOT/rename-proj
+  wt=$TMP_ROOT/rename-wt
+  fm_git_worktree "$proj" "$wt" fm/t-rename
+  mkdir -p "$wt/docs"
+  seq 1 40 > "$wt/docs/guide.md"
+  git -C "$wt" add -A
+  git -C "$wt" commit -q -m add
+  git -C "$proj" merge -q --ff-only fm/t-rename
+  git -C "$wt" checkout -q -b fm/t-rename2
+  mkdir -p "$wt/manual"
+  git -C "$wt" mv docs/guide.md manual/guide.md
+  git -C "$wt" commit -q -m move
+  git -C "$proj" config diff.renames true
+  out=$(fm_seat_changed_path_seats "$TMP_ROOT/none.txt" "$wt" main | sort -u | tr '\n' ' ')
+  [ "$out" = "docs manual " ] || fail "a rename must count under the seats of both paths (got '$out')"
+  pass "a renamed file counts under the seats of its old and its new path"
+}
+
+test_project_name_with_a_space_is_encoded() {
+  local home key out
+  home=$(new_home project-space on)
+  key=$(fm_seat_project_key "$TMP_ROOT/projects/my app/")
+  [ "$key" = "my%20app" ] || fail "a space must be encoded (got '$key')"
+  [ "$(fm_seat_project_key proj)" = proj ] || fail "a valid name must stay as is"
+  [ "$(fm_seat_project_key .hidden)" = "%2Ehidden" ] || fail "a leading dot must be encoded"
+  write_record "$home/data" t-space docs "Spaced project"
+  out=$(fm_seat_archive "$home/data" "$key" t-space ship)
+  [ "$out" = docs ] || fail "a project with a space must still be indexed (got '$out')"
+  [ -f "$home/data/seats/my%20app/index.tsv" ] || fail "the index must live under the encoded key"
+  FM_HOME=$home "$BRIEF" sp-ship "my app" --mode direct-PR --seat docs >/dev/null 2>&1 || fail "a brief for a project with a space failed"
+  out=$(cat "$home/data/sp-ship/brief.md")
+  assert_contains "$out" "  ## Spaced project" "a project with a space must still get its feed"
+  pass "a project name that is no seat name is encoded instead of turning seat memory off"
 }
 
 test_feed_without_matching_records_has_no_lead_in() {
@@ -386,7 +491,11 @@ test_flag_on_briefs_carry_feed_and_decisions_clause
 test_spawn_records_the_claude_session_id_only_with_the_flag
 test_spawn_infers_the_feed_from_the_filled_brief
 test_spawn_falls_back_to_the_newest_records_across_seats
-test_spawn_keeps_an_explicit_seat_section
+test_spawn_rebuilds_an_explicit_seat_section
+test_archive_honours_an_explicit_empty_seats_line
+test_changed_paths_leave_out_what_the_branch_took_from_its_base
+test_changed_paths_count_both_sides_of_a_rename
+test_project_name_with_a_space_is_encoded
 test_feed_without_matching_records_has_no_lead_in
 
 echo "# all fm-seat-memory tests passed"
