@@ -266,6 +266,59 @@ test_charted_rows_without_a_filed_date_follow_the_dated_rows_in_payload_order() 
   pass "charted rows with no filed date follow the dated rows in payload order"
 }
 
+theme_of() {  # <render-json>
+  printf '%s' "$1" | jq -c '.theme'
+}
+
+test_a_fresh_board_opens_light() {
+  local home out
+  home=$(make_home theme-fresh)
+  out=$(BOARD_RENDER_STORED_THEME='' render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":null,"light_pressed":"true","dark_pressed":"false","stored":null}' ] \
+    || fail "a board with no remembered appearance did not open light: $out"
+  pass "a board with no remembered appearance opens light"
+}
+
+test_a_remembered_mid_dark_choice_is_restored() {
+  local home out
+  home=$(make_home theme-restore)
+  out=$(BOARD_RENDER_STORED_THEME=dark render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":"dark","light_pressed":"false","dark_pressed":"true","stored":"dark"}' ] \
+    || fail "a remembered mid-dark choice was not restored: $out"
+  out=$(BOARD_RENDER_STORED_THEME=neon render "$home" '[]')
+  printf '%s' "$out" | jq -e '.theme.attribute == null and .theme.light_pressed == "true"' >/dev/null \
+    || fail "an unknown remembered appearance did not fall back to light: $out"
+  pass "a remembered mid-dark choice is restored and anything else opens light"
+}
+
+test_the_toggle_switches_and_remembers_the_appearance() {
+  local home out
+  home=$(make_home theme-toggle)
+  out=$(BOARD_RENDER_CLICK=bb-theme-dark render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":"dark","light_pressed":"false","dark_pressed":"true","stored":"dark"}' ] \
+    || fail "choosing mid-dark did not switch and remember it: $out"
+  out=$(BOARD_RENDER_STORED_THEME=dark BOARD_RENDER_CLICK=bb-theme-light render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":null,"light_pressed":"true","dark_pressed":"false","stored":"light"}' ] \
+    || fail "choosing light did not switch back and remember it: $out"
+  pass "the appearance toggle switches and remembers the choice"
+}
+
+test_unavailable_storage_never_blocks_the_board() {
+  local home out
+  home=$(make_home theme-nostorage)
+  out=$(BOARD_RENDER_NO_STORAGE=1 BOARD_RENDER_CLICK=bb-theme-dark render "$home" '[
+    {"id":"queued","repo":"sample","title":"Queued work","reason":"queued","dispatchable":true}
+  ]')
+  printf '%s' "$out" | jq -e '.error == "" and (.charted | length) == 1
+      and .theme.attribute == "dark" and .theme.stored == null' >/dev/null \
+    || fail "unavailable storage broke the board or the toggle: $out"
+  pass "unavailable browser storage still renders the board and switches for the visit"
+}
+
+test_a_fresh_board_opens_light
+test_a_remembered_mid_dark_choice_is_restored
+test_the_toggle_switches_and_remembers_the_appearance
+test_unavailable_storage_never_blocks_the_board
 test_an_underway_row_leads_with_the_task_name_and_keeps_its_run_status
 test_an_underway_identifier_label_is_not_replaced_by_run_status
 test_charted_next_reads_newest_filed_first

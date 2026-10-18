@@ -10,13 +10,15 @@
    Carried over: hierarchy, system typography, semantic colour roles, grouped
    backgrounds, spacing, dark appearance, increased contrast, reduced motion
    and reduced transparency. Native-only specifics do not apply here.
-   Light is the default appearance; the mid-dark appearance follows the
-   system's dark setting and never uses a near-black background. Every text
-   pair below meets WCAG AA (4.5:1 or better) in both appearances.
+   Light is the default appearance. The header toggle switches to a mid-dark
+   appearance that never uses a near-black background, and the page remembers
+   that choice; the owner asked for this in-page toggle even though Apple
+   prefers following the system setting. Every text pair below meets WCAG AA
+   (4.5:1 or better) in both appearances.
    No web fonts: the system font stack keeps the board fully offline.
    ============================================================ */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* grouped backgrounds: page, then card, then a group inside a card */
   --bg-page: #f2f2f7;
@@ -74,46 +76,45 @@
 }
 
 /* mid-dark appearance: dim backgrounds, bright labels, no near-black */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #3a3c43;
-    --surface-card: #464951;
-    --surface-card-warm: #464951;
-    --surface-group: #50535b;
-    --surface-hover: #55585f;
-    --nav-material: rgba(58, 60, 67, 0.84);
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #3a3c43;
+  --surface-card: #464951;
+  --surface-card-warm: #464951;
+  --surface-group: #50535b;
+  --surface-hover: #55585f;
+  --nav-material: rgba(58, 60, 67, 0.84);
 
-    --text-strong: #f5f5f7;
-    --text-body: #ececf0;
-    --text-muted: #e0e0e6;
-    --text-faint: #cfcfd6;
+  --text-strong: #f5f5f7;
+  --text-body: #ececf0;
+  --text-muted: #e0e0e6;
+  --text-faint: #cfcfd6;
 
-    --border-default: #62656e;
-    --border-soft: #585b63;
-    --border-strong: #9a9da6;
+  --border-default: #62656e;
+  --border-soft: #585b63;
+  --border-strong: #9a9da6;
 
-    --accent: #8fc2ff;
-    --accent-hover: #a9d0ff;
-    --accent-text: #10233f;
-    --accent-soft: #3d4f6b;
-    --link: #b0d4ff;
+  --accent: #8fc2ff;
+  --accent-hover: #a9d0ff;
+  --accent-text: #10233f;
+  --accent-soft: #3d4f6b;
+  --link: #b0d4ff;
 
-    --status-online: #a6f0b8; --status-online-soft: #3d5a47; --status-online-line: #5e8a6c;
-    --status-warn: #ffd2a6;   --status-warn-soft: #5e4a39;   --status-warn-line: #8f6f52;
-    --status-danger: #ffc1c3; --status-danger-soft: #61403f; --status-danger-line: #946160;
-    --status-info: #c4defd;   --status-info-soft: #3d4f6b;   --status-info-line: #5f7aa3;
-    --status-neutral: #ececf0; --status-neutral-soft: #55585f; --status-neutral-line: #767982;
-    --status-solid: #1a1747;  --status-solid-bg: #b5b0ff;
+  --status-online: #a6f0b8; --status-online-soft: #3d5a47; --status-online-line: #5e8a6c;
+  --status-warn: #ffd2a6;   --status-warn-soft: #5e4a39;   --status-warn-line: #8f6f52;
+  --status-danger: #ffc1c3; --status-danger-soft: #61403f; --status-danger-line: #946160;
+  --status-info: #c4defd;   --status-info-soft: #3d4f6b;   --status-info-line: #5f7aa3;
+  --status-neutral: #ececf0; --status-neutral-soft: #55585f; --status-neutral-line: #767982;
+  --status-solid: #1a1747;  --status-solid-bg: #b5b0ff;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.16);
-    --focus-ring: 0 0 0 3px rgba(143, 194, 255, 0.6);
-  }
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.16);
+  --focus-ring: 0 0 0 3px rgba(143, 194, 255, 0.6);
 }
 
 /* Increase Contrast: stronger labels and separators in either appearance */
 @media (prefers-contrast: more) {
-  :root {
+  :root, :root[data-theme="dark"] {
     --text-body: var(--text-strong); --text-muted: var(--text-strong); --text-faint: var(--text-body);
     --border-default: var(--border-strong); --border-soft: var(--border-strong);
   }
@@ -206,6 +207,21 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 }
 .bb-brand__disc svg { width: 62%; height: 62%; }
 .bb-brand__wm { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-strong); line-height: 1; }
+/* appearance toggle: a two-segment control in the header */
+.bb-theme {
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: var(--surface-hover); border: 1px solid var(--border-soft); border-radius: var(--radius-pill);
+}
+.bb-theme__btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--control-min); padding: 0 12px;
+  font-family: var(--font-sans); font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted);
+  background: transparent; border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.bb-theme__btn:hover { color: var(--text-strong); }
+.bb-theme__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bb-theme__btn[aria-pressed="true"] { background: var(--surface-card); color: var(--text-strong); box-shadow: var(--shadow-sm); }
+.bb-theme__btn svg { width: 16px; height: 16px; flex: none; }
 .bb-meta-mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
 
 .bb-main {
@@ -384,6 +400,16 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
       </span>
       <span class="bb-brand__wm">bearings</span>
     </span>
+    <div class="bb-theme" role="group" aria-label="Appearance">
+      <button type="button" class="bb-theme__btn" id="bb-theme-light" data-theme-choice="light" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        Light
+      </button>
+      <button type="button" class="bb-theme__btn" id="bb-theme-dark" data-theme-choice="dark" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        Mid-dark
+      </button>
+    </div>
   </div>
 </header>
 
@@ -476,6 +502,35 @@ __FM_BEARINGS_BOARD_DATA__
 <script>
 (function () {
   "use strict";
+
+  /* Appearance: light unless the owner picked mid-dark here before. The choice
+     is remembered per browser; any storage or DOM failure leaves the page light
+     and never blocks the board from rendering. */
+  (function setupTheme() {
+    var KEY = "fm-bearings-board.theme";
+    var root = document.documentElement;
+    var lightBtn = document.getElementById("bb-theme-light");
+    var darkBtn = document.getElementById("bb-theme-dark");
+    function apply(theme) {
+      if (root && root.setAttribute) {
+        if (theme === "dark") root.setAttribute("data-theme", "dark");
+        else if (root.removeAttribute) root.removeAttribute("data-theme");
+      }
+      lightBtn.setAttribute("aria-pressed", theme === "dark" ? "false" : "true");
+      darkBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+    }
+    function choose(theme) {
+      apply(theme);
+      try { window.localStorage.setItem(KEY, theme); } catch (e) { /* not remembered */ }
+    }
+    var stored = null;
+    try { stored = window.localStorage.getItem(KEY); } catch (e) { stored = null; }
+    try {
+      apply(stored === "dark" ? "dark" : "light");
+      lightBtn.addEventListener("click", function () { choose("light"); });
+      darkBtn.addEventListener("click", function () { choose("dark"); });
+    } catch (e) { /* toggle unavailable; the board stays light */ }
+  })();
 
   /* Fail closed: a board with unreadable or wrong-schema data says so plainly
      instead of rendering an empty page that looks like an empty fleet. */
