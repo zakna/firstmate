@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bearings - fleet board</title>
+<style>
+/* ============================================================
+   Bearings board - Apple Human Interface Guidelines applied to a web medium.
+   Carried over: hierarchy, system typography, semantic colour roles, grouped
+   backgrounds, spacing, dark appearance, increased contrast, reduced motion
+   and reduced transparency. Native-only specifics do not apply here.
+   Light is the default appearance. The header toggle switches to a mid-dark
+   appearance that never uses a near-black background, and the page remembers
+   that choice; the owner asked for this in-page toggle even though Apple
+   prefers following the system setting. Every text pair below meets WCAG AA
+   (4.5:1 or better) in both appearances.
+   No web fonts: the system font stack keeps the board fully offline.
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  /* grouped backgrounds: page, then card, then a group inside a card */
+  --bg-page: #f2f2f7;
+  --surface-card: #ffffff;
+  --surface-card-warm: #ffffff;
+  --surface-group: #f2f2f7;
+  --surface-hover: #e9e9ee;
+  --nav-material: rgba(242, 242, 247, 0.82);
+
+  /* labels: primary, secondary, tertiary */
+  --text-strong: #1d1d1f;
+  --text-body: #3a3a3c;
+  --text-muted: #5e5e63;
+  --text-faint: #636368;
+
+  --border-default: #d1d1d6;
+  --border-soft: #e5e5ea;
+  --border-strong: #8e8e93;
+
+  /* accent drives interactive elements only */
+  --accent: #0a5fd6;
+  --accent-hover: #0850b5;
+  --accent-text: #ffffff;
+  --accent-soft: #e3eefd;
+  --link: #0a5fd6;
+
+  /* status: tinted fill plus strong text, never colour alone */
+  --status-online: #0a6b2c; --status-online-soft: #e2f4e7; --status-online-line: #a9dcb6;
+  --status-warn: #8a4500;   --status-warn-soft: #fdeedd;   --status-warn-line: #f2c48f;
+  --status-danger: #b3121f; --status-danger-soft: #fde6e7; --status-danger-line: #f3aeb2;
+  --status-info: #0a55c2;   --status-info-soft: #e3eefd;   --status-info-line: #a9c8f5;
+  --status-neutral: #3a3a3c; --status-neutral-soft: #e9e9ee; --status-neutral-line: #c7c7cc;
+  --status-solid: #ffffff;  --status-solid-bg: #4f43d6;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* text styles; the smallest stays at 12px */
+  --fs-title: 1.375rem;   /* 22px title 2 */
+  --fs-h3: 1.75rem;       /* 28px stat numerals */
+  --fs-h4: 1.125rem;      /* 18px card title */
+  --fs-base: 1rem;        /* 16px body */
+  --fs-sm: 0.9375rem;     /* 15px subhead */
+  --fs-xs: 0.8125rem;     /* 13px footnote */
+  --fs-2xs: 0.75rem;      /* 12px caption */
+
+  --radius-xs: 6px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 14px; --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.07);
+  --focus-ring: 0 0 0 3px rgba(10, 95, 214, 0.45);
+  --control-min: 32px;
+  --container-app: 1180px;
+  --transition: 150ms ease;
+}
+
+/* mid-dark appearance: dim backgrounds, bright labels, no near-black */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #3a3c43;
+  --surface-card: #464951;
+  --surface-card-warm: #464951;
+  --surface-group: #50535b;
+  --surface-hover: #55585f;
+  --nav-material: rgba(58, 60, 67, 0.84);
+
+  --text-strong: #f5f5f7;
+  --text-body: #ececf0;
+  --text-muted: #e0e0e6;
+  --text-faint: #cfcfd6;
+
+  --border-default: #62656e;
+  --border-soft: #585b63;
+  --border-strong: #9a9da6;
+
+  --accent: #8fc2ff;
+  --accent-hover: #a9d0ff;
+  --accent-text: #10233f;
+  --accent-soft: #3d4f6b;
+  --link: #b0d4ff;
+
+  --status-online: #a6f0b8; --status-online-soft: #3d5a47; --status-online-line: #5e8a6c;
+  --status-warn: #ffd2a6;   --status-warn-soft: #5e4a39;   --status-warn-line: #8f6f52;
+  --status-danger: #ffc1c3; --status-danger-soft: #61403f; --status-danger-line: #946160;
+  --status-info: #c4defd;   --status-info-soft: #3d4f6b;   --status-info-line: #5f7aa3;
+  --status-neutral: #ececf0; --status-neutral-soft: #55585f; --status-neutral-line: #767982;
+  --status-solid: #1a1747;  --status-solid-bg: #b5b0ff;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.16);
+  --focus-ring: 0 0 0 3px rgba(143, 194, 255, 0.6);
+}
+
+/* Increase Contrast: stronger labels and separators in either appearance */
+@media (prefers-contrast: more) {
+  :root, :root[data-theme="dark"] {
+    --text-body: var(--text-strong); --text-muted: var(--text-strong); --text-faint: var(--text-body);
+    --border-default: var(--border-strong); --border-soft: var(--border-strong);
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  color: var(--text-body);
+  background: var(--bg-page);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+
+/* ---- fm-badge: tinted status capsule ---- */
+.fm-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-2xs); font-weight: 600; line-height: 1.2;
+  padding: 3px 9px; border-radius: var(--radius-pill); border: 1px solid transparent;
+  white-space: nowrap;
+}
+.fm-badge--online  { background: var(--status-online-soft);  color: var(--status-online);  border-color: var(--status-online-line); }
+.fm-badge--warn    { background: var(--status-warn-soft);    color: var(--status-warn);    border-color: var(--status-warn-line); }
+.fm-badge--danger  { background: var(--status-danger-soft);  color: var(--status-danger);  border-color: var(--status-danger-line); }
+.fm-badge--info    { background: var(--status-info-soft);    color: var(--status-info);    border-color: var(--status-info-line); }
+.fm-badge--neutral { background: var(--status-neutral-soft); color: var(--status-neutral); border-color: var(--status-neutral-line); }
+.fm-badge--solid   { background: var(--status-solid-bg);     color: var(--status-solid); }
+
+/* ---- fm-btn: one filled style for the primary action ---- */
+.fm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--control-min);
+  font-family: var(--font-sans); font-weight: 600; line-height: 1.2; white-space: nowrap;
+  border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer;
+  transition: background var(--transition), opacity var(--transition);
+}
+.fm-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.fm-btn--sm { font-size: var(--fs-sm); padding: 7px 16px; }
+.fm-btn--primary, .fm-btn--gold { background: var(--accent); color: var(--accent-text); }
+.fm-btn--primary:hover, .fm-btn--gold:hover { background: var(--accent-hover); }
+.fm-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.fm-btn[disabled]:hover { background: var(--accent); }
+
+/* ---- fm-card: grouped content surface ---- */
+.fm-card {
+  background: var(--surface-card); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.fm-card--poster { border-color: var(--border-default); box-shadow: var(--shadow-card); }
+.fm-card--warm { background: var(--surface-card-warm); }
+
+/* ---- fm-sign: section header ---- */
+.fm-sign {
+  display: inline-flex; align-items: center; gap: 8px; line-height: 1.25; white-space: nowrap;
+}
+.fm-sign--eyebrow { font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; color: var(--text-strong); letter-spacing: -0.01em; }
+.fm-sign--eyebrow .fm-ico { color: var(--accent); }
+.fm-sign--muted { font-size: var(--fs-sm); font-weight: 400; color: var(--text-muted); white-space: normal; text-align: end; }
+.fm-sign svg { width: 20px; height: 20px; }
+.fm-ico { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.16em; }
+
+/* ============================================================
+   Board chrome (bb-*) - built on the same tokens
+   ============================================================ */
+.bb-nav {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--nav-material);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--border-soft);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bb-nav { background: var(--bg-page); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.bb-nav__inner {
+  max-width: var(--container-app); margin: 0 auto; padding: 0 28px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.bb-brand { display: inline-flex; align-items: center; gap: 10px; }
+.bb-brand__disc {
+  display: grid; place-items: center; width: 30px; height: 30px; flex: none;
+  border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-text);
+}
+.bb-brand__disc svg { width: 62%; height: 62%; }
+.bb-brand__wm { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-strong); line-height: 1; }
+/* appearance toggle: a two-segment control in the header */
+.bb-theme {
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: var(--surface-hover); border: 1px solid var(--border-soft); border-radius: var(--radius-pill);
+}
+.bb-theme__btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--control-min); padding: 0 12px;
+  font-family: var(--font-sans); font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted);
+  background: transparent; border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.bb-theme__btn:hover { color: var(--text-strong); }
+.bb-theme__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bb-theme__btn[aria-pressed="true"] { background: var(--surface-card); color: var(--text-strong); box-shadow: var(--shadow-sm); }
+.bb-theme__btn svg { width: 16px; height: 16px; flex: none; }
+.bb-meta-mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
+
+.bb-main {
+  max-width: var(--container-app); margin: 0 auto;
+  padding: 28px 28px 72px; display: flex; flex-direction: column; gap: 32px;
+}
+
+/* stat strip */
+.bb-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.bb-stat {
+  display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; min-width: 0;
+  background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.bb-stat--call { background: var(--accent-soft); border-color: var(--accent); }
+.bb-stat__num { font-family: var(--font-display); font-size: var(--fs-h3); font-weight: 700; line-height: 1; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.bb-stat--call .bb-stat__num { color: var(--status-info); }
+.bb-stat__label { font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted); }
+
+.bb-section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bb-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.bb-cols { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 28px; align-items: start; }
+
+/* ---- Captain's Call: one card at a time, dealt off a visible stack ---- */
+.bb-callwrap { display: flex; flex-direction: column; gap: 12px; }
+/* extra top margin clears the pile edges that show below the active card */
+.bb-stacknav { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.bb-stacknav__count { flex: 1 1 auto; font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.bb-stacknav__btn {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; cursor: pointer;
+  background: var(--surface-card); color: var(--text-strong);
+  border: 1px solid var(--border-default); border-radius: var(--radius-pill);
+  transition: background var(--transition);
+}
+.bb-stacknav__btn:hover { background: var(--surface-hover); }
+.bb-stacknav__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bb-stacknav__btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.bb-stacknav__btn[disabled]:hover { background: var(--surface-card); }
+.bb-stacknav__btn svg { width: 18px; height: 18px; }
+/* the stack: card faces squared up under the active card, inset and lowered
+   so their edges read as a pile. It thins as cards are answered: two edges,
+   then one, then none on the last. */
+.bb-call { position: relative; display: grid; isolation: isolate; }
+.bb-call::before, .bb-call::after {
+  content: ""; position: absolute; z-index: 0;
+  background: var(--surface-card); border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.bb-call::before { inset: 6px 10px -6px 10px; }
+.bb-call::after  { inset: 12px 20px -12px 20px; z-index: -1; opacity: 0.7; }
+.bb-call--penult::after { display: none; }
+.bb-call--last::before, .bb-call--last::after,
+.bb-call--empty::before, .bb-call--empty::after { display: none; }
+.bb-call--empty { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); }
+.bb-call > .bb-decision { grid-area: 1 / 1; z-index: 1; }
+.bb-call > .bb-decision[hidden] { display: none; }
+.bb-decision { display: flex; flex-direction: column; }
+.bb-decision__pad { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.bb-decision__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bb-decision__repo { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
+.bb-decision__title { margin: 0; font-family: var(--font-display); font-size: var(--fs-h4); font-weight: 600; color: var(--text-strong); line-height: 1.3; }
+.bb-decision__detail { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; }
+/* about / decide - scannable context rows */
+.bb-ctx { display: flex; flex-direction: column; gap: 8px; }
+.bb-ctx__row { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 10px; align-items: baseline; }
+.bb-ctx__k { font-size: var(--fs-xs); font-weight: 600; color: var(--text-faint); white-space: nowrap; }
+.bb-ctx__v { font-size: var(--fs-sm); color: var(--text-body); line-height: 1.45; min-width: 0; }
+.bb-decision__link { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--link); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+/* One rhythm owner: the answer form is a flex column with the same gap as
+   the card pad, and the foot rides margin-top:auto so every Queue answer button
+   sits on the same baseline with identical breathing room. */
+.bb-decision form { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; }
+.bb-opts { display: flex; flex-direction: column; gap: 8px; }
+.bb-opt {
+  display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; cursor: pointer;
+  background: var(--surface-group); border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md); transition: border-color var(--transition), background var(--transition);
+}
+.bb-opt:hover { background: var(--surface-hover); }
+.bb-opt input { accent-color: var(--accent); width: 18px; height: 18px; margin: 1px 0 0; flex: none; }
+.bb-opt input:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 50%; }
+.bb-opt__body { min-width: 0; flex: 1 1 auto; }
+.bb-opt__label { display: block; font-size: var(--fs-sm); font-weight: 600; color: var(--text-strong); line-height: 1.35; }
+.bb-opt__hint { display: block; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.4; margin-top: 2px; }
+.bb-opt__rec { flex: none; align-self: center; font-size: var(--fs-2xs); font-weight: 600;
+  color: var(--status-online); background: var(--status-online-soft);
+  border: 1px solid var(--status-online-line); border-radius: var(--radius-pill); padding: 2px 8px; }
+.bb-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.bb-decision__foot { display: flex; align-items: center; gap: 12px; margin-top: auto; flex-wrap: wrap; }
+.bb-queued {
+  display: none; align-items: center; gap: 6px;
+  font-size: var(--fs-xs); font-weight: 600;
+  color: var(--status-online); background: var(--status-online-soft); border: 1px solid var(--status-online-line);
+  border-radius: var(--radius-pill); padding: 4px 10px;
+}
+.is-queued .bb-queued { display: inline-flex; }
+.bb-limit { display: none; font-size: var(--fs-xs); font-weight: 600; color: var(--status-danger); }
+.bb-limit.is-visible { display: inline; }
+.bb-freeform { width: 100%; min-height: var(--control-min); font-family: var(--font-sans); font-size: var(--fs-sm); color: var(--text-strong);
+  background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-sm); padding: 8px 12px; }
+.bb-freeform::placeholder { color: var(--text-faint); opacity: 1; }
+.bb-freeform:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+/* ---- compact rows (Underway / Landed / Charted) ---- */
+.bb-rows { display: flex; flex-direction: column; }
+.bb-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px; min-height: 52px;
+  border-top: 1px solid var(--border-soft); min-width: 0;
+}
+.bb-row:first-child { border-top: none; }
+.bb-row__main { min-width: 0; flex: 1 1 auto; }
+.bb-row__title { font-size: var(--fs-sm); font-weight: 600; color: var(--text-strong); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-row__sub { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.4; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-row__id { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
+.bb-row__pr { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 500; color: var(--link); white-space: nowrap; }
+.bb-row__check { width: 26px; height: 26px; border-radius: var(--radius-pill); display: grid; place-items: center; flex: none;
+  background: var(--status-online-soft); color: var(--status-online); border: 1px solid var(--status-online-line); }
+.bb-row__check svg { width: 15px; height: 15px; }
+.bb-morechip {
+  display: inline-flex; align-items: center; gap: 6px; margin: 10px 18px 14px;
+  font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted);
+  background: var(--surface-group); border-radius: var(--radius-pill); padding: 5px 12px; width: fit-content;
+}
+.bb-empty { padding: 20px 18px; font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* ---- Charted Next dispatch picker ---- */
+/* margin:0 kills the UA default checkbox margin so picker rows and spacer rows
+   share one text left edge */
+.bb-pick { accent-color: var(--accent); width: 18px; height: 18px; flex: none; cursor: pointer; margin: 0; }
+.bb-pick:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+.bb-pick-spacer { width: 18px; flex: none; }
+.bb-dispatch {
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px; flex-wrap: wrap;
+  border-top: 1px solid var(--border-default); background: var(--surface-group);
+}
+.bb-dispatch__count { flex: 1 1 auto; font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted); }
+
+.bb-foot { display: flex; justify-content: flex-end; border-top: 1px solid var(--border-soft); padding-top: 14px; }
+
+/* coarse pointers get full-size touch targets */
+@media (pointer: coarse) {
+  :root { --control-min: 44px; }
+  .bb-stacknav__btn { width: 44px; height: 44px; }
+  .bb-pick, .bb-opt input { width: 22px; height: 22px; }
+  .bb-pick-spacer { width: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+@media (max-width: 900px) {
+  .bb-cols { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 600px) {
+  .bb-nav__inner { padding: 0 16px; }
+  .bb-main { padding: 20px 16px 56px; gap: 28px; }
+  .bb-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bb-decision__pad { padding: 18px 16px; }
+  .bb-ctx__row { grid-template-columns: 1fr; gap: 2px; }
+  .bb-row { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<header class="bb-nav">
+  <div class="bb-nav__inner">
+    <span class="bb-brand">
+      <span class="bb-brand__disc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 6v16"/><path d="m19 13 2-1a9 9 0 0 1-18 0l2 1"/><path d="M9 11h6"/><circle cx="12" cy="4" r="2"/>
+        </svg>
+      </span>
+      <span class="bb-brand__wm">bearings</span>
+    </span>
+    <div class="bb-theme" role="group" aria-label="Appearance">
+      <button type="button" class="bb-theme__btn" id="bb-theme-light" data-theme-choice="light" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        Light
+      </button>
+      <button type="button" class="bb-theme__btn" id="bb-theme-dark" data-theme-choice="dark" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        Mid-dark
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="bb-main">
+
+  <div class="bb-stats" id="bb-stats"></div>
+
+  <div class="bb-cols">
+  <section class="bb-section">
+    <div class="bb-section__head">
+      <span class="fm-sign fm-sign--eyebrow">
+        <svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+        Captain's Call
+      </span>
+      <span class="fm-sign fm-sign--muted" id="bb-call-sub"></span>
+    </div>
+    <div class="bb-callwrap">
+      <div class="bb-call" id="bb-call"></div>
+      <!-- nav sits under the stack so the active card's top edge aligns with
+           the Charted Next card across the row -->
+      <div class="bb-stacknav">
+        <span class="bb-stacknav__count" id="bb-stack-count">-</span>
+        <button type="button" class="bb-stacknav__btn" id="bb-stack-prev" aria-label="Previous card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button type="button" class="bb-stacknav__btn" id="bb-stack-next" aria-label="Next card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="bb-section">
+    <div class="bb-section__head">
+      <span class="fm-sign fm-sign--eyebrow">
+        <svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+        Charted Next
+      </span>
+      <span class="fm-sign fm-sign--muted" id="bb-charted-sub"></span>
+    </div>
+    <div class="fm-card fm-card--warm">
+      <div class="bb-rows" id="bb-charted"></div>
+      <div class="bb-dispatch" id="bb-dispatch" hidden>
+        <span class="bb-dispatch__count" id="bb-dispatch-count">nothing picked</span>
+        <span class="bb-queued" id="bb-dispatch-queued">
+          <svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          queued
+        </span>
+        <button type="button" class="fm-btn fm-btn--sm fm-btn--gold" id="bb-dispatch-btn">Queue dispatch order</button>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="bb-cols">
+    <section class="bb-section">
+      <div class="bb-section__head">
+        <span class="fm-sign fm-sign--eyebrow">
+          <svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.189V14"/><path d="M12 2v3"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-8.188-3.639a2 2 0 0 0-1.624 0L3 14a11.6 11.6 0 0 0 2.81 7.76"/><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+          Underway
+        </span>
+      </div>
+      <div class="fm-card"><div class="bb-rows" id="bb-underway"></div></div>
+    </section>
+
+    <section class="bb-section">
+      <div class="bb-section__head">
+        <span class="fm-sign fm-sign--eyebrow">
+          <svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+          Recently Landed
+        </span>
+      </div>
+      <div class="fm-card"><div class="bb-rows" id="bb-landed"></div></div>
+    </section>
+  </div>
+
+  <footer class="bb-foot">
+    <span class="bb-meta-mono" id="bb-provenance">-</span>
+  </footer>
+
+</main>
+
+<!-- ONE SLOT. bin/fm-bearings-board.sh build injects the fresh
+     fm-bearings-board.v1 payload in place of the placeholder below; everything
+     above and below is the shipped template and is never regenerated per run. -->
+<script id="bearings-data" type="application/json">
+{"schema":"fm-bearings-board.v1","home":"main","generated":"2026-10-18T09:00Z","prs_live":true,"captains_call":[{"key":"hig-restyle","type":"decision","repo":"firstmate","title":"Ship the HIG restyle of the board?","about":"Restyles the fleet board with Apple HIG guidance and a light/mid-dark toggle.","decide":"Approve or hold","options":[{"value":"ship","label":"Ship it","hint":"Merge after CI"},{"value":"hold","label":"Hold","hint":"Keep iterating"},{"value":"reconcile","label":"Reconcile","hint":"Re-check the latest state, then close this with evidence or keep it open with a note"}],"recommend_value":"ship","allow_freeform":true},{"key":"pr-77","type":"merge","repo":"firstmate","title":"Merge PR #77 seat memory","risk":"low","pr_url":"https://github.com/zakna/firstmate/pull/77","options":[{"value":"merge","label":"Merge now"},{"value":"later","label":"Later"}]}],"underway":[{"id":"fm-bearings-board-hig-u1","name":"Bearings board HIG restyle","repo":"firstmate","state":"gating","doing":"no-mistakes test phase","kind":"ship"},{"id":"ha-cooling-control-m7","name":"HA cooling control","repo":"ha","state":"working","doing":"wiring thermostat schedules","kind":"ship"}],"landed":[{"id":"seat-memory","repo":"firstmate","what":"Seat memory decision records","owner":"secondmate","pr_url":"https://github.com/zakna/firstmate/pull/76"}],"charted":[{"id":"queued-a","repo":"firstmate","title":"Herdr lab teardown hardening","reason":"queued behind the cutover","dispatchable":true,"filed":"2026-10-17"},{"id":"main-inventory","repo":"firstmate","title":"Main inventory integrity","reason":"main inventory","dispatchable":false,"kind":"warning"}],"charted_more":2,"charted_warning_more":0}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Appearance: light unless the owner picked mid-dark here before. The choice
+     is remembered per browser; any storage or DOM failure leaves the page light
+     and never blocks the board from rendering. */
+  (function setupTheme() {
+    var KEY = "fm-bearings-board.theme";
+    var root = document.documentElement;
+    var lightBtn = document.getElementById("bb-theme-light");
+    var darkBtn = document.getElementById("bb-theme-dark");
+    function apply(theme) {
+      if (root && root.setAttribute) {
+        if (theme === "dark") root.setAttribute("data-theme", "dark");
+        else if (root.removeAttribute) root.removeAttribute("data-theme");
+      }
+      lightBtn.setAttribute("aria-pressed", theme === "dark" ? "false" : "true");
+      darkBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+    }
+    function choose(theme) {
+      apply(theme);
+      try { window.localStorage.setItem(KEY, theme); } catch (e) { /* not remembered */ }
+    }
+    var stored = null;
+    try { stored = window.localStorage.getItem(KEY); } catch (e) { stored = null; }
+    try {
+      apply(stored === "dark" ? "dark" : "light");
+      lightBtn.addEventListener("click", function () { choose("light"); });
+      darkBtn.addEventListener("click", function () { choose("dark"); });
+    } catch (e) { /* toggle unavailable; the board stays light */ }
+  })();
+
+  /* Fail closed: a board with unreadable or wrong-schema data says so plainly
+     instead of rendering an empty page that looks like an empty fleet. */
+  function renderBoardError(msg) {
+    var main = document.querySelector(".bb-main");
+    main.innerHTML = "";
+    var card = document.createElement("div");
+    card.className = "fm-card fm-card--poster bb-decision";
+    var pad = document.createElement("div");
+    pad.className = "bb-decision__pad";
+    var h = document.createElement("h3");
+    h.className = "bb-decision__title";
+    h.textContent = "This board could not load";
+    var d = document.createElement("p");
+    d.className = "bb-decision__detail";
+    d.textContent = msg + " - ask firstmate to rebuild the board.";
+    pad.appendChild(h);
+    pad.appendChild(d);
+    card.appendChild(pad);
+    main.appendChild(card);
+  }
+
+  var data;
+  try {
+    data = JSON.parse(document.getElementById("bearings-data").textContent);
+  } catch (e) {
+    renderBoardError("The board data is not valid JSON");
+    return;
+  }
+  if (!data || data.schema !== "fm-bearings-board.v1") {
+    renderBoardError("Unsupported board data schema: " + (data && data.schema ? data.schema : "(none)"));
+    return;
+  }
+  var fleetLists = [data.captains_call, data.underway, data.landed, data.charted];
+  var callItemsValid = Array.isArray(data.captains_call) && data.captains_call.every(function (item) {
+    return item && typeof item === "object" &&
+      typeof item.key === "string" && item.key.length > 0 &&
+      typeof item.type === "string" && item.type.length > 0 &&
+      typeof item.title === "string" && item.title.length > 0 &&
+      Array.isArray(item.options);
+  });
+  if (!fleetLists.every(Array.isArray) || !callItemsValid) {
+    renderBoardError("The board data does not have the required structure");
+    return;
+  }
+
+  try {
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function badge(tone, text) { return el("span", "fm-badge fm-badge--" + tone, text); }
+  /* Warnings ride the charted feed for layout only; they are alarms, not work,
+     so every count of queued work excludes them. */
+  function isWarning(t) { return t && t.kind === "warning"; }
+  function chartedQueued(rows) { return (rows || []).filter(function (t) { return !isWarning(t); }); }
+  /* Charted Next reads newest filed first, so the most recently filed upcoming
+     work is at the top. ISO filed dates compare as text; a row with no
+     comparable date keeps its payload order after every dated row. */
+  function chartedOrder(rows) {
+    var dated = [], undated = [];
+    (rows || []).forEach(function (t) {
+      if (t && typeof t.filed === "string" && t.filed) dated.push(t); else undated.push(t);
+    });
+    dated.sort(function (a, b) { return a.filed < b.filed ? 1 : (a.filed > b.filed ? -1 : 0); });
+    return dated.concat(undated);
+  }
+  var chartedMoreQueued = data.charted_more || 0;
+  var chartedMoreWarnings = data.charted_warning_more || 0;
+  function utf8ByteLength(text) { return new TextEncoder().encode(text).length; }
+  var CHECK_SVG = '<svg class="fm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  document.getElementById("bb-provenance").textContent = data.schema + " · " + data.generated;
+
+  /* stat strip */
+  var callTotal = data.captains_call.length;
+  var stats = [
+    { n: callTotal, l: "need you", call: true },
+    { n: data.underway.length, l: "underway" },
+    { n: data.landed.length, l: "landed recently" },
+    { n: chartedQueued(data.charted).length + chartedMoreQueued, l: "charted next" }
+  ];
+  var strip = document.getElementById("bb-stats");
+  stats.forEach(function (s) {
+    var t = el("div", "bb-stat" + (s.call ? " bb-stat--call" : ""));
+    t.appendChild(el("span", "bb-stat__num", String(s.n)));
+    t.appendChild(el("span", "bb-stat__label", s.l));
+    strip.appendChild(t);
+  });
+  document.getElementById("bb-call-sub").textContent =
+    callTotal ? callTotal + " item" + (callTotal === 1 ? "" : "s") + " wait on you, captain" : "nothing needs you, captain";
+
+  /* Captain's Call deck: every item renders as the same full card */
+  var deck = document.getElementById("bb-call");
+  function ctxRow(k, v, rec) {
+    var row = el("div", "bb-ctx__row" + (rec ? " bb-ctx__row--rec" : ""));
+    row.appendChild(el("span", "bb-ctx__k", k));
+    row.appendChild(el("span", "bb-ctx__v", v));
+    return row;
+  }
+
+  data.captains_call.forEach(function (item) {
+    var card = el("div", "fm-card fm-card--poster bb-decision");
+    var pad = el("div", "bb-decision__pad");
+
+    var top = el("div", "bb-decision__top");
+    if (item.type === "merge") {
+      top.appendChild(badge("online", "checks green"));
+      top.appendChild(badge(item.risk === "low" ? "neutral" : "warn", "risk " + item.risk));
+    } else {
+      top.appendChild(badge("solid", "decision"));
+      top.appendChild(el("span", "bb-decision__repo", item.repo));
+    }
+    pad.appendChild(top);
+
+    pad.appendChild(el("h3", "bb-decision__title", item.title));
+
+    if (item.type === "merge") {
+      if (item.detail) pad.appendChild(el("p", "bb-decision__detail", item.detail));
+      if (item.pr_url) {
+        var pr = el("a", "bb-decision__link", item.pr_url);
+        pr.href = item.pr_url; pr.target = "_blank"; pr.rel = "noopener";
+        pad.appendChild(pr);
+      }
+    } else {
+      /* the rec marker on the option itself carries the recommendation */
+      var ctx = el("div", "bb-ctx");
+      if (item.about) ctx.appendChild(ctxRow("about", item.about));
+      if (item.decide) ctx.appendChild(ctxRow("decide", item.decide));
+      pad.appendChild(ctx);
+    }
+
+    var form = document.createElement("form");
+    form.setAttribute("data-lavish-question", item.key);
+    var opts = el("div", "bb-opts");
+    item.options.forEach(function (o) {
+      var lab = el("label", "bb-opt");
+      var input = document.createElement("input");
+      input.type = "radio"; input.name = "answer"; input.value = o.value;
+      lab.appendChild(input);
+      var body = el("span", "bb-opt__body");
+      body.appendChild(el("span", "bb-opt__label", o.label));
+      if (o.hint) body.appendChild(el("span", "bb-opt__hint", o.hint));
+      lab.appendChild(body);
+      if (item.recommend_value && o.value === item.recommend_value) {
+        lab.appendChild(el("span", "bb-opt__rec", "rec"));
+      }
+      opts.appendChild(lab);
+    });
+    form.appendChild(opts);
+
+    if (item.allow_freeform) {
+      var ff = document.createElement("input");
+      ff.type = "text"; ff.name = "note"; ff.className = "bb-freeform";
+      ff.placeholder = item.freeform_hint || "or answer in your own words…";
+      form.appendChild(ff);
+    }
+
+    var foot = el("div", "bb-decision__foot");
+    var btn = el("button", "fm-btn fm-btn--sm " + (item.type === "merge" ? "fm-btn--gold" : "fm-btn--primary"), "Queue answer");
+    btn.type = "submit";
+    foot.appendChild(btn);
+    var q = el("span", "bb-queued");
+    q.innerHTML = CHECK_SVG + " queued";
+    foot.appendChild(q);
+    var answerLimit = el("span", "bb-limit");
+    answerLimit.setAttribute("role", "alert");
+    foot.appendChild(answerLimit);
+    form.appendChild(foot);
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      answerLimit.classList.remove("is-visible");
+      var fd = new FormData(form);
+      var value = fd.get("answer");
+      var note = (fd.get("note") || "").trim();
+      var displayAnswer = value ? (note ? value + " - " + note : value) : note;
+      if (!displayAnswer) return;
+      if (utf8ByteLength(displayAnswer) > 512) {
+        answerLimit.textContent = "Answer is too long to queue (512 bytes maximum).";
+        answerLimit.classList.add("is-visible");
+        return;
+      }
+      if (window.lavish && window.lavish.queuePrompt) {
+        /* The versioned context keeps the selected option separate from its
+           note, while close carries the composer-declared completion mode. */
+        var ctxData = {
+          schema: "fm-bearings-answer.v1",
+          question: item.key,
+          selection: value || "",
+          note: note
+        };
+        if (item.close) ctxData.close = item.close;
+        window.lavish.queuePrompt(
+          "Captain's Call answer - " + item.title + ": " + displayAnswer,
+          { tag: "choice", text: item.title + " -> " + displayAnswer, element: form,
+            data: ctxData }
+        );
+      }
+      card.classList.add("is-queued");
+      /* deal the next card once this one is answered */
+      setTimeout(function () { showCard(active < cards.length - 1 ? active + 1 : active); }, 450);
+    });
+
+    pad.appendChild(form);
+    card.appendChild(pad);
+    deck.appendChild(card);
+  });
+
+  /* stack navigation: one card at a time, dealt off the pile */
+  var cards = Array.prototype.slice.call(deck.children);
+  var active = 0;
+  var stackCount = document.getElementById("bb-stack-count");
+  var stackPrev = document.getElementById("bb-stack-prev");
+  var stackNext = document.getElementById("bb-stack-next");
+  var stackNav = stackCount.parentNode;
+  function showCard(i) {
+    active = Math.max(0, Math.min(cards.length - 1, i));
+    cards.forEach(function (c, j) { c.hidden = j !== active; });
+    var answered = deck.querySelectorAll(".is-queued").length;
+    stackCount.textContent = "card " + (active + 1) + " of " + cards.length +
+      (answered ? " · " + answered + " answered" : "");
+    stackPrev.disabled = active === 0;
+    stackNext.disabled = active === cards.length - 1;
+    /* the pile thins as the deal approaches the bottom */
+    deck.classList.toggle("bb-call--penult", active === cards.length - 2);
+    deck.classList.toggle("bb-call--last", active === cards.length - 1);
+  }
+  if (cards.length) {
+    stackPrev.addEventListener("click", function () { showCard(active - 1); });
+    stackNext.addEventListener("click", function () { showCard(active + 1); });
+    showCard(0);
+  } else {
+    deck.classList.add("bb-call--empty");
+    deck.appendChild(el("div", "bb-empty", "Nothing needs your action right now."));
+    stackNav.hidden = true;
+  }
+
+  /* Underway */
+  var uw = document.getElementById("bb-underway");
+  if (!data.underway.length) uw.appendChild(el("div", "bb-empty", "Nothing is underway."));
+  data.underway.forEach(function (t) {
+    var row = el("div", "bb-row");
+    row.appendChild(badge(t.state === "working" ? "online" : "info", t.state));
+    var main = el("div", "bb-row__main");
+    /* the snapshot's durable name-or-id label leads the row so a scan says
+       WHICH task this is; the run status keeps its place on the second line */
+    main.appendChild(el("div", "bb-row__title", t.name));
+    /* captain-facing rows name the repo; the internal task id shows only when
+       no repo is known */
+    main.appendChild(el("div", "bb-row__sub",
+      t.doing + " · " + t.kind + " · " + (t.repo || t.id)));
+    row.appendChild(main);
+    uw.appendChild(row);
+  });
+
+  /* Landed */
+  var ld = document.getElementById("bb-landed");
+  if (!data.landed.length) ld.appendChild(el("div", "bb-empty", "No recent completions are in the current baseline."));
+  data.landed.forEach(function (t) {
+    var row = el("div", "bb-row");
+    var chk = el("span", "bb-row__check");
+    chk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    row.appendChild(chk);
+    var main = el("div", "bb-row__main");
+    main.appendChild(el("div", "bb-row__title", t.what));
+    main.appendChild(el("div", "bb-row__sub", (t.repo || t.id) + " · " + t.owner));
+    row.appendChild(main);
+    if (t.pr_url) {
+      var a = el("a", "bb-row__pr", "#" + t.pr_url.split("/").pop());
+      a.href = t.pr_url; a.title = t.pr_url; a.target = "_blank"; a.rel = "noopener";
+      row.appendChild(a);
+    }
+    ld.appendChild(row);
+  });
+
+  /* Charted Next + dispatch picker */
+  var ch = document.getElementById("bb-charted");
+  var bar = document.getElementById("bb-dispatch");
+  var barCount = document.getElementById("bb-dispatch-count");
+  var barBtn = document.getElementById("bb-dispatch-btn");
+  var anyPickable = false;
+
+  function pickedIds() {
+    return Array.prototype.map.call(ch.querySelectorAll(".bb-pick:checked"), function (c) { return c.value; });
+  }
+  function refreshBar(limitMessage) {
+    var n = pickedIds().length;
+    barCount.textContent = limitMessage || (n ? n + " picked for dispatch" : "pick queued work to dispatch");
+    barBtn.disabled = !n;
+  }
+
+  if (!chartedQueued(data.charted).length && !chartedMoreQueued) {
+    ch.appendChild(el("div", "bb-empty", "Nothing is queued."));
+  }
+  chartedOrder(data.charted).forEach(function (t) {
+    var row = el("div", "bb-row");
+    if (t.dispatchable && !isWarning(t)) {
+      anyPickable = true;
+      var pick = document.createElement("input");
+      pick.type = "checkbox"; pick.className = "bb-pick"; pick.value = t.id;
+      pick.setAttribute("aria-label", "Pick " + t.id + " for dispatch");
+      pick.addEventListener("change", function () {
+        if (pick.checked && utf8ByteLength(pickedIds().join(",")) > 512) {
+          pick.checked = false;
+          refreshBar("Selection limit reached (512 bytes maximum). ");
+          return;
+        }
+        refreshBar();
+      });
+      row.appendChild(pick);
+    } else {
+      row.appendChild(el("span", "bb-pick-spacer"));
+    }
+    var main = el("div", "bb-row__main");
+    main.appendChild(el("div", "bb-row__title", t.title));
+    /* second line keeps the title uncrowded in the half-width column */
+    var chSub = t.repo || t.id;
+    main.appendChild(el("div", "bb-row__sub", t.reason ? t.reason + " · " + chSub : chSub));
+    row.appendChild(main);
+    if (isWarning(t)) row.appendChild(badge("danger", "needs repair"));
+    else if (t.reason) row.appendChild(badge("warn", "waiting"));
+    ch.appendChild(row);
+  });
+  var chartedShown = chartedQueued(data.charted).length;
+  var chartedTotal = chartedShown + chartedMoreQueued;
+  document.getElementById("bb-charted-sub").textContent =
+    chartedMoreQueued ? "showing " + chartedShown + " of " + chartedTotal : "";
+  if (chartedMoreQueued) {
+    ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreQueued + " more queued - ask firstmate for the full chart"));
+  }
+  if (chartedMoreWarnings) {
+    ch.appendChild(el("span", "bb-morechip", "+" + chartedMoreWarnings + " more repair warning" + (chartedMoreWarnings === 1 ? "" : "s") + " - ask firstmate for the full chart"));
+  }
+
+  if (anyPickable) {
+    bar.hidden = false;
+    refreshBar();
+    barBtn.addEventListener("click", function () {
+      var ids = pickedIds();
+      var dispatchAnswer = ids.join(",");
+      if (!ids.length) return;
+      if (utf8ByteLength(dispatchAnswer) > 512) {
+        refreshBar("Selection is too long to queue (512 bytes maximum). ");
+        return;
+      }
+      if (window.lavish && window.lavish.queuePrompt) {
+        window.lavish.queuePrompt(
+          "Dispatch order - start this queued work now: " + ids.join(", "),
+          { tag: "choice", text: "Dispatch: " + ids.join(", "), element: bar,
+            queueKey: "dispatch.charted",
+            data: { question: "dispatch.charted", answer: dispatchAnswer } }
+        );
+      }
+      bar.classList.add("is-queued");
+    });
+  }
+  } catch (e) {
+    renderBoardError("The board data could not be rendered");
+  }
+})();
+</script>
+</body>
+</html>
