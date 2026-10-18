@@ -668,6 +668,10 @@ EOF
   FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh fm --mode direct-PR >/dev/null 2>&1
   assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh/brief.md" \
     "a registered clone with an SSH origin was not recognised as Firstmate"
+  git -C "$home/projects/fm" remote set-url origin "ssh://git@example.invalid:22/firstmate.git/"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh-port fm --mode direct-PR >/dev/null 2>&1
+  assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh-port/brief.md" \
+    "a registered clone with an explicit-port ssh:// origin was not recognised as Firstmate"
   FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"

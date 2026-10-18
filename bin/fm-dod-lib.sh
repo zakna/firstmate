@@ -651,7 +651,7 @@ fm_project_is_firstmate() {  # <fm-root> <fm-home> <project>
 # forms of one repository compare equal.
 fm_origin_identity() {  # <dir>
   git -C "$1" remote get-url origin 2>/dev/null \
-    | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#/+$##; s#\.git$##'
+    | sed -E 's#^([a-zA-Z][a-zA-Z0-9+.-]*://[^/]*):[0-9]+/#\1/#; s#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#/+$##; s#\.git$##'
 }
 
 # The "Existing building blocks" section of a Firstmate ship brief: the shared
