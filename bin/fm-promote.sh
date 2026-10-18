@@ -258,6 +258,12 @@ If these promotion steps were already completed before a relaunch, preserve the 
 6. Treat the scout-time Firstmate spec and any unmarked legacy \`# Task\` text as investigation context, not captain intent or current ship-time instructions.
 7. Everything else in your original instructions carries over unchanged: the status protocol; the instruction inbox and its acknowledgement; the escalation rules, including ask-user; and every safety rule, except where the current delivery contract below explicitly replaces scout-only delivery rules.
 EOF
+promote_building_blocks() {
+  local blocks
+  blocks=$(fm_building_blocks_block "$FM_ROOT" "${PROMOTE_PROJECT_NAME:-}")
+  [ -z "$blocks" ] || printf '%s\n\n' "$blocks"
+}
+
 promote_delivery_contract() {
   cat <<EOF
 # Current delivery mode contract
@@ -303,6 +309,7 @@ $PROMOTION_SHIP_SPEC
 EOF
   fm_scope_allowance_block "$FM_ROOT"
   printf '\n'
+  promote_building_blocks
   promote_delivery_contract
 } > "$TMP" || { echo "error: could not render ship instructions for mode=$MODE" >&2; exit 1; }
 mv "$TMP" "$INSTRUCTIONS"
@@ -319,6 +326,7 @@ BRIEF_REPLACEMENT="$DATA/$ID/.brief.md.promote.${BASHPID:-$$}"
   printf '# Current ship Firstmate spec\n%s\n\n' "$PROMOTION_SHIP_SPEC"
   fm_scope_allowance_block "$FM_ROOT"
   printf '\n'
+  promote_building_blocks
   promote_delivery_contract
 } > "$BRIEF_REPLACEMENT" || {
   echo "error: could not render the promoted brief for mode=$MODE" >&2

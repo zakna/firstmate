@@ -710,6 +710,8 @@ $TASK_SECTION
 
 $(fm_scope_allowance_block "$FM_ROOT")
 
+$(fm_building_blocks_block "$FM_ROOT" "$REPO")
+
 $HERDR_SECTION
 
 # Setup

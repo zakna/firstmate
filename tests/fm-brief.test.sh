@@ -216,7 +216,7 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
-    assert_grep "write \`$home/data/$id/landing-note.md\` with three short answers" "$brief" \
+    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = direct-PR ] && echo three || echo four) short answers" "$brief" \
       "$id: brief missing the landing-note step with its task-data path"
     assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$brief" \
       "$id: brief missing the failing-bug-test-first rule"
@@ -612,6 +612,68 @@ test_ship_scope_allowance() {
   assert_no_grep "However narrowly the task above states its scope" "$home/data/brief-scope-scout/brief.md" \
     "scout brief received the ship scope allowance"
   pass "fm-brief.sh: ship briefs keep the documentation-accuracy scope allowance visible"
+}
+
+# Workers rebuild helpers that already exist because nothing tells them what
+# exists, so a Firstmate ship brief lists the shared libraries docs/scripts.md calls
+# the single owner of a contract, and every ship definition of done asks the report
+# to name the reused helper where that delivery mode lets the worker write it. The
+# list is read from the code root's own table, not kept by hand, and only a task on
+# the Firstmate repository gets it; any other project gets nothing.
+test_ship_existing_building_blocks() {
+  local home root mode id brief
+  home="$TMP_ROOT/building-blocks-home"
+  root="$TMP_ROOT/building-blocks-root"
+  mkdir -p "$home/data" "$root/docs"
+  cat > "$root/docs/scripts.md" <<'EOF'
+| Script | Purpose |
+| ------ | ------- |
+| `fm-alpha-lib.sh` | Single owner of alpha parsing; extra detail follows |
+| [`fm-beta-lib.sh`](../bin/fm-beta-lib.sh) | One owner of beta state. More detail. |
+| `fm-epsilon-lib.sh` | Single fleet-wide owner of epsilon shapes, with detail |
+| `fm-zeta-lib.sh` | One executable owner of zeta verbs |
+| `fm-eta-lib.sh` | Single durable keyed shared fleet-wide owner of eta records |
+| `fm-gamma-lib.sh` | Shared gamma helpers |
+| `fm-delta.sh` | Single owner of a script that is not a library |
+EOF
+  for mode in no-mistakes direct-PR local-only; do
+    id="brief-blocks-$mode"
+    FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" firstmate --mode "$mode" >/dev/null 2>&1
+    brief="$home/data/$id/brief.md"
+    assert_present "$brief" "$mode brief was not scaffolded"
+    assert_grep "# Existing building blocks" "$brief" "$mode brief lost the building blocks section"
+    assert_grep "- \`fm-alpha-lib.sh\` - alpha parsing" "$brief" "$mode brief lost a bare-name library row"
+    assert_grep "- \`fm-beta-lib.sh\` - beta state" "$brief" "$mode brief lost a linked library row"
+    assert_grep "- \`fm-eta-lib.sh\` - eta records" "$brief" "$mode brief lost a row with four modifier words"
+    assert_grep "- \`fm-epsilon-lib.sh\` - epsilon shapes" "$brief" "$mode brief lost a fleet-wide owner row"
+    assert_grep "- \`fm-zeta-lib.sh\` - zeta verbs" "$brief" "$mode brief lost an executable owner row"
+    assert_no_grep "fm-gamma-lib.sh" "$brief" "$mode brief listed a library that is not a single owner"
+    assert_no_grep "fm-delta.sh" "$brief" "$mode brief listed a non-library script"
+  done
+  assert_grep "name the one you reused, or the search that found none, as answer (d) of your landing note." \
+    "$home/data/brief-blocks-no-mistakes/brief.md" "no-mistakes definition of done sent the reuse report into --intent"
+  assert_grep "- (d) the existing helper you reused, or the search that found none." \
+    "$home/data/brief-blocks-no-mistakes/brief.md" "no-mistakes landing note has no slot for the reuse report"
+  assert_grep "name the one you reused, or the search that found none, in the PR description." \
+    "$home/data/brief-blocks-direct-PR/brief.md" "direct-PR definition of done lost the reuse rule"
+  assert_grep "name the one you reused, or the search that found none, as answer (d) of your landing note." \
+    "$home/data/brief-blocks-local-only/brief.md" "local-only definition of done named a PR it forbids"
+  assert_grep "- (d) the existing helper you reused, or the search that found none." \
+    "$home/data/brief-blocks-local-only/brief.md" "local-only landing note has no slot for the reuse report"
+  assert_no_grep "- (d) the existing helper you reused" \
+    "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
+  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
+    "another project's brief listed Firstmate's libraries"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout firstmate --scout >/dev/null 2>&1
+  assert_no_grep "Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
+    "scout brief received the ship building blocks"
+  rm -rf "$root/docs"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs firstmate --mode direct-PR >/dev/null 2>&1
+  assert_present "$home/data/brief-blocks-nodocs/brief.md" "brief was not scaffolded without docs/scripts.md"
+  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-nodocs/brief.md" \
+    "brief printed an empty building blocks section"
+  pass "fm-brief.sh: Firstmate ship briefs list existing building blocks and the DoD asks for reuse where a PR exists or not"
 }
 
 test_herdr_lab_contract_is_explicit_and_complete() {
@@ -1627,6 +1689,7 @@ test_pr_based_dod_requires_non_draft
 test_ask_user_escalation_format
 test_ship_project_memory_wording
 test_ship_scope_allowance
+test_ship_existing_building_blocks
 test_herdr_lab_contract_is_explicit_and_complete
 test_herdr_lab_contract_quotes_foreign_firstmate_path
 test_herdr_lab_omission_is_loud_for_ship_and_scout

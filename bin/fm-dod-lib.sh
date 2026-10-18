@@ -631,6 +631,55 @@ However narrowly the task above states its scope, the smallest downstream change
 EOF
 }
 
+# The "Existing building blocks" section of a Firstmate ship brief: the shared
+# libraries docs/scripts.md already describes as the single owner of a contract
+# ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
+# `name - purpose` line each, read from that table rather than kept by hand.
+# The table is only ever the code root's own copy (trusted, never the task
+# project's text), and the section is only for a task on this Firstmate repository,
+# the registry name `firstmate`. Rendered by bin/fm-brief.sh and bin/fm-promote.sh;
+# prints nothing otherwise.
+fm_building_blocks_block() {  # <fm-root> <project-name>
+  local table="$1/docs/scripts.md" rows
+  [ "$2" = firstmate ] && [ -r "$table" ] || return 0
+  rows=$(awk -F'|' '
+    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
+      name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)
+      purpose = $3; sub(/^ */, "", purpose)
+      sub(/^(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)? owner( of)? /, "", purpose)
+      sub(/(;|\. ).*$/, "", purpose); sub(/ *$/, "", purpose)
+      print "- `" name "` - " purpose
+    }' "$table")
+  [ -n "$rows" ] || return 0
+  cat <<EOF
+# Existing building blocks
+Before writing a new helper, search \`bin/\` and \`docs/scripts.md\` for one that already does the job, and reuse it.
+These shared libraries already own their contract:
+$rows
+EOF
+}
+
+# 0 unless <mode>/<forge> has a PR body the worker writes (direct-PR off Gerrit),
+# so the reuse report goes in the landing note. A no-mistakes PR body is the
+# `--intent` string, which may carry only the captain's words.
+fm_reuse_in_landing_note() {  # <mode> <forge>
+  case "$1:${2:-none}" in
+    direct-PR:gerrit) return 0 ;;
+    direct-PR:*) return 1 ;;
+  esac
+  return 0
+}
+
+# The one line every ship definition of done carries: reuse is checked before a
+# new helper is written, and the report names what was found. The destination is
+# the one this delivery mode actually has: a PR description the worker writes
+# (direct-PR), or the landing note everywhere else.
+fm_existing_helper_rule() {  # <mode> <forge>
+  local where='in the PR description'
+  fm_reuse_in_landing_note "$1" "$2" && where='as answer (d) of your landing note'
+  printf 'Before adding a helper, search for an existing one and name the one you reused, or the search that found none, %s.\n' "$where"
+}
+
 # The forge-independent middle of the no-mistakes contract: how a worker drives
 # the pipeline, what `--intent` may carry, and the two firstmate-specific rules.
 # Written once; only the two sentences about a green PR depend on the forge,
@@ -738,12 +787,18 @@ EOF
 # The landing note every ship writes before its ready report, whatever its mode.
 # ship-landing owns what firstmate does with it at landing, and the retro skill
 # reads it as a source.
-fm_landing_note_block() {  # <task-data-dir>
+fm_landing_note_block() {  # <task-data-dir> <mode> <forge>
+  local count=three reuse=''
+  if fm_reuse_in_landing_note "$2" "$3"; then
+    count=four
+    reuse="
+- (d) the existing helper you reused, or the search that found none."
+  fi
   cat <<EOF
-Before the \`done:\` line that finishes this task - the ready report - write \`$1/landing-note.md\` with three short answers:
+Before the \`done:\` line that finishes this task - the ready report - write \`$1/landing-note.md\` with $count short answers:
 - (a) what this change made harder to change next;
 - (b) the one structure-only tidy you would do next, under about one hour and with no behaviour change, naming its files, or \`none\`;
-- (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.
+- (c) one fact you needed that this brief or the project's \`AGENTS.md\` did not give you, or \`none\`.$reuse
 That note is task material outside your worktree: never commit it.
 EOF
 }
@@ -891,7 +946,8 @@ EOF
       echo "error: fm_dod_block: unknown delivery mode '$mode'" >&2
       return 1 ;;
   esac
-  fm_landing_note_block "$intent_dir"
+  fm_existing_helper_rule "$mode" "$forge"
+  fm_landing_note_block "$intent_dir" "$mode" "$forge"
   fm_bug_fix_test_contract
 }
 
