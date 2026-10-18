@@ -529,6 +529,10 @@
 # consumers can distinguish a replacement worker that reuses the same task id.
 # A claude launch also records claude_root=, the configuration root it runs
 # under, which a later relaunch's predecessor recap reads its transcript from.
+# With config/seat-memory present, a templated claude ship or scout launch also
+# starts with --session-id and records it as claude_session_id=, which that
+# recap then reads exactly; a relaunch keeps earlier ids in
+# claude_prior_session_ids= (bin/fm-seat-lib.sh).
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -3257,6 +3261,8 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
         case "$recap_since" in *[!0-9]*) ;; *) recap_args+=(--since "$recap_since") ;; esac
         ;;
     esac
+    recap_session=$(fm_meta_get "$RELAUNCH_META" claude_session_id) || recap_session=
+    [ -z "$recap_session" ] || recap_args+=(--claude-session "$recap_session")
     recap_root=$(fm_meta_get "$RELAUNCH_META" claude_root) || recap_root=
     recap_account=$(fm_meta_get "$RELAUNCH_META" account) || recap_account=
     if [ -n "$recap_root" ]; then
@@ -5247,6 +5253,22 @@ else
   fi
 fi
 
+# Opt-in seat memory (bin/fm-seat-lib.sh): a templated Claude ship or scout
+# launch starts under a session id chosen here, so the task record names its
+# conversation exactly. Other harnesses take no caller-chosen id at launch and
+# record none. A relaunch keeps every earlier id in claude_prior_session_ids=,
+# whether or not the flag is still on; a record that never had one gets neither.
+CLAUDE_SESSION_ID=
+CLAUDE_PRIOR_SESSION_IDS=
+if [ "$HARNESS" = claude ] && [ "$RAW_LAUNCH" = 0 ] && [ "$KIND" != secondmate ] && fm_seat_memory_enabled "$CONFIG"; then
+  CLAUDE_SESSION_ID=$(fm_seat_session_uuid)
+fi
+if [ "$RELAUNCH" -eq 1 ]; then
+  CLAUDE_PRIOR_SESSION_IDS=$(fm_meta_get "$RELAUNCH_META" claude_prior_session_ids)
+  prior_session=$(fm_meta_get "$RELAUNCH_META" claude_session_id)
+  [ -z "$prior_session" ] || CLAUDE_PRIOR_SESSION_IDS=${CLAUDE_PRIOR_SESSION_IDS:+$CLAUDE_PRIOR_SESSION_IDS,}$prior_session
+fi
+
 META_WINDOW=$T
 [ "$BACKEND" = orca ] && META_WINDOW=$W
 SPAWN_GEN="s$(date +%s).${BASHPID:-$$}.$RANDOM"
@@ -5294,7 +5316,7 @@ raw_claude_config_dir() {
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
-      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp base_branch model effort account account_provider claude_root busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
+      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp base_branch model effort account account_provider claude_root claude_session_id claude_prior_session_ids busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
       for (i in keys) owned[keys[i]] = 1
     }
     !($1 in owned)
@@ -5339,6 +5361,8 @@ preserve_relaunch_meta() {
       echo "claude_root=$HOME/.claude"
     fi
   fi
+  [ -z "$CLAUDE_SESSION_ID" ] || echo "claude_session_id=$CLAUDE_SESSION_ID"
+  [ -z "$CLAUDE_PRIOR_SESSION_IDS" ] || echo "claude_prior_session_ids=$CLAUDE_PRIOR_SESSION_IDS"
   [ -z "${BUSY_GEN:-}" ] || echo "busy_gen=$BUSY_GEN"
   echo "spawn_gen=$SPAWN_GEN"
   # Default-off writes no traceparent= line.
@@ -5478,6 +5502,7 @@ MODELFLAG=$(model_flag_for_harness "$HARNESS" "$MODEL")
 # A pinned Pi launch confines Pi's model lookup to the declared provider.
 [ -z "$WORKER_ACCOUNT_PROVIDER" ] || MODELFLAG="--provider $(shell_quote "$WORKER_ACCOUNT_PROVIDER") $MODELFLAG"
 EFFORTFLAG=$(effort_flag_for_harness "$HARNESS" "$EFFORT" "$MODEL") || exit 1
+[ -z "$CLAUDE_SESSION_ID" ] || MODELFLAG="--session-id $CLAUDE_SESSION_ID $MODELFLAG"
 LAUNCH=${LAUNCH//__MODELFLAG__/$MODELFLAG}
 LAUNCH=${LAUNCH//__EFFORTFLAG__/$EFFORTFLAG}
 # Relaunch session continuity. Computed here, where the adopted endpoint (T) is

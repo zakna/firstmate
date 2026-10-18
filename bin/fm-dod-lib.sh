@@ -119,6 +119,8 @@
 # session does not register the skill, such as one in another project's
 # worktree, cannot, so the role also names the file as the fallback to read;
 # the Claude launch grants the skills directory that holds it.
+# With config/seat-memory present, every ship definition of done also asks for
+# the decision record bin/fm-seat-lib.sh owns; absent, the block is unchanged.
 # fm_ship_rule_one owns the mode-specific first ship safety rule shared by an
 # ordinary ship brief and the durable contract written during scout promotion.
 # It takes the same optional trailing forge argument, because the rule that keeps
@@ -133,6 +135,8 @@ FM_DOD_LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}" && pwd)/fm-nm-run-lib.sh"
 # shellcheck source=bin/fm-brief-heading-lib.sh
 . "$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}" && pwd)/fm-brief-heading-lib.sh"
+# shellcheck source=bin/fm-seat-lib.sh
+. "$(d=${BASH_SOURCE[0]%/*}; [ "$d" != "${BASH_SOURCE[0]}" ] || d=.; cd "${d:-/}" && pwd)/fm-seat-lib.sh"
 
 fm_brief_worker_role() {  # <state-dir> <task-id> <code-root>
   local state=$1 task_id=$2 root=$3
@@ -948,6 +952,7 @@ EOF
   esac
   fm_existing_helper_rule "$mode" "$forge"
   fm_landing_note_block "$intent_dir" "$mode" "$forge"
+  fm_seat_decisions_dod_block "$intent_dir"
   fm_bug_fix_test_contract
 }
 

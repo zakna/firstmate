@@ -1046,6 +1046,42 @@ test_no_mistakes_origin_remote_allows() {
   pass "no-mistakes worktree with HEAD on origin is torn down (no regression)"
 }
 
+# Opt-in seat memory: teardown indexes the task's decision record under its
+# seats with config/seat-memory, falling back to the paths the branch changed,
+# and leaves no seat index without the flag.
+test_seat_memory_indexes_decisions_only_with_flag() {
+  local case_dir rc index flag
+  for flag in on off; do
+    case_dir=$(make_case "seat-memory-$flag")
+    write_meta "$case_dir" no-mistakes ship
+    [ "$flag" = off ] || : > "$case_dir/config/seat-memory"
+    mkdir -p "$case_dir/wt/tools"
+    wt_commit_file "$case_dir" tools/helper.sh x "add helper"
+    git -C "$case_dir/wt" push -q origin fm/task-x1
+    git -C "$case_dir/project" fetch -q origin
+    mkdir -p "$case_dir/data/task-x1"
+    printf '%s\n' '## Keep the helper small' 'Reason: one caller' 'Rejected: a new script' 'UNVERIFIED: none' \
+      > "$case_dir/data/task-x1/decisions.md"
+
+    set +e
+    run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+    rc=$?
+    set -e
+
+    expect_code 0 "$rc" "seat-memory-$flag: teardown should succeed"
+    index="$case_dir/data/seats/project/index.tsv"
+    if [ "$flag" = on ]; then
+      awk -F'\t' '$2 == "tools" && $3 == "task-x1" && $4 == "ship" { f = 1 } END { exit !f }' "$index" 2>/dev/null \
+        || fail "seat-memory-on: the record was not indexed under its changed-path seat: $(cat "$index" 2>/dev/null)"
+    else
+      assert_absent "$case_dir/data/seats" "seat-memory-off: teardown created a seat index without the flag"
+    fi
+    assert_contains "$(cat "$case_dir/data/task-x1/decisions.md")" "Keep the helper small" \
+      "seat-memory-$flag: teardown must leave the task's own record in place"
+  done
+  pass "teardown indexes a decision record under its changed-path seat only with config/seat-memory"
+}
+
 test_no_mistakes_truly_unpushed_refuses() {
   local case_dir rc
   case_dir=$(make_case nm-unpushed)
@@ -3893,6 +3929,7 @@ assert_head_absent_from_worktree() {  # <worktree> <short-sha> <label>
 
 # Land a shippable commit on the task branch and push it to origin, the same
 # "definitely landed, teardown must ALLOW" shape test_no_mistakes_origin_remote_allows
+test_seat_memory_indexes_decisions_only_with_flag
 # uses, so these new cases exercise the abort/reap steps on a real successful
 # teardown rather than a refusal path.
 land_shippable_commit() {

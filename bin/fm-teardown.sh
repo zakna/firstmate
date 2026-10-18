@@ -11,6 +11,8 @@
 # names. A copy that fails refuses with its concrete reason before any removal,
 # and --force does not lift that refusal; teardown_archive_task_records owns
 # when it runs and teardown_archive_record owns the rule for an existing copy.
+# With config/seat-memory present, a ship or scout's data/<id>/decisions.md is
+# also indexed under its seats (bin/fm-seat-lib.sh owns that record).
 # An endpoint whose close could not do its job REFUSES before any record naming
 # it is removed: those records are the only thing that names what survived, so
 # reporting such a close as a completed cleanup strands the endpoint instead of
@@ -415,6 +417,8 @@ unset _teardown_source
 . "$SCRIPT_DIR/fm-pending-reply-lib.sh"
 # shellcheck source=bin/fm-nm-run-lib.sh
 . "$SCRIPT_DIR/fm-nm-run-lib.sh"
+# shellcheck source=bin/fm-seat-lib.sh
+. "$SCRIPT_DIR/fm-seat-lib.sh"
 if [ "$#" -lt 1 ] || ! fm_task_id_path_safe "$1"; then
   echo "error: invalid teardown request" >&2
   exit 2
@@ -3691,6 +3695,23 @@ fi
 # backlog-close record below, whose replay removes the task record: an
 # unwritable archive must refuse while everything is still intact.
 teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
+# Opt-in seat memory (bin/fm-seat-lib.sh): index the task's decision record
+# under its seats while the worktree still exists for a ship's changed-path
+# fallback; a scout's scratch commits are not its product, so it has none.
+# Off costs one file test; it never refuses a teardown.
+if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
+  if fm_seat_memory_enabled "$CONFIG" && SEAT_PROJECT=$(fm_seat_project_key "$PROJ"); then
+    if [ -n "$BASE_BRANCH" ]; then
+      SEAT_BASE="origin/$BASE_BRANCH"
+    else
+      SEAT_BASE=$(default_branch 2>/dev/null) && SEAT_BASE="origin/$SEAT_BASE" || SEAT_BASE=
+    fi
+    [ -z "$SEAT_BASE" ] || git -C "$WT" rev-parse --verify -q "$SEAT_BASE" >/dev/null 2>&1 || SEAT_BASE=${SEAT_BASE#origin/}
+    SEAT_WT=
+    [ "$KIND" != ship ] || SEAT_WT=$WT
+    fm_seat_archive "$DATA" "$SEAT_PROJECT" "$ID" "$KIND" "$SEAT_WT" "$SEAT_BASE" >/dev/null || true
+  fi
+fi
 
 BACKLOG_CLOSED=0
 BACKLOG_TRANSITION=$TEARDOWN_BACKLOG_TRANSITION

@@ -4,6 +4,7 @@
 # Usage: fm-predecessor-recap.sh --harness <name> --worktree <path>
 #                                [--since <epoch>]
 #                                [--claude-account <ordinary|path> | --claude-root <dir>]
+#                                [--claude-session <uuid>]
 #                                [--scrollback <file>] [--count <n>]
 #                                [--max-bytes <n>]
 #   --harness      the PREVIOUS worker's recorded harness (state/<id>.meta
@@ -23,6 +24,12 @@
 #                  names (state/<id>.meta claude_root=), whose projects/
 #                  directory may hold the transcript. With neither this nor
 #                  --claude-account no transcript is read
+#   --claude-session
+#                  the previous worker's recorded session id (state/<id>.meta
+#                  claude_session_id=, written under opt-in seat memory). When
+#                  that session's own transcript exists in the root, it is the
+#                  one read and --since is not needed, because the id proves
+#                  whose it is; otherwise selection falls back to the rule below
 #   --scrollback   a file holding the previous worker's terminal capture, the
 #                  fallback for any harness
 #   --count        how many transcript messages to keep, newest last
@@ -44,7 +51,9 @@
 # omitted for the same reason.
 #
 # Sources, in order:
-#   1. harness=claude: the newest session transcript
+#   1. harness=claude: the transcript <claude-root>/projects/<encoded
+#      worktree>/<claude-session>.jsonl when that id is given and the file
+#      exists, else the newest session transcript
 #      <claude-root>/projects/<encoded worktree>/*.jsonl, in the one root the
 #      previous worker used, last written after --since, and recording the
 #      worktree as its cwd. Claude encodes the cwd by replacing every non-alphanumeric character with `-`; both the
@@ -85,6 +94,7 @@ MAX_BYTES=${FM_PREDECESSOR_RECAP_MAX_BYTES:-6000}
 TAIL_BYTES=${FM_PREDECESSOR_RECAP_TAIL_BYTES:-4194304}
 CLAUDE_ROOT=
 CLAUDE_ACCOUNT=
+CLAUDE_SESSION=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -93,6 +103,7 @@ while [ "$#" -gt 0 ]; do
     --since) SINCE=${2-}; shift ;;
     --claude-account) CLAUDE_ACCOUNT=${2-}; shift ;;
     --claude-root) CLAUDE_ROOT=${2-}; shift ;;
+    --claude-session) CLAUDE_SESSION=${2-}; shift ;;
     --scrollback) SCROLLBACK=${2-}; shift ;;
     --count) COUNT=${2-}; shift ;;
     --max-bytes) MAX_BYTES=${2-}; shift ;;
@@ -109,6 +120,9 @@ done
 [ "$COUNT" -gt 0 ] || COUNT=10
 [ "$MAX_BYTES" -ge 64 ] || MAX_BYTES=64
 [ "$TAIL_BYTES" -gt 0 ] || TAIL_BYTES=4194304
+case "$CLAUDE_SESSION" in
+  ''|*[!0-9a-fA-F-]*) CLAUDE_SESSION= ;;
+esac
 case "$CLAUDE_ACCOUNT" in
   '') ;;
   ordinary) CLAUDE_ROOT=${HOME:+$HOME/.claude} ;;
@@ -292,11 +306,26 @@ scrollback_items() {  # <file>
     | map(cut(200)) | fit($max) | .[]' <"$1" 2>/dev/null
 }
 
+# The previous worker's own session transcript when its id is recorded and the
+# file exists, else nothing.
+claude_session_transcript() {
+  local enc wtp f
+  [ -n "$CLAUDE_ROOT" ] && [ -n "$CLAUDE_SESSION" ] || return 1
+  wtp=$(cd "$WT" 2>/dev/null && pwd -P) || wtp=$WT
+  for enc in "$WT" "$wtp"; do
+    f="$CLAUDE_ROOT/projects/$(printf '%s' "$enc" | sed 's/[^A-Za-z0-9]/-/g')/$CLAUDE_SESSION.jsonl"
+    [ -f "$f" ] && { printf '%s\n' "$f"; return 0; }
+  done
+  return 1
+}
+
 # The newest transcript for this worktree in the previous worker's root,
 # written since that worker started, or nothing.
 claude_transcript() {
   local dir enc wtp best='' best_m=-1 f m
   [ -n "$CLAUDE_ROOT" ] || return 1
+  claude_session_transcript && return 0
+  [ -n "$SINCE" ] || return 1
   wtp=$(cd "$WT" 2>/dev/null && pwd -P) || wtp=$WT
   for enc in "$WT" "$wtp"; do
     dir="$CLAUDE_ROOT/projects/$(printf '%s' "$enc" | sed 's/[^A-Za-z0-9]/-/g')"
@@ -325,7 +354,7 @@ emit_items() {  # <prefix>; reads items on stdin
 printf '%s\n' "# Predecessor recap"
 transcript_reason=
 if [ "$HARNESS" = claude ]; then
-  if [ -z "$SINCE" ]; then
+  if [ -z "$SINCE" ] && ! claude_session_transcript >/dev/null; then
     transcript_reason="the previous worker's start time is not recorded, so no Claude transcript can be proven to be its own"
   elif [ -z "$CLAUDE_ROOT" ]; then
     transcript_reason="the previous worker's Claude configuration folder is not recorded, so its transcript cannot be found"

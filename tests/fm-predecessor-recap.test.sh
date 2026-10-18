@@ -17,6 +17,8 @@
 #   7. A byte bound below the safe minimum still terminates.
 #   8. Only a bounded tail of a large transcript is read, and a result whose
 #      call lies before that tail is omitted.
+#   9. A recorded session id selects that session's own transcript, even with
+#      no start time and a newer transcript beside it; a missing one falls back.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -685,6 +687,27 @@ test_tiny_byte_bound_terminates() {
   pass "recap: a byte bound under the minimum is raised and terminates"
 }
 
+test_recorded_session_selects_its_own_transcript() {
+  local dir own newer out sid=0b6c1f6e-3a2d-4c5e-9f00-1234567890ab
+  dir=$(new_case session-id)
+  own=$(transcript_path "$dir" "$sid")
+  newer=$(transcript_path "$dir" other)
+  entry assistant "$dir/wt" '[{"type":"text","text":"OWN SESSION TEXT"}]' >"$own"
+  touch -t 202601010000 "$own"
+  entry assistant "$dir/wt" '[{"type":"text","text":"NEWER OTHER TEXT"}]' >"$newer"
+  out=$("$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" --claude-session "$sid" </dev/null)
+  expect_code 0 $? "a recorded session must exit 0"
+  assert_contains "$out" "- assistant: OWN SESSION TEXT" "the recorded session's transcript was not read without a start time"
+  case "$out" in *"NEWER OTHER TEXT"*) fail "a newer transcript displaced the recorded session: $out" ;; esac
+  out=$(run_recap "$dir" --claude-session "$sid")
+  assert_contains "$out" "- assistant: OWN SESSION TEXT" "the recorded session lost to a newer transcript"
+  out=$(run_recap "$dir" --claude-session 11111111-2222-3333-4444-555555555555)
+  assert_contains "$out" "- assistant: NEWER OTHER TEXT" "a missing recorded session must fall back to the newest transcript"
+  out=$("$RECAP" --harness claude --worktree "$dir/wt" --claude-root "$dir/claude" --claude-session 11111111-2222-3333-4444-555555555555 </dev/null)
+  assert_contains "$out" "No recap: the previous worker's start time is not recorded" "a missing session without a start time must read nothing"
+  pass "a recorded session id selects its own transcript; a missing one falls back to the start-time rule"
+}
+
 test_usage_errors_exit_2() {
   "$RECAP" --harness claude </dev/null >/dev/null 2>&1
   expect_code 2 $? "a missing --worktree is a usage error"
@@ -725,6 +748,7 @@ test_tiny_byte_bound_terminates
 test_same_second_transcript_is_not_read
 test_no_recorded_root_reads_no_transcript
 test_large_transcript_reads_only_a_bounded_tail
+test_recorded_session_selects_its_own_transcript
 test_usage_errors_exit_2
 
 echo "all fm-predecessor-recap tests passed"
