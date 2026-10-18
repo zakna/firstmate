@@ -428,6 +428,38 @@ STUB
   pass "fm-promote: a promoted worker receives the same mode-specific delivery contract a briefed one does"
 }
 
+# A promoted scout is a ship from then on, so its ship instructions and the brief a
+# replacement worker relaunches from carry the same Existing building blocks as a
+# scaffolded ship brief, and only for Firstmate's own repository.
+test_promotion_carries_existing_building_blocks() {
+  local home project id out mode origin
+  home="$TMP_ROOT/promote-blocks/home"
+  mkdir -p "$home/state" "$home/data" "$home/projects"
+  origin=$(git -C "$ROOT" remote get-url origin 2>/dev/null) || origin="https://example.invalid/firstmate.git"
+  for project in firstmate other; do
+    git init -q "$home/projects/$project"
+  done
+  git -C "$home/projects/firstmate" remote add origin "$origin"
+  git -C "$home/projects/other" remote add origin https://example.invalid/other.git
+  for project in firstmate other; do
+    id="promote-blocks-$project"
+    printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\nproject=%s\n' "$id" "$home/projects/$project" > "$home/state/$id.meta"
+    FM_HOME="$home" "$BRIEF" "$id" "$project" --scout >/dev/null 2>&1 \
+      || fail "$project: scout brief generation should succeed"
+    fill_brief_subsections "$home/data/$id/brief.md" "Ship the change." "Keep it small."
+    FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off >/dev/null 2>&1 \
+      || fail "$project: promotion should succeed"
+    for out in "$home/data/$id/ship-instructions.md" "$home/data/$id/brief.md"; do
+      if [ "$project" = firstmate ]; then
+        assert_grep "# Existing building blocks" "$out" "promoted $(basename "$out") lost the building blocks"
+      else
+        assert_no_grep "# Existing building blocks" "$out" "promoted $(basename "$out") listed Firstmate libraries for another project"
+      fi
+    done
+  done
+  pass "fm-promote: promoted ships get the existing building blocks only for Firstmate's own repository"
+}
+
 test_promotion_persists_the_selected_ship_branch() {
   local home id meta instructions out
   home="$TMP_ROOT/promote-branch/home"
@@ -1735,6 +1767,7 @@ test_spawn_requires_the_brief_to_carry_the_selected_branch
 test_spawn_notices_a_ship_branch_against_the_registry_prefix
 test_spawn_refuses_a_registry_forge_it_cannot_read
 test_promotion_carries_the_forge_binding
+test_promotion_carries_existing_building_blocks
 test_spawn_and_promote_require_filled_task_subsections
 test_spawn_and_promote_warn_on_gate_delegation_wording
 test_project_mode_resolves_branch_prefix

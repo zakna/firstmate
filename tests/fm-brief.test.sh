@@ -615,44 +615,63 @@ test_ship_scope_allowance() {
 }
 
 # Workers rebuild helpers that already exist because nothing tells them what
-# exists, so every ship brief lists the shared libraries docs/scripts.md calls
-# the single owner of a contract and its definition of done asks the PR to name
-# the reused helper. The list is read from that table, not kept by hand.
+# exists, so a Firstmate ship brief lists the shared libraries docs/scripts.md calls
+# the single owner of a contract, and every ship definition of done asks the report
+# to name the reused helper where that delivery mode has somewhere to put it. The
+# list is read from that table, not kept by hand, and never reaches another project.
 test_ship_existing_building_blocks() {
-  local home root mode id brief
+  local home root mode id brief origin
   home="$TMP_ROOT/building-blocks-home"
   root="$TMP_ROOT/building-blocks-root"
-  mkdir -p "$home/data" "$root/docs"
+  origin="https://example.invalid/firstmate.git"
+  mkdir -p "$home/data" "$home/projects" "$root/docs"
+  git init -q "$home/projects/fm"
+  git -C "$home/projects/fm" remote add origin "$origin"
+  git init -q "$home/projects/other"
+  git -C "$home/projects/other" remote add origin https://example.invalid/other.git
+  git init -q "$root"
+  git -C "$root" remote add origin "$origin"
   cat > "$root/docs/scripts.md" <<'EOF'
 | Script | Purpose |
 | ------ | ------- |
 | `fm-alpha-lib.sh` | Single owner of alpha parsing; extra detail follows |
 | [`fm-beta-lib.sh`](../bin/fm-beta-lib.sh) | One owner of beta state. More detail. |
+| `fm-epsilon-lib.sh` | Single fleet-wide owner of epsilon shapes, with detail |
+| `fm-zeta-lib.sh` | One executable owner of zeta verbs |
 | `fm-gamma-lib.sh` | Shared gamma helpers |
 | `fm-delta.sh` | Single owner of a script that is not a library |
 EOF
   for mode in no-mistakes direct-PR local-only; do
     id="brief-blocks-$mode"
-    FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" some-proj --mode "$mode" >/dev/null 2>&1
+    FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" fm --mode "$mode" >/dev/null 2>&1
     brief="$home/data/$id/brief.md"
     assert_present "$brief" "$mode brief was not scaffolded"
     assert_grep "# Existing building blocks" "$brief" "$mode brief lost the building blocks section"
     assert_grep "- \`fm-alpha-lib.sh\` - alpha parsing" "$brief" "$mode brief lost a bare-name library row"
     assert_grep "- \`fm-beta-lib.sh\` - beta state" "$brief" "$mode brief lost a linked library row"
+    assert_grep "- \`fm-epsilon-lib.sh\` - epsilon shapes" "$brief" "$mode brief lost a fleet-wide owner row"
+    assert_grep "- \`fm-zeta-lib.sh\` - zeta verbs" "$brief" "$mode brief lost an executable owner row"
     assert_no_grep "fm-gamma-lib.sh" "$brief" "$mode brief listed a library that is not a single owner"
     assert_no_grep "fm-delta.sh" "$brief" "$mode brief listed a non-library script"
-    assert_grep "Before adding a helper, search for an existing one" "$brief" \
-      "$mode definition of done lost the reuse rule"
   done
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout some-proj --scout >/dev/null 2>&1
-  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
+  assert_grep "name the one you reused, or the search that found none, in the PR description." \
+    "$home/data/brief-blocks-no-mistakes/brief.md" "PR-based definition of done lost the reuse rule"
+  assert_grep "name the one you reused, or the search that found none, in the PR description." \
+    "$home/data/brief-blocks-direct-PR/brief.md" "direct-PR definition of done lost the reuse rule"
+  assert_grep "name the one you reused, or the search that found none, in your landing note." \
+    "$home/data/brief-blocks-local-only/brief.md" "local-only definition of done named a PR it forbids"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
+  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
+    "another project's brief listed Firstmate's libraries"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout fm --scout >/dev/null 2>&1
+  assert_no_grep "Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
     "scout brief received the ship building blocks"
   rm -rf "$root/docs"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs some-proj --mode direct-PR >/dev/null 2>&1
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs fm --mode direct-PR >/dev/null 2>&1
   assert_present "$home/data/brief-blocks-nodocs/brief.md" "brief was not scaffolded without docs/scripts.md"
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-nodocs/brief.md" \
     "brief printed an empty building blocks section"
-  pass "fm-brief.sh: ship briefs list existing building blocks from docs/scripts.md and the DoD asks for reuse"
+  pass "fm-brief.sh: Firstmate ship briefs list existing building blocks and the DoD asks for reuse where a PR exists or not"
 }
 
 test_herdr_lab_contract_is_explicit_and_complete() {

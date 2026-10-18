@@ -631,18 +631,38 @@ However narrowly the task above states its scope, the smallest downstream change
 EOF
 }
 
-# The "Existing building blocks" section of a ship brief: the shared libraries
-# docs/scripts.md already describes as the single owner of a contract, one
+# 0 when <project> names Firstmate's own repository: the registered clone (or the
+# directory itself) shares the code root's git directory or origin URL.
+fm_project_is_firstmate() {  # <fm-root> <fm-home> <project>
+  local root=$1 home=$2 project=$3 dir='' a b
+  [ -n "$project" ] || return 1
+  if [ -d "$home/projects/$project" ]; then dir="$home/projects/$project"
+  elif [ -d "$project" ]; then dir=$project
+  else return 1; fi
+  a=$(cd "$dir" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || a=''
+  b=$(cd "$root" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || b=''
+  [ -z "$a" ] || [ "$a" != "$b" ] || return 0
+  a=$(git -C "$dir" remote get-url origin 2>/dev/null) || a=''
+  b=$(git -C "$root" remote get-url origin 2>/dev/null) || b=''
+  [ -n "$a" ] && [ "$a" = "$b" ]
+}
+
+# The "Existing building blocks" section of a Firstmate ship brief: the shared
+# libraries docs/scripts.md already describes as the single owner of a contract
+# ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
 # `name - purpose` line each, read from that table rather than kept by hand.
-# Rendered by bin/fm-brief.sh; prints nothing when the table is absent.
-fm_building_blocks_block() {  # <fm-root>
+# Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing for any other
+# project, whose worktree has neither these libraries nor that table, or when the
+# table is absent.
+fm_building_blocks_block() {  # <fm-root> <fm-home> <project>
   local table="$1/docs/scripts.md" rows
   [ -r "$table" ] || return 0
+  fm_project_is_firstmate "$1" "$2" "$3" || return 0
   rows=$(awk -F'|' '
-    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( executable)? owner/ {
+    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
       name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)
       purpose = $3; sub(/^ */, "", purpose)
-      sub(/^(Single|One)( executable)? owner of /, "", purpose)
+      sub(/^(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner( of)? /, "", purpose)
       sub(/(;|\. ).*$/, "", purpose); sub(/ *$/, "", purpose)
       print "- `" name "` - " purpose
     }' "$table")
@@ -656,9 +676,15 @@ EOF
 }
 
 # The one line every ship definition of done carries: reuse is checked before a
-# new helper is written, and the PR names what was found.
-fm_existing_helper_rule() {
-  printf '%s\n' 'Before adding a helper, search for an existing one (see Existing building blocks) and name the one you reused, or the search that found none, in the PR.'
+# new helper is written, and the report names what was found. The destination is
+# the one this delivery mode actually has: a PR description, or the landing note
+# where there is no PR (local-only, Gerrit).
+fm_existing_helper_rule() {  # <mode> <forge>
+  local where='in the PR description'
+  case "$1:${2:-none}" in
+    local-only:*|*:gerrit) where='in your landing note' ;;
+  esac
+  printf 'Before adding a helper, search for an existing one and name the one you reused, or the search that found none, %s.\n' "$where"
 }
 
 # The forge-independent middle of the no-mistakes contract: how a worker drives
@@ -921,7 +947,7 @@ EOF
       echo "error: fm_dod_block: unknown delivery mode '$mode'" >&2
       return 1 ;;
   esac
-  fm_existing_helper_rule
+  fm_existing_helper_rule "$mode" "$forge"
   fm_landing_note_block "$intent_dir"
   fm_bug_fix_test_contract
 }
