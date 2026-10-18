@@ -70,7 +70,7 @@ A path belongs to the seat whose defined path in `seats.txt` is its longest matc
 At cleanup, a record's seats are its `Seats:` line, even an empty one, else the brief's `Task seats:` line from `--seat` or `--path`, together with, for a ship, the seats of the files its branch changed.
 A renamed file counts under the seats of both its old and its new path.
 Files the branch only took in from its base, through a rebase or a sync, do not count, also after the branch has landed.
-A scout's scratch changes are not its product, so a scout without either line is not indexed.
+A scout's scratch changes are not its product, so a scout whose lines name no seat is not indexed.
 
 `bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds, and file formats.
 
