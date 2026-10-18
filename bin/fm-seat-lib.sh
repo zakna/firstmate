@@ -330,7 +330,7 @@ fm_seat_decisions_dod_block() {  # <task-data-dir>
   fm_seat_memory_enabled || return 0
   cat <<EOF
 Before your \`done:\` line, write \`$1/decisions.md\`, a short record of the decisions you made, for the next worker on the same area of this project:
-- first line \`Seats: <seat> [<seat>...]\`, naming the seats under \`# Seat decisions\` when this brief has one, plus the top-level directory of each other area you changed;
+- first line \`Seats: <seat> [<seat>...]\`, naming the seats on this brief's \`Task seats:\` line when it has one, plus the top-level directory of each other area you actually changed, and never a seat only because a record or a likely area listed it;
 - then one \`## <decision>\` heading per decision, each followed by \`Reason:\`, \`Rejected:\` (the options you did not take, and why), and \`UNVERIFIED:\` (facts you relied on but did not check) lines, writing \`none\` where nothing applies;
 - keep it under about 40 lines; it is task material outside your worktree, so never commit it.
 EOF

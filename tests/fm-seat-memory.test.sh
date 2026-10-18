@@ -192,6 +192,7 @@ test_flag_on_briefs_carry_feed_and_decisions_clause() {
   assert_contains "$out" $'# Seat decisions\nTask seats: bin' "the ship brief must carry the feed"
   assert_contains "$out" "  ## Keep the lib small" "the feed must carry the earlier record"
   assert_contains "$out" "$home/data/on-ship/decisions.md" "the ship definition of done must ask for the decisions file"
+  assert_contains "$out" "naming the seats on this brief's \`Task seats:\` line" "the definition of done must tie the Seats line to the named seats only"
   [ "$(grep -c '^# Task$' "$home/data/on-ship/brief.md")" = 1 ] || fail "the feed must not add a # Task heading"
   FM_HOME=$home "$BRIEF" on-scout proj --scout --path bin/x.sh >/dev/null 2>&1 || fail "flag-on scout brief failed"
   out=$(cat "$home/data/on-scout/brief.md")
