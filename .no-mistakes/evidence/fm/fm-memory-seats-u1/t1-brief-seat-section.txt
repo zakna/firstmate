@@ -1,0 +1,11 @@
+# Scope allowance
+However narrowly the task above states its scope, the smallest downstream changes needed to keep already accepted behavior correct, add behavioral tests where an executable contract exists, or keep documentation accurate stay within this task even in files it does not name; Firstmate's `/private/tmp/fmlab.18Oq4n/home/.agents/skills/validation-supervision/SKILL.md` owns this allowance.
+
+
+
+# Seat decisions
+Task seats: api
+These are the areas of this project this task touches; name the ones your work touched on the `Seats:` line of your decisions file.
+No earlier task left a decision record for these seats.
+
+# Herdr lifecycle declaration - NOT ENABLED

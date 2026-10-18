@@ -1,0 +1,6 @@
+Before your `done:` line, write `/private/tmp/fmlab.18Oq4n/home/data/t1-count/decisions.md`, a short record of the decisions you made, for the next worker on the same area of this project:
+- first line `Seats: <seat> [<seat>...]`, naming the seats this brief lists (task seats or likely areas) that your work actually touched, or left empty; cleanup adds the seats of the files your branch changed;
+- then one `## <decision>` heading per decision, each followed by `Reason:`, `Rejected:` (the options you did not take, and why), and `UNVERIFIED:` (facts you relied on but did not check) lines, writing `none` on any of those three lines where nothing applies;
+- keep it under about 40 lines; it is task material outside your worktree, so never commit it.
+When this task fixes a bug, first add a test that reproduces the bug and fails, and commit it on its own before any fix; then fix the code, not the test.
+   Never edit, weaken, skip, or delete that test to make it pass; if the test itself turns out to be wrong, append `blocked [at=<epoch>]: {why the bug test is wrong}` and stop instead of changing it.

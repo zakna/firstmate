@@ -1,0 +1,17 @@
+window=firstmate:fm-t1-count
+endpoint_task_id=t1-count
+worktree=/private/tmp/fmlab.18Oq4n/treehouse/.treehouse/notes-38db79/1/notes
+project=/private/tmp/fmlab.18Oq4n/home/projects/notes
+harness=claude
+kind=ship
+mode=local-only
+yolo=on
+branch=fm/t1-count
+tasktmp=/tmp/fm-t1-count
+model=sonnet
+effort=low
+claude_root=/Users/olivier/.claude
+claude_session_id=bae13a6d-76f7-45c7-a2ca-dc2d31ae3e27
+busy_gen=g1792346765.64354.16793
+spawn_gen=s1792346765.63524.14738
+worktree_returned=/private/tmp/fmlab.18Oq4n/treehouse/.treehouse/notes-38db79/1/notes

@@ -1,0 +1,10 @@
+lab: /private/tmp/fmlab.18Oq4n (tear down with: bin/fm-live-lab.sh down /private/tmp/fmlab.18Oq4n)
+tree: 994f3ee9cd188b317fba0259a9b72c4584cdb0ef from /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M582GKH0F2PW6F21CNRMKYWC
+primary: claude --setting-sources project,local --model sonnet --effort low --permission-mode auto
+ok primary: claude pid 55007 in /private/tmp/fmlab.18Oq4n/home
+ok probe: the primary answered LABREADY-699d403578b5
+ok trust: /private/tmp/fmlab.18Oq4n/home is trusted in the Claude store
+ok host: skipped (empty fleet arms no supervision)
+ok watcher: skipped (empty fleet)
+ok treehouse: ~/.treehouse unchanged
+ready: /private/tmp/fmlab.18Oq4n
