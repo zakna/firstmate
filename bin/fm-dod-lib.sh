@@ -643,10 +643,10 @@ fm_building_blocks_block() {  # <fm-root> <project-name>
   local table="$1/docs/scripts.md" rows
   [ "$2" = firstmate ] && [ -r "$table" ] || return 0
   rows=$(awk -F'|' '
-    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
+    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
       name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)
       purpose = $3; sub(/^ */, "", purpose)
-      sub(/^(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner( of)? /, "", purpose)
+      sub(/^(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)?( [A-Za-z-]+)? owner( of)? /, "", purpose)
       sub(/(;|\. ).*$/, "", purpose); sub(/ *$/, "", purpose)
       print "- `" name "` - " purpose
     }' "$table")

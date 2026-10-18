@@ -632,6 +632,7 @@ test_ship_existing_building_blocks() {
 | [`fm-beta-lib.sh`](../bin/fm-beta-lib.sh) | One owner of beta state. More detail. |
 | `fm-epsilon-lib.sh` | Single fleet-wide owner of epsilon shapes, with detail |
 | `fm-zeta-lib.sh` | One executable owner of zeta verbs |
+| `fm-eta-lib.sh` | Single durable keyed shared fleet-wide owner of eta records |
 | `fm-gamma-lib.sh` | Shared gamma helpers |
 | `fm-delta.sh` | Single owner of a script that is not a library |
 EOF
@@ -643,6 +644,7 @@ EOF
     assert_grep "# Existing building blocks" "$brief" "$mode brief lost the building blocks section"
     assert_grep "- \`fm-alpha-lib.sh\` - alpha parsing" "$brief" "$mode brief lost a bare-name library row"
     assert_grep "- \`fm-beta-lib.sh\` - beta state" "$brief" "$mode brief lost a linked library row"
+    assert_grep "- \`fm-eta-lib.sh\` - eta records" "$brief" "$mode brief lost a row with four modifier words"
     assert_grep "- \`fm-epsilon-lib.sh\` - epsilon shapes" "$brief" "$mode brief lost a fleet-wide owner row"
     assert_grep "- \`fm-zeta-lib.sh\` - zeta verbs" "$brief" "$mode brief lost an executable owner row"
     assert_no_grep "fm-gamma-lib.sh" "$brief" "$mode brief listed a library that is not a single owner"
