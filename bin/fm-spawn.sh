@@ -532,7 +532,9 @@
 # With config/seat-memory present, a templated claude ship or scout launch also
 # starts with --session-id and records it as claude_session_id=, which that
 # recap then reads exactly; a relaunch keeps earlier ids in
-# claude_prior_session_ids= (bin/fm-seat-lib.sh).
+# claude_prior_session_ids= (bin/fm-seat-lib.sh). With the flag, a ship or
+# scout launch brief whose source names no seat also gains a "# Seat decisions"
+# section inferred from its filled `# Task` text (fm_seat_launch_feed).
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -3301,12 +3303,19 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   # Use the existing launch-brief overlay for every worker kind, including
   # pre-scope briefs and relaunches. Charters never enter this worker path.
   SOURCE_BRIEF=$BRIEF
+  SEAT_FEED=
+  if SEAT_PROJECT=$(fm_seat_project_key "$PROJ_ABS"); then
+    SEAT_FEED=$(fm_seat_launch_feed "$DATA" "$SEAT_PROJECT" "$SOURCE_BRIEF")
+  fi
   BRIEF="$DATA/$ID/launch-brief.md"
   BRIEF_TMP="$DATA/$ID/.launch-brief.md.${BASHPID:-$$}"
   {
     fm_brief_worker_role "$STATE" "$ID" "$FM_ROOT" &&
       printf '\n' &&
       cat "$SOURCE_BRIEF" &&
+      if [ -n "$SEAT_FEED" ]; then
+        printf '\n%s\n' "$SEAT_FEED"
+      fi &&
       if [ -n "$PREDECESSOR_RECAP" ]; then
         printf '\n%s\n' "$PREDECESSOR_RECAP"
       fi &&

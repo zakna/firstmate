@@ -11,6 +11,9 @@
 #      and the decisions clause; without it --seat and --path change nothing.
 #   4. Spawn: with the flag a Claude launch carries --session-id and the task
 #      record names the same id; without it neither appears.
+#   5. Spawn feed: a brief naming no seat gets the feed at launch for the seats
+#      its filled task text names, else the newest records across all seats;
+#      a brief scaffolded with --seat or --path keeps its own section.
 # bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh and
 # the recap's use of the id in tests/fm-predecessor-recap.test.sh.
 set -u
@@ -19,6 +22,8 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # shellcheck source=/dev/null
 . "$ROOT/bin/fm-seat-lib.sh"
+# shellcheck source=/dev/null
+. "$ROOT/bin/fm-brief-heading-lib.sh"
 fm_git_identity fmtest fmtest@example.invalid
 
 BRIEF="$ROOT/bin/fm-brief.sh"
@@ -151,7 +156,10 @@ test_feed_is_newest_first_deduplicated_and_bounded() {
   out=$(CONFIG=$TMP_ROOT/no-config fm_seat_feed_block "$data" proj bin)
   [ -z "$out" ] || fail "the feed must be empty with the flag off: $out"
   out=$(CONFIG=$home/config fm_seat_feed_block "$data" proj)
-  [ -z "$out" ] || fail "the feed must be empty with no seat named: $out"
+  assert_contains "$out" "across all its seats" "with no seat named the feed must span all seats"
+  ! printf '%s\n' "$out" | grep -q '^Task seats:' || fail "a feed naming no seat must not write a Task seats line: $out"
+  out=$(CONFIG=$home/config fm_seat_feed_block "$data" no-such-proj)
+  [ -z "$out" ] || fail "the feed must be empty with no seat named and no record: $out"
   pass "the feed is newest first, one entry per task, bounded by count, lines, and bytes, and off without the flag"
 }
 
@@ -223,8 +231,8 @@ SH
   printf '%s\n' "$fakebin"
 }
 
-run_spawn_case() {  # <name> <on|off> -> prints home|launchlog
-  local name=$1 home proj wt fakebin log id=$1-z1
+run_spawn_case() {  # <name> <on|off> [<intent>] [<extra-brief-text>] [<setup-fn>] -> prints meta|launchlog
+  local name=$1 home proj wt fakebin log id=$1-z1 intent=${3:-} extra=${4:-}
   home=$(new_home "$name" "$2")
   proj=$TMP_ROOT/$name-proj
   wt=$TMP_ROOT/$name-wt
@@ -236,7 +244,10 @@ run_spawn_case() {  # <name> <on|off> -> prints home|launchlog
   touch "$home/state/.last-watcher-beat"
   fm_git_worktree "$proj" "$wt" "wt-$name"
   mkdir -p "$home/data/$id" "$home/user-home"
-  printf '%s\n' '# Task' "## Captain's intent" "Record the session of $id." '' '## Firstmate spec' 'Check the launch.' > "$home/data/$id/brief.md"
+  [ -n "$intent" ] || intent="Record the session of $id."
+  printf '%s\n' '# Task' "## Captain's intent" "$intent" '' '## Firstmate spec' 'Check the launch.' > "$home/data/$id/brief.md"
+  [ -z "$extra" ] || printf '\n%s\n' "$extra" >> "$home/data/$id/brief.md"
+  [ -z "${5:-}" ] || "$5" "$home/data" "$name-proj"
   env -u FM_TRACE_CONTEXT FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$home/user-home" CLAUDE_CONFIG_DIR='' \
     FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
     FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
@@ -269,6 +280,65 @@ test_spawn_records_the_claude_session_id_only_with_the_flag() {
   pass "a Claude spawn records and launches with one session id with the flag, and neither without it"
 }
 
+seed_spawn_seats() {  # <data> <project-key>
+  mkdir -p "$1/seats/$2"
+  printf '%s\n' 'launcher bin/fm-spawn.sh' > "$1/seats/$2/seats.txt"
+  write_record "$1" t-launch launcher "Launch decision"
+  index_line "$1" "$2" 1000000001 launcher t-launch
+  write_record "$1" t-teardown teardown "Teardown decision"
+  index_line "$1" "$2" 1000000002 teardown t-teardown
+  write_record "$1" t-docs docs "Docs decision"
+  index_line "$1" "$2" 1000000003 docs t-docs
+}
+
+test_spawn_infers_the_feed_from_the_filled_brief() {
+  local rec meta lb out
+  rec=$(run_spawn_case infer-name on "Make Teardown faster." "" seed_spawn_seats)
+  meta=${rec%%|*}
+  lb=${meta%/state/*}/data/infer-name-z1/launch-brief.md
+  out=$(cat "$lb")
+  assert_contains "$out" $'# Seat decisions\nTask seats: teardown' "a known seat named in the task must be inferred"
+  assert_contains "$out" "  ## Teardown decision" "the inferred seat's record must be fed"
+  case "$out" in *"Launch decision"* | *"Docs decision"*) fail "other seats' records must be left out: $out" ;; esac
+  write_record "${meta%/state/*}/data" infer-name-z1 "" "Untagged"
+  out=$(fm_seat_archive "${meta%/state/*}/data" infer-name-proj infer-name-z1 ship)
+  [ "$out" = teardown ] || fail "an untagged record must take the launch brief's inferred seats (got '$out')"
+
+  rec=$(run_spawn_case infer-path on "Fix the flag parsing in \`bin/fm-spawn.sh\`." "" seed_spawn_seats)
+  meta=${rec%%|*}
+  out=$(cat "${meta%/state/*}/data/infer-path-z1/launch-brief.md")
+  assert_contains "$out" "Task seats: launcher" "a path in the task must map through its seat definition"
+  assert_contains "$out" "  ## Launch decision" "the path's seat record must be fed"
+  pass "a spawn infers the task's seats from its filled brief by seat name and defined path"
+}
+
+test_spawn_falls_back_to_the_newest_records_across_seats() {
+  local rec meta out
+  rec=$(run_spawn_case infer-none on "Improve the wording of the greeting." "" seed_spawn_seats)
+  meta=${rec%%|*}
+  out=$(cat "${meta%/state/*}/data/infer-none-z1/launch-brief.md")
+  assert_contains "$out" "across all its seats" "an unmatched task must get the all-seat feed"
+  ! printf '%s\n' "$out" | grep -q '^Task seats:' || fail "an unmatched task must name no seat: $out"
+  for d in Launch Teardown Docs; do
+    assert_contains "$out" "  ## $d decision" "the all-seat feed must carry the $d record"
+  done
+  [ "$(printf '%s\n' "$out" | grep '^- ' | head -1 | grep -c t-docs)" = 1 ] || fail "the all-seat feed must be newest first: $out"
+  rec=$(run_spawn_case infer-off off "Make Teardown faster." "" seed_spawn_seats)
+  meta=${rec%%|*}
+  ! grep -q 'Seat decisions' "${meta%/state/*}/data/infer-off-z1/launch-brief.md" || fail "a flag-off launch must carry no feed"
+  pass "an unmatched task gets the project's newest records across all seats, and a flag-off launch none"
+}
+
+test_spawn_keeps_an_explicit_seat_section() {
+  local rec meta out
+  rec=$(run_spawn_case infer-override on "Make Teardown faster." $'# Seat decisions\nTask seats: docs' seed_spawn_seats)
+  meta=${rec%%|*}
+  out=$(cat "${meta%/state/*}/data/infer-override-z1/launch-brief.md")
+  [ "$(printf '%s\n' "$out" | grep -c '^# Seat decisions')" = 1 ] || fail "an explicit seat section must not gain an inferred one: $out"
+  case "$out" in *"Teardown decision"*) fail "an explicit seat must override inference: $out" ;; esac
+  pass "a brief scaffolded with --seat or --path keeps exactly its named seats at launch"
+}
+
 test_path_maps_to_longest_defined_prefix_else_first_component
 test_archive_indexes_named_seats_once
 test_archive_falls_back_to_brief_then_changed_paths
@@ -276,5 +346,8 @@ test_feed_is_newest_first_deduplicated_and_bounded
 test_flag_off_brief_is_unchanged_by_seat_options
 test_flag_on_briefs_carry_feed_and_decisions_clause
 test_spawn_records_the_claude_session_id_only_with_the_flag
+test_spawn_infers_the_feed_from_the_filled_brief
+test_spawn_falls_back_to_the_newest_records_across_seats
+test_spawn_keeps_an_explicit_seat_section
 
 echo "# all fm-seat-memory tests passed"

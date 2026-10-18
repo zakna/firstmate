@@ -158,8 +158,10 @@
 # carry a "# Seat decisions" section after the building blocks, holding those
 # seats' newest decision records, and every ship and scout definition of done
 # asks for the task's own decisions file. bin/fm-seat-lib.sh owns the record,
-# index, and feed bounds. Without the flag both options are accepted and
-# change nothing. Refused on --secondmate.
+# index, and feed bounds. With neither option, bin/fm-spawn.sh infers the
+# seats from the filled `# Task` text when it writes the launch brief. Without
+# the flag both options are accepted and change nothing. Refused on
+# --secondmate.
 # Refuses to overwrite an existing brief.
 set -eu
 
