@@ -154,7 +154,7 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 .fm-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: var(--control-min);
-  font-family: var(--font-sans); font-weight: 600; line-height: 1.2; white-space: nowrap;
+  font-family: var(--font-sans); font-weight: 600; line-height: 1.2; text-align: center; max-width: 100%;
   border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer;
   transition: background var(--transition), opacity var(--transition);
 }
@@ -177,7 +177,7 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 .fm-sign {
   display: inline-flex; align-items: center; gap: 8px; line-height: 1.25; white-space: nowrap;
 }
-.fm-sign--eyebrow { font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; color: var(--text-strong); letter-spacing: -0.01em; }
+.fm-sign--eyebrow { white-space: normal; font-family: var(--font-display); font-size: var(--fs-title); font-weight: 700; color: var(--text-strong); letter-spacing: -0.01em; }
 .fm-sign--eyebrow .fm-ico { color: var(--accent); }
 .fm-sign--muted { font-size: var(--fs-sm); font-weight: 400; color: var(--text-muted); white-space: normal; text-align: end; }
 .fm-sign svg { width: 20px; height: 20px; }
@@ -196,9 +196,11 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 @media (prefers-reduced-transparency: reduce) {
   .bb-nav { background: var(--bg-page); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+/* the header wraps instead of overflowing: on a narrow screen or with large
+   text the appearance toggle drops below the title and stays fully visible */
 .bb-nav__inner {
-  max-width: var(--container-app); margin: 0 auto; padding: 0 28px; height: 56px;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: var(--container-app); margin: 0 auto; padding: 8px 28px; min-height: 56px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
 }
 .bb-brand { display: inline-flex; align-items: center; gap: 10px; }
 .bb-brand__disc {
@@ -209,7 +211,7 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 .bb-brand__wm { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-strong); line-height: 1; }
 /* appearance toggle: a two-segment control in the header */
 .bb-theme {
-  display: inline-flex; gap: 2px; padding: 2px;
+  display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 2px; padding: 2px;
   background: var(--surface-hover); border: 1px solid var(--border-soft); border-radius: var(--radius-pill);
 }
 .bb-theme__btn {
@@ -379,7 +381,7 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
   .bb-cols { grid-template-columns: 1fr; gap: 32px; }
 }
 @media (max-width: 600px) {
-  .bb-nav__inner { padding: 0 16px; }
+  .bb-nav__inner { padding: 8px 16px; }
   .bb-main { padding: 20px 16px 56px; gap: 28px; }
   .bb-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bb-decision__pad { padding: 18px 16px; }
