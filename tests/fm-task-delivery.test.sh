@@ -363,7 +363,7 @@ STUB
       "$mode: promoted worker did not receive the documentation-accuracy scope allowance"
     assert_grep "or keep documentation accurate stay within this task even in files it does not name" "$home/data/$id/brief.md" \
       "$mode: promoted brief did not carry the documentation-accuracy scope allowance for a relaunch"
-    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = local-only ] && echo four || echo three) short answers" "$payload" \
+    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = direct-PR ] && echo three || echo four) short answers" "$payload" \
       "$mode: promoted worker missing the landing-note step with its task-data path"
     assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$payload" \
       "$mode: promoted worker did not receive the failing-bug-test-first rule"

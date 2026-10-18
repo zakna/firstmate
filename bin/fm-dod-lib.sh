@@ -663,18 +663,21 @@ $rows
 EOF
 }
 
-# 0 when <mode>/<forge> has no PR, so the reuse report goes in the landing note.
+# 0 unless <mode>/<forge> has a PR body the worker writes (direct-PR off Gerrit),
+# so the reuse report goes in the landing note. A no-mistakes PR body is the
+# `--intent` string, which may carry only the captain's words.
 fm_reuse_in_landing_note() {  # <mode> <forge>
   case "$1:${2:-none}" in
-    local-only:*|*:gerrit) return 0 ;;
+    direct-PR:gerrit) return 0 ;;
+    direct-PR:*) return 1 ;;
   esac
-  return 1
+  return 0
 }
 
 # The one line every ship definition of done carries: reuse is checked before a
 # new helper is written, and the report names what was found. The destination is
-# the one this delivery mode actually has: a PR description, or the landing note
-# where there is no PR (local-only, Gerrit).
+# the one this delivery mode actually has: a PR description the worker writes
+# (direct-PR), or the landing note everywhere else.
 fm_existing_helper_rule() {  # <mode> <forge>
   local where='in the PR description'
   fm_reuse_in_landing_note "$1" "$2" && where='as answer (d) of your landing note'

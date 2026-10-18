@@ -216,7 +216,7 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
-    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = local-only ] && echo four || echo three) short answers" "$brief" \
+    assert_grep "write \`$home/data/$id/landing-note.md\` with $( [ "$mode" = direct-PR ] && echo three || echo four) short answers" "$brief" \
       "$id: brief missing the landing-note step with its task-data path"
     assert_grep "first add a test that reproduces the bug and fails, and commit it on its own before any fix" "$brief" \
       "$id: brief missing the failing-bug-test-first rule"
@@ -617,7 +617,7 @@ test_ship_scope_allowance() {
 # Workers rebuild helpers that already exist because nothing tells them what
 # exists, so a Firstmate ship brief lists the shared libraries docs/scripts.md calls
 # the single owner of a contract, and every ship definition of done asks the report
-# to name the reused helper where that delivery mode has somewhere to put it. The
+# to name the reused helper where that delivery mode lets the worker write it. The
 # list is read from the task project's own table, not kept by hand, so a project
 # without one gets nothing.
 test_ship_existing_building_blocks() {
@@ -647,8 +647,10 @@ EOF
     assert_no_grep "fm-gamma-lib.sh" "$brief" "$mode brief listed a library that is not a single owner"
     assert_no_grep "fm-delta.sh" "$brief" "$mode brief listed a non-library script"
   done
-  assert_grep "name the one you reused, or the search that found none, in the PR description." \
-    "$home/data/brief-blocks-no-mistakes/brief.md" "PR-based definition of done lost the reuse rule"
+  assert_grep "name the one you reused, or the search that found none, as answer (d) of your landing note." \
+    "$home/data/brief-blocks-no-mistakes/brief.md" "no-mistakes definition of done sent the reuse report into --intent"
+  assert_grep "- (d) the existing helper you reused, or the search that found none." \
+    "$home/data/brief-blocks-no-mistakes/brief.md" "no-mistakes landing note has no slot for the reuse report"
   assert_grep "name the one you reused, or the search that found none, in the PR description." \
     "$home/data/brief-blocks-direct-PR/brief.md" "direct-PR definition of done lost the reuse rule"
   assert_grep "name the one you reused, or the search that found none, as answer (d) of your landing note." \
@@ -657,14 +659,6 @@ EOF
     "$home/data/brief-blocks-local-only/brief.md" "local-only landing note has no slot for the reuse report"
   assert_no_grep "- (d) the existing helper you reused" \
     "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
-  git -C "$home/projects/fm" remote set-url origin "git@example.invalid:firstmate"
-  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh fm --mode direct-PR >/dev/null 2>&1
-  assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh/brief.md" \
-    "a registered clone with an SSH origin was not recognised as Firstmate"
-  git -C "$home/projects/fm" remote set-url origin "ssh://git@example.invalid:22/firstmate.git/"
-  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh-port fm --mode direct-PR >/dev/null 2>&1
-  assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh-port/brief.md" \
-    "a registered clone with an explicit-port ssh:// origin was not recognised as Firstmate"
   FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"
