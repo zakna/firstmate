@@ -1,0 +1,35 @@
+ok - recap: a present transcript renders its newest messages oldest first
+ok - recap: the newest transcript for the worktree is the one read
+ok - recap: an absent, stale, foreign, or empty transcript gives one reason line
+ok - recap: long items are cut and the recap is bounded by count and bytes
+ok - recap: credential-shaped strings are redacted and .env contents omitted
+ok - recap: attached -p<value> is redacted for mysql tools and unrelated options are kept
+ok - recap: ANSI-C quoted and repeated attached -p values are redacted
+ok - recap: an attached -p command substitution is redacted whole
+ok - recap: separated -p, credential flag, and secret assignment command substitutions are redacted whole
+ok - recap: a quoted secret does not pair its closing quote with a later secret
+ok - recap: a quoted command substitution with inner quotes is redacted whole
+ok - recap: a compound secret word is redacted up to the next unquoted space
+ok - recap: a quote after a substitution secret does not pair with a later secret
+ok - recap: an arithmetic expansion is redacted whole in secret values
+ok - recap: a deeply nested command substitution is redacted whole
+ok - recap: a process substitution inside a command substitution is redacted whole
+ok - recap: adjacent backtick substitutions are redacted whole
+ok - recap: a substitution holding an escaped newline is redacted whole
+ok - recap: an unbalanced secret value is redacted to the end
+ok - recap: an inline-code secret keeps the following prose
+ok - recap: parameter-expansion and array secrets are redacted whole
+ok - recap: a row ending in two backslashes is not joined to the next row
+ok - recap: a password that starts with [redacted] is redacted
+ok - recap: an attached -p value stops at a shell operator
+ok - recap: other harnesses fall back to the terminal capture, or say why there is none
+ok - recap: a continuation survives the scrollback cutoff and the row clip
+ok - recap: only the previous worker's recorded account root is read
+ok - recap: no transcript is read when the previous worker's start is unknown
+ok - recap: a byte bound under the minimum is raised and terminates
+ok - recap: a transcript written in the start second is not read
+ok - recap: no transcript is read without a recorded Claude root
+ok - recap: only a bounded tail of a large transcript is read
+ok - a recorded session id selects its own transcript; a missing one falls back to the start-time rule
+ok - recap: usage errors exit 2
+all fm-predecessor-recap tests passed

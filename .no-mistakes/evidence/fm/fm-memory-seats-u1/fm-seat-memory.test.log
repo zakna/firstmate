@@ -1,0 +1,12 @@
+ok - a path maps to its longest defined prefix, else its first component, else root
+ok - a record is indexed once per named seat, and an empty or missing one not at all
+ok - a ship's record joins its named seats with its changed-path seats, and a scout's keeps its named seats
+ok - the feed is newest first, one entry per task, bounded by count, lines, and bytes, and off without the flag
+ok - with the flag off, --seat and --path leave ship and scout briefs byte-identical
+ok - with the flag on, ship and scout briefs carry the feed and ask for the decisions file
+ok - a Claude spawn records and launches with one session id with the flag, and neither without it
+ok - a spawn infers the task's seats from its filled brief by seat name and defined path
+ok - an unmatched task gets the project's newest records across all seats, and a flag-off launch none
+ok - a brief scaffolded with --seat or --path keeps exactly its named seats at launch
+ok - a feed whose seats have no record says so instead of a dangling lead-in
+# all fm-seat-memory tests passed
