@@ -587,7 +587,7 @@ if fm_seat_memory_enabled "$CONFIG" && SEAT_PROJECT=$(fm_seat_project_key "$REPO
     SEAT_SECTION="$(fm_seat_feed_block "$DATA" "$SEAT_PROJECT" "${SEAT_UNIQUE[@]}")"$'\n\n'
 fi
 if [ "$KIND" = scout ] && fm_seat_memory_enabled "$CONFIG"; then
-  SEAT_DECISIONS="$(fm_seat_decisions_dod_block "$DATA/$ID")"$'\n'
+  SEAT_DECISIONS="$(fm_seat_decisions_dod_block "$DATA/$ID" scout)"$'\n'
 fi
 
 if [ "$HERDR_LAB" -eq 1 ]; then

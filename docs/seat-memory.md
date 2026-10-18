@@ -44,7 +44,7 @@ Rejected: a separate session store - a second source of truth
 UNVERIFIED: none
 ```
 
-The `Seats:` line names the areas the task touched, each by its seat: a task seat or likely area from the brief when the change falls inside it, otherwise its top-level directory.
+The `Seats:` line names the seats the brief listed (task seats or likely areas) that the work touched, and may be empty for a ship. A scout, which changes no product files, names the listed seats it investigated, else the top-level directory of each area it investigated.
 Each `##` heading is one decision, followed by its reason, the options rejected, and any fact relied on but not checked.
 
 ## Where everything lives
@@ -65,7 +65,7 @@ The index points at each task's own record rather than copying it.
 A seat name is letters, digits, dots, underscores, and dashes, starting with a letter or digit.
 A path belongs to the seat whose defined path in `seats.txt` is its longest match, else to its top-level directory, else to `root` for a top-level file.
 
-At cleanup, a record's seats come from the first of these that names any: its `Seats:` line, the brief's `Task seats:` line from `--seat` or `--path`, or the files the ship's branch changed.
+At cleanup, a record's seats are its `Seats:` line, else the brief's `Task seats:` line from `--seat` or `--path`, together with, for a ship, the seats of the files its branch changed.
 A scout's scratch changes are not its product, so a scout without either line is not indexed.
 
 `bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds and their environment overrides, and file formats.

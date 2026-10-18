@@ -3697,7 +3697,7 @@ fi
 teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 # Opt-in seat memory (bin/fm-seat-lib.sh): index the task's decision record
 # under its seats while the worktree still exists for a ship's changed-path
-# fallback; a scout's scratch commits are not its product, so it has none.
+# seats; a scout's scratch commits are not its product, so it has none.
 # Off costs one file test; it never refuses a teardown.
 if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   if fm_seat_memory_enabled "$CONFIG" && SEAT_PROJECT=$(fm_seat_project_key "$PROJ"); then

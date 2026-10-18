@@ -952,7 +952,7 @@ EOF
   esac
   fm_existing_helper_rule "$mode" "$forge"
   fm_landing_note_block "$intent_dir" "$mode" "$forge"
-  fm_seat_decisions_dod_block "$intent_dir"
+  fm_seat_decisions_dod_block "$intent_dir" ship
   fm_bug_fix_test_contract
 }
 

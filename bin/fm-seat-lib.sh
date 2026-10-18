@@ -14,8 +14,8 @@
 #                       for seats named with --seat or --path)
 #   bin/fm-spawn.sh     fm_seat_launch_feed (that section inferred from the
 #                       filled brief when it names no seat)
-#   bin/fm-dod-lib.sh   fm_seat_decisions_dod_block (ship and promoted ship)
-#   bin/fm-brief.sh     fm_seat_decisions_dod_block (scout)
+#   bin/fm-dod-lib.sh   fm_seat_decisions_dod_block ship (ship and promoted ship)
+#   bin/fm-brief.sh     fm_seat_decisions_dod_block scout
 #   bin/fm-spawn.sh     fm_seat_session_uuid (claude --session-id and
 #                       claude_session_id= in the task record)
 #   bin/fm-teardown.sh  fm_seat_archive (index the task's decision record)
@@ -39,14 +39,14 @@
 # A seat name matches [A-Za-z0-9][A-Za-z0-9._-]*. A path maps to the seat
 # whose defined prefix is its longest match (a prefix matches itself and
 # anything below it), else to its first path component, else to `root` for a
-# top-level file. That mapping is the fallback wherever no seat is named.
+# top-level file.
 #
-# Seats of one task, first source that names any:
-#   1. the record's first `Seats:` line;
-#   2. the brief's `Task seats:` line (written by fm_seat_feed_block for
-#      --seat/--path; seats inferred at spawn never write one);
-#   3. the files the task's branch changed, mapped as above
-#      (fm_seat_changed_path_seats owns the range).
+# Seats of one task: the record's first `Seats:` line, else the brief's
+# `Task seats:` line (written by fm_seat_feed_block for --seat/--path; seats
+# inferred at spawn never write one), together with, for a ship, the seats
+# of the files its branch changed, mapped as above
+# (fm_seat_changed_path_seats owns the range). The path mapping is the one
+# source for changed areas, since a worker never sees seats.txt.
 #
 # Feed bounds: at most FM_SEAT_FEED_COUNT records (default 5), each cut to
 # FM_SEAT_FEED_LINES lines (default 12), and the record entries together held
@@ -158,7 +158,7 @@ fm_seat_archive() {  # <data-dir> <project-key> <task-id> <kind> [<worktree> <ba
   defs="$dir/seats.txt"
   seats=$(fm_seat_names_from_line "$record" 'Seats:')
   [ -n "$seats" ] || seats=$(fm_seat_names_from_line "$data/$id/brief.md" 'Task seats:')
-  [ -n "$seats" ] || seats=$(fm_seat_changed_path_seats "$defs" "$wt" "$base")
+  seats=$(printf '%s\n%s\n' "$seats" "$(fm_seat_changed_path_seats "$defs" "$wt" "$base")")
   seats=$(printf '%s\n' "$seats" | awk 'NF && !seen[$0]++')
   [ -n "$seats" ] || return 0
   mkdir -p -- "$dir" 2>/dev/null || { echo "warning: could not create $dir; $id's decisions were not indexed" >&2; return 0; }
@@ -267,15 +267,14 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
   [ -n "$seats_line" ] || [ -s "$index" ] || return 0
   printf '%s\n' '# Seat decisions'
   if [ -z "$seats_line" ]; then
-    printf '%s\n' "No area of this project was matched to this task; name each area you change on the \`Seats:\` line of your decisions file."
+    printf '%s\n' "No area of this project was matched to this task."
     lead="Below are the project's newest decision records across all its seats, newest first."
   elif [ "$inferred" -eq 1 ]; then
     printf 'Likely areas of this project, matched from this task'"'"'s text:%s\n' "$seats_line"
-    printf '%s\n' "Name each area you actually change on the \`Seats:\` line of your decisions file."
     lead='Below are the newest decision records earlier tasks left for these areas, newest first.'
   else
     printf 'Task seats:%s\n' "$seats_line"
-    printf '%s\n' "These are the areas of this project this task touches; name them, plus any other area you change, on the \`Seats:\` line of your decisions file."
+    printf '%s\n' "These are the areas of this project this task touches; name the ones your work touched on the \`Seats:\` line of your decisions file."
     lead='Below are the newest decision records earlier tasks left for these seats, newest first.'
   fi
   { [ ! -f "$index" ] || LC_ALL=C sort -t "$(printf '\t')" -k1,1nr "$index"; } | LC_ALL=C awk -F'\t' \
@@ -326,11 +325,17 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
 
 # The decision-record clause of a ship or scout definition of done, or nothing
 # when the flag is off.
-fm_seat_decisions_dod_block() {  # <task-data-dir>
+fm_seat_decisions_dod_block() {  # <task-data-dir> <ship|scout>
+  local seats_rule
   fm_seat_memory_enabled || return 0
+  if [ "$2" = scout ]; then
+    seats_rule="naming the seats this brief lists (task seats or likely areas) that you investigated, else the top-level directory of each area you investigated"
+  else
+    seats_rule="naming the seats this brief lists (task seats or likely areas) that your work actually touched, or left empty; cleanup adds the seats of the files your branch changed"
+  fi
   cat <<EOF
 Before your \`done:\` line, write \`$1/decisions.md\`, a short record of the decisions you made, for the next worker on the same area of this project:
-- first line \`Seats: <seat> [<seat>...]\`, naming the seats on this brief's \`Task seats:\` line when it has one, plus each other area you actually changed by its seat: a seat this brief lists as a task seat or likely area when the change falls inside it, otherwise its top-level directory; never name a seat only because a record or a likely area listed it;
+- first line \`Seats: <seat> [<seat>...]\`, $seats_rule;
 - then one \`## <decision>\` heading per decision, each followed by \`Reason:\`, \`Rejected:\` (the options you did not take, and why), and \`UNVERIFIED:\` (facts you relied on but did not check) lines, writing \`none\` where nothing applies;
 - keep it under about 40 lines; it is task material outside your worktree, so never commit it.
 EOF

@@ -117,7 +117,15 @@ test_archive_falls_back_to_brief_then_changed_paths() {
   write_record "$data" t-landed "" "After landing"
   out=$(fm_seat_archive "$data" proj t-landed ship "$wt" main)
   assert_contains "$out" "newtool" "a branch already fast-forwarded into its base should still map its changes"
-  pass "an untagged record falls back to the brief's seats, then to the paths its branch changed"
+  write_record "$data" t-union "launcher bin" "Tagged ship"
+  out=$(fm_seat_archive "$data" proj t-union ship "$wt" main)
+  for s in launcher bin newtool docs; do
+    printf '%s\n' "$out" | grep -qx "$s" || fail "a tagged ship must be indexed under its named and changed-path seats; missing $s: $out"
+  done
+  write_record "$data" t-scout "bin" "Tagged scout"
+  out=$(fm_seat_archive "$data" proj t-scout scout)
+  [ "$out" = bin ] || fail "a scout must be indexed under its named seats only (got '$out')"
+  pass "a ship's record joins its named seats with its changed-path seats, and a scout's keeps its named seats"
 }
 
 test_feed_is_newest_first_deduplicated_and_bounded() {
@@ -192,13 +200,14 @@ test_flag_on_briefs_carry_feed_and_decisions_clause() {
   assert_contains "$out" $'# Seat decisions\nTask seats: bin' "the ship brief must carry the feed"
   assert_contains "$out" "  ## Keep the lib small" "the feed must carry the earlier record"
   assert_contains "$out" "$home/data/on-ship/decisions.md" "the ship definition of done must ask for the decisions file"
-  assert_contains "$out" "naming the seats on this brief's \`Task seats:\` line" "the definition of done must tie the Seats line to the named seats only"
-  assert_contains "$out" "a seat this brief lists as a task seat or likely area when the change falls inside it, otherwise its top-level directory" "the definition of done must name a changed area by its seat"
+  assert_contains "$out" "that your work actually touched, or left empty; cleanup adds the seats of the files your branch changed" "the ship definition of done must leave changed areas to cleanup"
   [ "$(grep -c '^# Task$' "$home/data/on-ship/brief.md")" = 1 ] || fail "the feed must not add a # Task heading"
   FM_HOME=$home "$BRIEF" on-scout proj --scout --path bin/x.sh >/dev/null 2>&1 || fail "flag-on scout brief failed"
   out=$(cat "$home/data/on-scout/brief.md")
   assert_contains "$out" "Task seats: bin" "a --path must resolve to its seat"
   assert_contains "$out" "$home/data/on-scout/decisions.md" "the scout definition of done must ask for the decisions file"
+  assert_contains "$out" "that you investigated, else the top-level directory of each area you investigated" "the scout definition of done must name the areas it investigated"
+  case "$out" in *"cleanup adds the seats"*) fail "a scout changes no product files, so cleanup adds no seats: $out" ;; esac
   FM_HOME=$home "$BRIEF" on-none proj --mode direct-PR >/dev/null 2>&1 || fail "flag-on brief without seats failed"
   ! grep -q '^# Seat decisions' "$home/data/on-none/brief.md" || fail "a brief naming no seat must carry no feed"
   grep -q 'decisions.md' "$home/data/on-none/brief.md" || fail "a brief naming no seat must still ask for the decisions file"
