@@ -624,13 +624,7 @@ test_ship_existing_building_blocks() {
   local home root mode id brief
   home="$TMP_ROOT/building-blocks-home"
   root="$TMP_ROOT/building-blocks-root"
-  mkdir -p "$home/data" "$root/docs" "$TMP_ROOT/building-blocks-clone" "$TMP_ROOT/building-blocks-stranger"
-  git init -q "$root"
-  git -C "$root" remote add origin https://example.invalid/firstmate.git
-  git init -q "$TMP_ROOT/building-blocks-clone"
-  git -C "$TMP_ROOT/building-blocks-clone" remote add origin https://example.invalid/firstmate.git
-  git init -q "$TMP_ROOT/building-blocks-stranger"
-  git -C "$TMP_ROOT/building-blocks-stranger" remote add origin https://example.invalid/other.git
+  mkdir -p "$home/data" "$root/docs"
   cat > "$root/docs/scripts.md" <<'EOF'
 | Script | Purpose |
 | ------ | ------- |
@@ -666,12 +660,6 @@ EOF
     "$home/data/brief-blocks-local-only/brief.md" "local-only landing note has no slot for the reuse report"
   assert_no_grep "- (d) the existing helper you reused" \
     "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-clone "$TMP_ROOT/building-blocks-clone" --mode direct-PR >/dev/null 2>&1
-  assert_grep "# Existing building blocks" "$home/data/brief-blocks-clone/brief.md" \
-    "a project directory with Firstmate's origin lost the building blocks"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-stranger "$TMP_ROOT/building-blocks-stranger" --mode direct-PR >/dev/null 2>&1
-  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-stranger/brief.md" \
-    "a project directory with another origin received Firstmate's libraries"
   FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"

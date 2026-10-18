@@ -636,20 +636,12 @@ EOF
 # ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
 # `name - purpose` line each, read from that table rather than kept by hand.
 # The table is only ever the code root's own copy (trusted, never the task
-# project's text), and the section is only for a task on this Firstmate repository:
-# the registry name `firstmate`, or an absolute project directory whose origin URL
-# equals the code root's or whose basename is `firstmate`. Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints
-# nothing otherwise.
-fm_building_blocks_block() {  # <fm-root> <project-name-or-absolute-dir>
-  local table="$1/docs/scripts.md" rows origin
-  [ -r "$table" ] || return 0
-  case "$2" in
-    firstmate) ;;
-    /*)
-      origin=$(git -C "$1" remote get-url origin 2>/dev/null) || origin=''
-      [ -n "$origin" ] && [ "$origin" = "$(git -C "$2" remote get-url origin 2>/dev/null)" ] || [ "$(basename "$2")" = firstmate ] || return 0 ;;
-    *) return 0 ;;
-  esac
+# project's text), and the section is only for a task on this Firstmate repository,
+# the registry name `firstmate`. Rendered by bin/fm-brief.sh and bin/fm-promote.sh;
+# prints nothing otherwise.
+fm_building_blocks_block() {  # <fm-root> <project-name>
+  local table="$1/docs/scripts.md" rows
+  [ "$2" = firstmate ] && [ -r "$table" ] || return 0
   rows=$(awk -F'|' '
     $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
       name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)
