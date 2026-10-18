@@ -44,7 +44,7 @@ Rejected: a separate session store - a second source of truth
 UNVERIFIED: none
 ```
 
-The `Seats:` line names the areas the task touched.
+The `Seats:` line names the areas the task touched, each by its seat: a task seat or likely area from the brief when the change falls inside it, otherwise its top-level directory.
 Each `##` heading is one decision, followed by its reason, the options rejected, and any fact relied on but not checked.
 
 ## Where everything lives
