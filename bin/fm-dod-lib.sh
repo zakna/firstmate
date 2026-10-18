@@ -631,6 +631,36 @@ However narrowly the task above states its scope, the smallest downstream change
 EOF
 }
 
+# The "Existing building blocks" section of a ship brief: the shared libraries
+# docs/scripts.md already describes as the single owner of a contract, one
+# `name - purpose` line each, read from that table rather than kept by hand.
+# Rendered by bin/fm-brief.sh; prints nothing when the table is absent.
+fm_building_blocks_block() {  # <fm-root>
+  local table="$1/docs/scripts.md" rows
+  [ -r "$table" ] || return 0
+  rows=$(awk -F'|' '
+    $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( executable)? owner/ {
+      name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)
+      purpose = $3; sub(/^ */, "", purpose)
+      sub(/^(Single|One)( executable)? owner of /, "", purpose)
+      sub(/(;|\. ).*$/, "", purpose); sub(/ *$/, "", purpose)
+      print "- `" name "` - " purpose
+    }' "$table")
+  [ -n "$rows" ] || return 0
+  cat <<EOF
+# Existing building blocks
+Before writing a new helper, search \`bin/\` and \`docs/scripts.md\` for one that already does the job, and reuse it.
+These shared libraries already own their contract:
+$rows
+EOF
+}
+
+# The one line every ship definition of done carries: reuse is checked before a
+# new helper is written, and the PR names what was found.
+fm_existing_helper_rule() {
+  printf '%s\n' 'Before adding a helper, search for an existing one (see Existing building blocks) and name the one you reused, or the search that found none, in the PR.'
+}
+
 # The forge-independent middle of the no-mistakes contract: how a worker drives
 # the pipeline, what `--intent` may carry, and the two firstmate-specific rules.
 # Written once; only the two sentences about a green PR depend on the forge,
@@ -891,6 +921,7 @@ EOF
       echo "error: fm_dod_block: unknown delivery mode '$mode'" >&2
       return 1 ;;
   esac
+  fm_existing_helper_rule
   fm_landing_note_block "$intent_dir"
   fm_bug_fix_test_contract
 }
