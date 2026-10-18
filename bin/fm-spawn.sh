@@ -3304,8 +3304,7 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
   # pre-scope briefs and relaunches. Charters never enter this worker path.
   SOURCE_BRIEF=$BRIEF
   SEAT_FEED=
-  SEAT_PROJECT=$(fm_seat_project_key "$PROJ_ABS") || SEAT_PROJECT=
-  if [ -n "$SEAT_PROJECT" ]; then
+  if SEAT_PROJECT=$(fm_seat_project_key "$PROJ_ABS"); then
     SEAT_FEED=$(fm_seat_launch_feed "$DATA" "$SEAT_PROJECT" "$SOURCE_BRIEF")
   fi
   BRIEF="$DATA/$ID/launch-brief.md"

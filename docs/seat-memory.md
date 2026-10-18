@@ -59,7 +59,7 @@ Everything stays in the home's private `data/` tree, never in a project's `AGENT
 | `data/seats/<project>/seats.txt` | Optional seat definitions, one per line: a seat name followed by the project paths it covers |
 
 `<project>` is the project's clone directory name.
-A name that is not a valid seat name, such as one with a space or `#`, is written with each such byte as `%XX`, so `my app` becomes `my%20app`.
+A project whose clone directory name is not a valid seat name, such as one with a space, has seat memory off.
 The index points at each task's own record rather than copying it.
 
 ## How a task finds its seats

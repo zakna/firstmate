@@ -23,8 +23,7 @@
 #   bin/fm-teardown.sh  fm_seat_archive (index the task's decision record)
 #
 # Concepts, ported from OpenRig without any OpenRig dependency: a rig is a
-# registered project, keyed by its clone directory name (fm_seat_project_key
-# owns the encoding of a name a seat name could not hold); a seat is a named,
+# registered project, keyed by its clone directory name; a seat is a named,
 # durable area of that project (a module or subsystem) that outlives every
 # worker and accumulates that area's decision records. Workers stay disposable,
 # one worktree per task.
@@ -71,37 +70,12 @@ fm_seat_name_valid() {  # <name>
   return 0
 }
 
-# The project key: the clone directory name of a project name or path, as
-# is when it is a valid seat name. Otherwise each byte outside letters,
-# digits, dots, underscores, and dashes, and a leading dot, underscore, or
-# dash, is written as %XX, so `my app` keys as `my%20app` and no key is `.`
-# or `..` or holds a `/`.
+# The project key: the clone directory name of a project name or path.
 fm_seat_project_key() {  # <project-name-or-path>
-  local key=${1%/} out='' c i=0 LC_ALL=C
+  local key=${1%/}
   key=${key##*/}
-  [ -n "$key" ] || return 1
-  if fm_seat_name_valid "$key"; then
-    printf '%s' "$key"
-    return 0
-  fi
-  while [ "$i" -lt "${#key}" ]; do
-    c=${key:$i:1}
-    case "$i:$c" in
-      0:[._-]) out="$out%$(printf '%s' "$c" | od -An -tx1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')" ;;
-      *:[A-Za-z0-9._-]) out="$out$c" ;;
-      *) out="$out%$(printf '%s' "$c" | od -An -tx1 | tr -d ' \n' | tr '[:lower:]' '[:upper:]')" ;;
-    esac
-    i=$((i + 1))
-  done
-  printf '%s' "$out"
-}
-
-# 0 when <key> is a key fm_seat_project_key can print.
-fm_seat_project_key_valid() {  # <key>
-  case "$1" in
-    ''|[!A-Za-z0-9%]*|*[!A-Za-z0-9._%-]*) return 1 ;;
-  esac
-  return 0
+  fm_seat_name_valid "$key" || return 1
+  printf '%s' "$key"
 }
 
 fm_seat_dir() {  # <data-dir> <project-key>
@@ -229,7 +203,7 @@ fm_seat_archive() {  # <data-dir> <project-key> <task-id> <kind> [<worktree> <ba
   local data=$1 project=$2 id=$3 kind=$4 wt=${5:-} base=${6:-}
   local record="$1/$3/decisions.md" dir index defs seats seat now
   [ -f "$record" ] && [ ! -L "$record" ] && [ -s "$record" ] || return 0
-  fm_seat_project_key_valid "$project" && fm_seat_name_valid "$id" || return 0
+  fm_seat_name_valid "$project" && fm_seat_name_valid "$id" || return 0
   dir=$(fm_seat_dir "$data" "$project")
   index="$dir/index.tsv"
   defs="$dir/seats.txt"
@@ -434,7 +408,7 @@ fm_seat_decisions_dod_block() {  # <task-data-dir> <ship|scout>
   cat <<EOF
 Before your \`done:\` line, write \`$1/decisions.md\`, a short record of the decisions you made, for the next worker on the same area of this project:
 - first line \`Seats: <seat> [<seat>...]\`, $seats_rule;
-- then one \`## <decision>\` heading per decision, each followed by \`Reason:\`, \`Rejected:\` (the options you did not take, and why), and \`UNVERIFIED:\` (facts you relied on but did not check) lines, writing \`none\` where nothing applies;
+- then one \`## <decision>\` heading per decision, each followed by \`Reason:\`, \`Rejected:\` (the options you did not take, and why), and \`UNVERIFIED:\` (facts you relied on but did not check) lines, writing \`none\` on any of those three lines where nothing applies;
 - keep it under about 40 lines; it is task material outside your worktree, so never commit it.
 EOF
 }

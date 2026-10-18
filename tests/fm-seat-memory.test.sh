@@ -471,21 +471,18 @@ test_changed_paths_count_both_sides_of_a_rename() {
   pass "a renamed file counts under the seats of its old and its new path"
 }
 
-test_project_name_with_a_space_is_encoded() {
-  local home key out
+test_project_name_that_is_no_seat_name_turns_seat_memory_off() {
+  local home out
   home=$(new_home project-space on)
-  key=$(fm_seat_project_key "$TMP_ROOT/projects/my app/")
-  [ "$key" = "my%20app" ] || fail "a space must be encoded (got '$key')"
-  [ "$(fm_seat_project_key proj)" = proj ] || fail "a valid name must stay as is"
-  [ "$(fm_seat_project_key .hidden)" = "%2Ehidden" ] || fail "a leading dot must be encoded"
+  [ "$(fm_seat_project_key "$TMP_ROOT/projects/proj/")" = proj ] || fail "a valid clone name must key as is"
+  if fm_seat_project_key "$TMP_ROOT/projects/my app" >/dev/null; then
+    fail "a clone name with a space must have no project key"
+  fi
   write_record "$home/data" t-space docs "Spaced project"
-  out=$(fm_seat_archive "$home/data" "$key" t-space ship)
-  [ "$out" = docs ] || fail "a project with a space must still be indexed (got '$out')"
-  [ -f "$home/data/seats/my%20app/index.tsv" ] || fail "the index must live under the encoded key"
-  FM_HOME=$home "$BRIEF" sp-ship "my app" --mode direct-PR --seat docs >/dev/null 2>&1 || fail "a brief for a project with a space failed"
-  out=$(cat "$home/data/sp-ship/brief.md")
-  assert_contains "$out" "  ## Spaced project" "a project with a space must still get its feed"
-  pass "a project name that is no seat name is encoded instead of turning seat memory off"
+  out=$(fm_seat_archive "$home/data" "my app" t-space ship)
+  [ -z "$out" ] || fail "a project with no valid key must not be indexed (got '$out')"
+  [ ! -e "$home/data/seats" ] || fail "a project with no valid key must leave no seat index"
+  pass "a project name that is no seat name turns seat memory off for that project"
 }
 
 test_feed_without_matching_records_has_no_lead_in() {
@@ -513,7 +510,7 @@ test_archive_honours_an_explicit_empty_seats_line
 test_archive_treats_a_none_seat_as_no_seat
 test_changed_paths_leave_out_what_the_branch_took_from_its_base
 test_changed_paths_count_both_sides_of_a_rename
-test_project_name_with_a_space_is_encoded
+test_project_name_that_is_no_seat_name_turns_seat_memory_off
 test_feed_without_matching_records_has_no_lead_in
 
 echo "# all fm-seat-memory tests passed"
