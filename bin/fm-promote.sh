@@ -260,7 +260,7 @@ If these promotion steps were already completed before a relaunch, preserve the 
 EOF
 promote_building_blocks() {
   local blocks
-  blocks=$(fm_building_blocks_block "$FM_HOME" "${PROMOTE_PROJECT:-}")
+  blocks=$(fm_building_blocks_block "$FM_ROOT" "${PROMOTE_PROJECT:-}")
   [ -z "$blocks" ] || printf '%s\n\n' "$blocks"
 }
 

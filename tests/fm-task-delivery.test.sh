@@ -435,8 +435,7 @@ test_promotion_carries_existing_building_blocks() {
   local home project id out
   home="$TMP_ROOT/promote-blocks/home"
   mkdir -p "$home/state" "$home/data" "$home/projects"
-  mkdir -p "$home/projects/firstmate/docs" "$home/projects/other"
-  cp "$ROOT/docs/scripts.md" "$home/projects/firstmate/docs/scripts.md"
+  mkdir -p "$home/projects/firstmate" "$home/projects/other"
   for project in firstmate other; do
     id="promote-blocks-$project"
     printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\nproject=%s\n' "$id" "$home/projects/$project" > "$home/state/$id.meta"
@@ -453,7 +452,7 @@ test_promotion_carries_existing_building_blocks() {
       fi
     done
   done
-  pass "fm-promote: promoted ships get the existing building blocks only for a project that carries the table"
+  pass "fm-promote: promoted ships get the existing building blocks only for Firstmate's own repository"
 }
 
 test_promotion_persists_the_selected_ship_branch() {

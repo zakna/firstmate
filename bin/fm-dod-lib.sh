@@ -635,19 +635,21 @@ EOF
 # libraries docs/scripts.md already describes as the single owner of a contract
 # ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
 # `name - purpose` line each, read from that table rather than kept by hand.
-# The table is read from the task's own project (the registered clone under
-# <fm-home>/projects, or the absolute directory itself), so only a project that carries such
-# a table - Firstmate's own repository - gets the section, at its own revision.
-# Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing otherwise.
-fm_building_blocks_block() {  # <fm-home> <project-name-or-absolute-dir>
-  local dir='' table rows
-  case "$2" in
-    /*) [ -d "$2" ] && dir=$2 ;;
-    *) [ -d "$1/projects/$2" ] && dir="$1/projects/$2" ;;
-  esac
-  [ -n "$dir" ] || return 0
-  table="$dir/docs/scripts.md"
+# The table is only ever the code root's own copy (trusted, never the task
+# project's text), and the section is only for a task on this Firstmate repository:
+# the registry name `firstmate`, or an absolute project directory whose origin URL
+# equals the code root's. Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints
+# nothing otherwise.
+fm_building_blocks_block() {  # <fm-root> <project-name-or-absolute-dir>
+  local table="$1/docs/scripts.md" rows origin
   [ -r "$table" ] || return 0
+  case "$2" in
+    firstmate) ;;
+    /*)
+      origin=$(git -C "$1" remote get-url origin 2>/dev/null) || origin=''
+      [ -n "$origin" ] && [ "$origin" = "$(git -C "$2" remote get-url origin 2>/dev/null)" ] || [ "$(basename "$2")" = firstmate ] || return 0 ;;
+    *) return 0 ;;
+  esac
   rows=$(awk -F'|' '
     $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
       name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)

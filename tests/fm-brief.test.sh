@@ -621,10 +621,17 @@ test_ship_scope_allowance() {
 # list is read from the task project's own table, not kept by hand, so a project
 # without one gets nothing.
 test_ship_existing_building_blocks() {
-  local home mode id brief
+  local home root mode id brief
   home="$TMP_ROOT/building-blocks-home"
-  mkdir -p "$home/data" "$home/projects/fm/docs" "$home/projects/other"
-  cat > "$home/projects/fm/docs/scripts.md" <<'EOF'
+  root="$TMP_ROOT/building-blocks-root"
+  mkdir -p "$home/data" "$root/docs" "$TMP_ROOT/building-blocks-clone" "$TMP_ROOT/building-blocks-stranger"
+  git init -q "$root"
+  git -C "$root" remote add origin https://example.invalid/firstmate.git
+  git init -q "$TMP_ROOT/building-blocks-clone"
+  git -C "$TMP_ROOT/building-blocks-clone" remote add origin https://example.invalid/firstmate.git
+  git init -q "$TMP_ROOT/building-blocks-stranger"
+  git -C "$TMP_ROOT/building-blocks-stranger" remote add origin https://example.invalid/other.git
+  cat > "$root/docs/scripts.md" <<'EOF'
 | Script | Purpose |
 | ------ | ------- |
 | `fm-alpha-lib.sh` | Single owner of alpha parsing; extra detail follows |
@@ -636,7 +643,7 @@ test_ship_existing_building_blocks() {
 EOF
   for mode in no-mistakes direct-PR local-only; do
     id="brief-blocks-$mode"
-    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" fm --mode "$mode" >/dev/null 2>&1
+    FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" firstmate --mode "$mode" >/dev/null 2>&1
     brief="$home/data/$id/brief.md"
     assert_present "$brief" "$mode brief was not scaffolded"
     assert_grep "# Existing building blocks" "$brief" "$mode brief lost the building blocks section"
@@ -659,14 +666,20 @@ EOF
     "$home/data/brief-blocks-local-only/brief.md" "local-only landing note has no slot for the reuse report"
   assert_no_grep "- (d) the existing helper you reused" \
     "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
-  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-clone "$TMP_ROOT/building-blocks-clone" --mode direct-PR >/dev/null 2>&1
+  assert_grep "# Existing building blocks" "$home/data/brief-blocks-clone/brief.md" \
+    "a project directory with Firstmate's origin lost the building blocks"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-stranger "$TMP_ROOT/building-blocks-stranger" --mode direct-PR >/dev/null 2>&1
+  assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-stranger/brief.md" \
+    "a project directory with another origin received Firstmate's libraries"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"
-  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout fm --scout >/dev/null 2>&1
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout firstmate --scout >/dev/null 2>&1
   assert_no_grep "Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
     "scout brief received the ship building blocks"
-  rm -rf "$home/projects/fm/docs"
-  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs fm --mode direct-PR >/dev/null 2>&1
+  rm -rf "$root/docs"
+  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs firstmate --mode direct-PR >/dev/null 2>&1
   assert_present "$home/data/brief-blocks-nodocs/brief.md" "brief was not scaffolded without docs/scripts.md"
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-nodocs/brief.md" \
     "brief printed an empty building blocks section"
