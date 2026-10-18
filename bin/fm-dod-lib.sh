@@ -636,13 +636,13 @@ EOF
 # ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
 # `name - purpose` line each, read from that table rather than kept by hand.
 # The table is read from the task's own project (the registered clone under
-# <fm-home>/projects, or the directory itself), so only a project that carries such
+# <fm-home>/projects, or the absolute directory itself), so only a project that carries such
 # a table - Firstmate's own repository - gets the section, at its own revision.
 # Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing otherwise.
-fm_building_blocks_block() {  # <fm-home> <project-name-or-dir>
+fm_building_blocks_block() {  # <fm-home> <project-name-or-absolute-dir>
   local dir='' table rows
   case "$2" in
-    */*|.|..) [ -d "$2" ] && dir=$2 ;;
+    /*) [ -d "$2" ] && dir=$2 ;;
     *) [ -d "$1/projects/$2" ] && dir="$1/projects/$2" ;;
   esac
   [ -n "$dir" ] || return 0
