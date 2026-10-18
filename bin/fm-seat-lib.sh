@@ -48,9 +48,8 @@
 # (fm_seat_changed_path_seats owns the range). The path mapping is the one
 # source for changed areas, since a worker never sees seats.txt.
 #
-# Feed bounds: at most FM_SEAT_FEED_COUNT records (default 5), each cut to
-# FM_SEAT_FEED_LINES lines (default 12), and the record entries together held
-# under FM_SEAT_FEED_MAX_BYTES bytes (default 4000; floor 512), newest first and one
+# Feed bounds: at most 5 records, each cut to 12 lines, and the record
+# entries together held under 4000 bytes, newest first and one
 # entry per task even when it touched several seats. Every record line is
 # indented and stripped of control characters, so a record can never forge a
 # machine-read brief line such as `# Task` or `Delivery contract:`.
@@ -252,15 +251,10 @@ fm_seat_launch_feed() {  # <data-dir> <project-key> <brief>
 # none, it holds the project's newest records across all seats, and is empty
 # when the project has none.
 fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
-  local data=$1 project=$2 index count lines max seats_line seat inferred=0 lead
+  local data=$1 project=$2 index seats_line seat inferred=0 lead
   shift 2
   fm_seat_memory_enabled || return 0
   [ "${1:-}" != --inferred ] || { inferred=1; shift; }
-  count=${FM_SEAT_FEED_COUNT:-5}
-  lines=${FM_SEAT_FEED_LINES:-12}
-  max=${FM_SEAT_FEED_MAX_BYTES:-4000}
-  case "$count$lines$max" in *[!0-9]*) count=5 lines=12 max=4000 ;; esac
-  [ "$max" -ge 512 ] || max=512
   seats_line=
   for seat in "$@"; do seats_line="$seats_line $seat"; done
   index="$(fm_seat_dir "$data" "$project")/index.tsv"
@@ -278,7 +272,7 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
     lead='Below are the newest decision records earlier tasks left for these seats, newest first.'
   fi
   { [ ! -f "$index" ] || LC_ALL=C sort -t "$(printf '\t')" -k1,1nr "$index"; } | LC_ALL=C awk -F'\t' \
-    -v want="$seats_line" -v data="$data" -v count="$count" -v lines="$lines" -v max="$max" -v idx="$index" -v lead="$lead" '
+    -v want="$seats_line" -v data="$data" -v count=5 -v lines=12 -v max=4000 -v idx="$index" -v lead="$lead" '
     BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) ok[w[i]] = 1 }
     (n > 0 && !($2 in ok)) || $1 !~ /^[0-9]+$/ || $3 !~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/ { next }
     { seats[$3] = ($3 in seats) ? seats[$3] ", " $2 : $2 }

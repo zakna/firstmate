@@ -28,7 +28,7 @@ With the flag present:
     These inferred seats are offered as likely areas only; they never become the task's `Task seats:` line.
   - When nothing in that text matches, the section holds the project's newest records across all seats, within the same size bound.
 - A Claude ship or scout worker starts with `--session-id <uuid>`, its task record names that id as `claude_session_id=`, and the archived `data/<task-id>/meta.txt` keeps it.
-  A relaunch starts a new id and keeps the earlier ones in `claude_prior_session_ids=`, and its predecessor recap reads the previous worker's own conversation by that id.
+  A relaunch starts a new id and keeps the earlier ones in `claude_prior_session_ids=`.
   Other worker tools accept no id chosen at launch, so their records name none.
 
 ## The decision record
@@ -39,7 +39,7 @@ The worker writes a short, structured file:
 Seats: spawn docs
 
 ## Record the session id in the task record
-Reason: the recap had to guess the conversation from the worktree and a start time
+Reason: the conversation could only be guessed from the worktree and a start time
 Rejected: a separate session store - a second source of truth
 UNVERIFIED: none
 ```
@@ -68,7 +68,7 @@ A path belongs to the seat whose defined path in `seats.txt` is its longest matc
 At cleanup, a record's seats are its `Seats:` line, else the brief's `Task seats:` line from `--seat` or `--path`, together with, for a ship, the seats of the files its branch changed.
 A scout's scratch changes are not its product, so a scout without either line is not indexed.
 
-`bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds and their environment overrides, and file formats.
+`bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds, and file formats.
 
 ## Limits
 

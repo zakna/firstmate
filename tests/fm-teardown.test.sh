@@ -3929,7 +3929,6 @@ assert_head_absent_from_worktree() {  # <worktree> <short-sha> <label>
 
 # Land a shippable commit on the task branch and push it to origin, the same
 # "definitely landed, teardown must ALLOW" shape test_no_mistakes_origin_remote_allows
-test_seat_memory_indexes_decisions_only_with_flag
 # uses, so these new cases exercise the abort/reap steps on a real successful
 # teardown rather than a refusal path.
 land_shippable_commit() {
@@ -5217,6 +5216,7 @@ test_teardown_archives_an_acknowledged_steer_once_under_handled
 test_local_only_truly_unpushed_refuses
 test_local_only_merged_to_local_main_allows
 test_no_mistakes_origin_remote_allows
+test_seat_memory_indexes_decisions_only_with_flag
 test_no_mistakes_truly_unpushed_refuses
 test_local_only_force_overrides_unpushed
 test_secondmate_pr_registration_publishes_ready_line

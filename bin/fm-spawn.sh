@@ -530,8 +530,8 @@
 # A claude launch also records claude_root=, the configuration root it runs
 # under, which a later relaunch's predecessor recap reads its transcript from.
 # With config/seat-memory present, a templated claude ship or scout launch also
-# starts with --session-id and records it as claude_session_id=, which that
-# recap then reads exactly; a relaunch keeps earlier ids in
+# starts with --session-id and records it as claude_session_id=, so the task
+# record names its conversation; a relaunch keeps earlier ids in
 # claude_prior_session_ids= (bin/fm-seat-lib.sh). With the flag, a ship or
 # scout launch brief whose source names no seat also gains a "# Seat decisions"
 # section inferred from its filled `# Task` text (fm_seat_launch_feed).
@@ -3263,8 +3263,6 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
         case "$recap_since" in *[!0-9]*) ;; *) recap_args+=(--since "$recap_since") ;; esac
         ;;
     esac
-    recap_session=$(fm_meta_get "$RELAUNCH_META" claude_session_id) || recap_session=
-    [ -z "$recap_session" ] || recap_args+=(--claude-session "$recap_session")
     recap_root=$(fm_meta_get "$RELAUNCH_META" claude_root) || recap_root=
     recap_account=$(fm_meta_get "$RELAUNCH_META" account) || recap_account=
     if [ -n "$recap_root" ]; then

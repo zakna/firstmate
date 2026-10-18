@@ -15,8 +15,7 @@
 #      its filled task text names, offered as likely areas, never `root` or
 #      a heading word, else the newest records across all seats;
 #      a brief scaffolded with --seat or --path keeps its own section.
-# bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh and
-# the recap's use of the id in tests/fm-predecessor-recap.test.sh.
+# bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -150,15 +149,18 @@ test_feed_is_newest_first_deduplicated_and_bounded() {
   assert_contains "$out" "$data/t7/decisions.md" "each record must link its full file"
   printf '%s\n' "$out" | grep -q '^## \|^# Task\|^Seats:' && fail "record lines must be indented: $out"
 
-  out=$(CONFIG=$home/config FM_SEAT_FEED_COUNT=1 FM_SEAT_FEED_LINES=2 fm_seat_feed_block "$data" proj bin)
-  [ "$(printf '%s\n' "$out" | grep -c '^  ')" = 3 ] || fail "a record must keep only the configured lines plus the cut note: $out"
+  mkdir -p "$data/t-long"
+  for n in $(seq 1 20); do printf 'line %s\n' "$n"; done > "$data/t-long/decisions.md"
+  index_line "$data" proj 1000000010 long t-long
+  out=$(CONFIG=$home/config fm_seat_feed_block "$data" proj long)
+  [ "$(printf '%s\n' "$out" | grep -c '^  ')" = 13 ] || fail "a record must keep only 12 lines plus the cut note: $out"
   assert_contains "$out" "[cut; the full record is at the path above]" "a cut record must say so"
 
-  write_record "$data" t-big bin "$(printf 'x%.0s' $(seq 1 900))"
-  index_line "$data" proj 1000000009 bin t-big
-  out=$(CONFIG=$home/config FM_SEAT_FEED_MAX_BYTES=600 fm_seat_feed_block "$data" proj bin)
+  write_record "$data" t-big big "$(printf 'x%.0s' $(seq 1 5000))"
+  index_line "$data" proj 1000000009 big t-big
+  out=$(CONFIG=$home/config fm_seat_feed_block "$data" proj big)
   n=$(printf '%s\n' "$out" | sed -n '/^- /,$p' | grep -v 'not shown; the index is' | LC_ALL=C wc -c | tr -d ' ')
-  [ "$n" -le 600 ] || fail "the feed's record entries must stay within the byte bound (got $n bytes)"
+  [ "$n" -le 4000 ] || fail "the feed's record entries must stay within the byte bound (got $n bytes)"
   assert_contains "$out" "\`t-big\`" "an oversized newest record must still be shown, cut"
   assert_contains "$out" "[cut to fit" "an oversized record must say it was cut"
 
