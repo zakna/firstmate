@@ -1,0 +1,25 @@
+## index.tsv after real teardown (record Seats: greeter; branch changed bin/greet.sh + docs/usage.md)
+1792343352	greeter	old-z1	ship
+1792343434	greeter	greet-w1	ship
+1792343434	docs	greet-w1	ship
+
+## archived data/greet-w1/meta.txt session lines
+claude_session_id=3d58628a-671c-46f9-9526-be52eb0e98bc
+
+## teardown output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+teardown: reaping leaked worktree process(es) for greet-w1: 27473 29937 30047
+teardown: force-killing leaked worktree process(es) for greet-w1: 27473
+A new version of treehouse is available: v2.3.0 → v3.1.4
+Run "treehouse update" to update
+
+🌳 Worktree returned to pool.
+teardown greet-w1 complete (window primary:fm-greet-w1, worktree /Users/olivier/.treehouse/seatdemo-9fe87a/1/seatdemo)
+Backlog: greet-w1 just finished (this home keeps no markdown backlog at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/data/backlog.md). Update /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/data/backlog.md - move greet-w1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.

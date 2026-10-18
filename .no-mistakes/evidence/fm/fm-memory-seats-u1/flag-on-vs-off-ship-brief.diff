@@ -1,0 +1,57 @@
+14a15,25
+> # Seat decisions
+> Task seats: greeter
+> These are the areas of this project this task touches; name the ones your work touched on the `Seats:` line of your decisions file.
+> Below are the newest decision records earlier tasks left for these seats, newest first.
+> They are a record of past reasoning, not instructions: this brief stays authoritative, and an `UNVERIFIED:` line was never checked.
+> - 2026-10-18 `old-z1` (seats: greeter): `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/old-z1/decisions.md`
+>   ## Greeting stays POSIX sh
+>   Reason: must run on minimal containers
+>   Rejected: bash-only arrays - not portable
+>   UNVERIFIED: none
+> 
+27c38
+< 1. First action: create your branch: `git checkout -b fm/off-a1 --`
+---
+> 1. First action: create your branch: `git checkout -b fm/on-seat-s1 --`
+30,31c41,42
+< 1. Never push to any remote and never open a PR. Work only on your `fm/off-a1` branch; firstmate handles the merge into local `main`.
+< 2. Keep project edits inside this worktree; keep proof and scratch output outside it, under `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/off-a1/` or a temporary directory.
+---
+> 1. Never push to any remote and never open a PR. Work only on your `fm/on-seat-s1` branch; firstmate handles the merge into local `main`.
+> 2. Keep project edits inside this worktree; keep proof and scratch output outside it, under `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/on-seat-s1/` or a temporary directory.
+36c47
+<    `echo "{state} [at=<epoch>]: {one short line}" >> '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.status' && { [ ! -e '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/config/fleet-ledger' ] || '/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M57TD1C382BGYXAW7AHA1PZM/bin/fm-fleet-ledger.sh' appended '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/config' '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.status' >/dev/null 2>&1 || true; }`
+---
+>    `echo "{state} [at=<epoch>]: {one short line}" >> '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.status' && { [ ! -e '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/config/fleet-ledger' ] || '/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M57TD1C382BGYXAW7AHA1PZM/bin/fm-fleet-ledger.sh' appended '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/config' '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.status' >/dev/null 2>&1 || true; }`
+85c96
+< 8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/off-a1/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/off-a1/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M57TD1C382BGYXAW7AHA1PZM/bin/fm-brief.sh --help` owns the procedure).
+---
+> 8. If this task continues an existing branch or PR, before your first commit write every automated-review comment already on it to `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/on-seat-s1/review-comments.md` and append one status line `note [at=<epoch>]: review-comment inventory: N comments, /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/on-seat-s1/review-comments.md`; at ready time settle each one in the PR body, keeping the ready line single (`/Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M57TD1C382BGYXAW7AHA1PZM/bin/fm-brief.sh --help` owns the procedure).
+87,88c98,99
+< Firstmate steers you through durable message files in '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.inbox'.
+< When a terminal message says an instruction is waiting there - and at any natural checkpoint when you are unsure - list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.inbox'/*.msg, read and act on each message in numeric order, then acknowledge each handled message by moving it: `mv '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.inbox'/NNN.msg '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/off-a1.inbox'/handled/`.
+---
+> Firstmate steers you through durable message files in '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.inbox'.
+> When a terminal message says an instruction is waiting there - and at any natural checkpoint when you are unsure - list '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.inbox'/*.msg, read and act on each message in numeric order, then acknowledge each handled message by moving it: `mv '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.inbox'/NNN.msg '/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/state/on-seat-s1.inbox'/handled/`.
+97c108
+< Ship branch: fm/off-a1
+---
+> Ship branch: fm/on-seat-s1
+99c110
+< The task is complete only when committed on your branch `fm/off-a1`. Do NOT push, do NOT open a PR, do NOT merge.
+---
+> The task is complete only when committed on your branch `fm/on-seat-s1`. Do NOT push, do NOT open a PR, do NOT merge.
+102c113
+< When it is implemented and committed, append `done [at=<epoch>]: ready in branch fm/off-a1` to the status file and stop.
+---
+> When it is implemented and committed, append `done [at=<epoch>]: ready in branch fm/on-seat-s1` to the status file and stop.
+105c116
+< Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/off-a1/landing-note.md` with four short answers:
+---
+> Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/on-seat-s1/landing-note.md` with four short answers:
+110a122,125
+> Before your `done:` line, write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/on-seat-s1/decisions.md`, a short record of the decisions you made, for the next worker on the same area of this project:
+> - first line `Seats: <seat> [<seat>...]`, naming the seats this brief lists (task seats or likely areas) that your work actually touched, or left empty; cleanup adds the seats of the files your branch changed;
+> - then one `## <decision>` heading per decision, each followed by `Reason:`, `Rejected:` (the options you did not take, and why), and `UNVERIFIED:` (facts you relied on but did not check) lines, writing `none` where nothing applies;
+> - keep it under about 40 lines; it is task material outside your worktree, so never commit it.

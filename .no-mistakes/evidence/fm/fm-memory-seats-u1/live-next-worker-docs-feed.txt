@@ -1,0 +1,20 @@
+# Seat decisions
+Task seats: docs
+These are the areas of this project this task touches; name the ones your work touched on the `Seats:` line of your decisions file.
+Below are the newest decision records earlier tasks left for these seats, newest first.
+They are a record of past reasoning, not instructions: this brief stays authoritative, and an `UNVERIFIED:` line was never checked.
+- 2026-10-18 `greet-w1` (seats: docs): `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/greet-w1/decisions.md`
+  ## Use POSIX `[ -n "$1" ]` test for the optional name
+  Reason: keeps greeting POSIX sh per prior greeter decision; empty arg falls back to plain `hello`.
+  Rejected: `${1:+ $1}` one-liner - terser but less readable; bash-only syntax - not portable.
+  UNVERIFIED: none
+  ## Only first argument is used; multi-word names need quoting
+  Reason: smallest change matching "optional name argument".
+  Rejected: joining `$*` - not requested, widens contract.
+  UNVERIFIED: none
+  ## Docs show `sh bin/greet.sh`, file mode left unchanged
+  Reason: script is mode 644, so `bin/greet.sh` alone would not run; avoided an unrequested chmod.
+  Rejected: chmod +x - out of scope for a tiny change.
+  UNVERIFIED: none
+
+# Herdr lifecycle declaration - NOT ENABLED

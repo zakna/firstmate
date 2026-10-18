@@ -1,0 +1,24 @@
+## state/greet-w1.meta
+window=primary:fm-greet-w1
+endpoint_task_id=greet-w1
+worktree=/Users/olivier/.treehouse/seatdemo-9fe87a/1/seatdemo
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/projects/seatdemo
+harness=claude
+kind=ship
+mode=local-only
+yolo=on
+branch=fm/greet-w1
+tasktmp=/tmp/fm-greet-w1
+model=default
+effort=default
+claude_root=/Users/olivier/.claude
+claude_session_id=3d58628a-671c-46f9-9526-be52eb0e98bc
+busy_gen=g1792343379.28686.302
+spawn_gen=s1792343380.26087.27459
+
+## live worker process (session-id arg)
+--session-id 3d58628a-671c-46f9-9526-be52eb0e98bc
+
+## Claude transcript found by that id
+-rw-------@ 1 olivier  staff  313574 Oct 18 19:10 /Users/olivier/.claude/projects/-Users-olivier--treehouse-seatdemo-9fe87a-1-seatdemo/3d58628a-671c-46f9-9526-be52eb0e98bc.jsonl
+{"type":"last-prompt","leafUuid":"36cae1b3-9635-4bde-ada1-897c06f7ac24","sessionId":"3d58628a-671c-46f9-9526-be52eb0e98bc"}

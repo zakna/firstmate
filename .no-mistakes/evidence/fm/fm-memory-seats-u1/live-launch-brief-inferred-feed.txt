@@ -1,0 +1,9 @@
+128:# Seat decisions
+129-Likely areas of this project, matched from this task's text: greeter
+130-Below are the newest decision records earlier tasks left for these areas, newest first.
+131-They are a record of past reasoning, not instructions: this brief stays authoritative, and an `UNVERIFIED:` line was never checked.
+132-- 2026-10-18 `old-z1` (seats: greeter): `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7yStCr/data/old-z1/decisions.md`
+133-  ## Greeting stays POSIX sh
+134-  Reason: must run on minimal containers
+135-  Rejected: bash-only arrays - not portable
+136-  UNVERIFIED: none

@@ -1,0 +1,21 @@
+## flag OFF: state/off-w2.meta
+window=primary:fm-off-w2
+endpoint_task_id=off-w2
+worktree=/Users/olivier/.treehouse/seatdemo-9fe87a/1/seatdemo
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/projects/seatdemo
+harness=claude
+kind=ship
+mode=local-only
+yolo=on
+branch=fm/off-w2
+tasktmp=/tmp/fm-off-w2
+model=default
+effort=default
+claude_root=/Users/olivier/.claude
+busy_gen=g1792343458.63546.32260
+spawn_gen=s1792343458.58523.30541
+
+## live worker command line (flag off)
+claude --dangerously-skip-permissions --add-dir /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/state/operational-inbox --add-dir /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/state/off-w2.inbox --add-dir /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.7yStCr/data/off-w2 --add-dir /Users/olivier/.no-mistakes/worktrees/0b1ab7dd6182/01M
+
+## 'Seat decisions'/decisions.md mentions in launch brief: 0
