@@ -397,6 +397,7 @@ family_for_basename() {
     fm-worker-account.test.sh|\
     fm-git-strip-ai-trailers.test.sh|\
     fm-trace-context-spawn.test.sh|fm-spawn-worktree-settle.test.sh|\
+    fm-seat-memory.test.sh|\
     fm-spawn-compact-adviser-disable.test.sh|\
     fm-spawn-compact-adviser-disable-remote.test.sh|\
     fm-project-capacity.test.sh|\
@@ -829,6 +830,7 @@ tests/fm-remote-secondmate-trace-context.test.sh 74870
 tests/fm-remote-transport-lanes.test.sh 66089
 tests/fm-rovo-harness.test.sh 15691
 tests/fm-rovo-signals-live-e2e.test.sh 52
+tests/fm-seat-memory.test.sh 20000
 tests/fm-secondmate-harness.test.sh 188187
 tests/fm-secondmate-busy-contract-live-e2e.test.sh 90000
 tests/fm-secondmate-lifecycle-e2e.test.sh 11268
@@ -1612,6 +1614,14 @@ families_for_changed_path() {
       ;;
     bin/fm-pr-*|bin/fm-merge-local.sh|bin/fm-teardown.sh|bin/fm-review-diff.sh|\
     bin/fm-x-*|bin/fm-check*|bin/fm-pipeline-spend.sh)
+      printf '%s\n' pr-forge
+      ;;
+    bin/fm-seat-lib.sh)
+      # Opt-in seat memory: its own suite, the brief and definition-of-done
+      # contracts that render it, and teardown's archiving.
+      printf '%s\n' "__script__:fm-seat-memory.test.sh"
+      printf '%s\n' "__script__:fm-brief.test.sh"
+      printf '%s\n' "__script__:fm-dod-lib.test.sh"
       printf '%s\n' pr-forge
       ;;
     bin/fm-nm-run-lib.sh)

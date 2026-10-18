@@ -19,8 +19,8 @@
 # charters still use a single `{TASK}` charter fill. Firstmate may adjust other
 # sections when the task genuinely deviates (e.g. working an existing external
 # PR instead of shipping a new one).
-# Usage: fm-brief.sh <task-id> <repo-name> --mode <no-mistakes|direct-PR|local-only> [--branch-prefix <prefix>] [--base-branch <branch>] [--forge <none|gerrit> [--shape squash]] [--herdr-lab]
-#        fm-brief.sh <task-id> <repo-name> --scout [--base-branch <branch>] [--herdr-lab]
+# Usage: fm-brief.sh <task-id> <repo-name> --mode <no-mistakes|direct-PR|local-only> [--branch-prefix <prefix>] [--base-branch <branch>] [--forge <none|gerrit> [--shape squash]] [--herdr-lab] [--seat <seat>]... [--path <path>]...
+#        fm-brief.sh <task-id> <repo-name> --scout [--base-branch <branch>] [--herdr-lab] [--seat <seat>]... [--path <path>]...
 #        fm-brief.sh <task-id> --secondmate {<project>...|--no-projects}
 #   --scout writes the scout contract instead: the deliverable is a report at
 #   data/<task-id>/report.md (no branch, no push, no PR) and the worktree is scratch.
@@ -152,6 +152,16 @@
 # regular file, or text carrying its own "Delivery contract: mode=" line (which
 # a later scout promotion could not outrank), stops the scaffold before
 # anything is written. Secondmate charters never take it.
+# --seat <seat> names an area of the project this task touches, and --path
+# <path> names a project-relative path whose seat bin/fm-seat-lib.sh resolves;
+# both repeat. With config/seat-memory present, ship and scout scaffolds then
+# carry a "# Seat decisions" section after the building blocks, holding those
+# seats' newest decision records, and every ship and scout definition of done
+# asks for the task's own decisions file. bin/fm-seat-lib.sh owns the record,
+# index, and feed bounds. With neither option, bin/fm-spawn.sh infers the
+# seats from the filled `# Task` text when it writes the launch brief. Without
+# the flag both options are accepted and change nothing. Refused on
+# --secondmate.
 # Refuses to overwrite an existing brief.
 set -eu
 
@@ -175,6 +185,8 @@ esac
 . "$SCRIPT_DIR/fm-classify-lib.sh"
 # shellcheck source=bin/fm-dod-lib.sh
 . "$SCRIPT_DIR/fm-dod-lib.sh"
+# shellcheck source=bin/fm-seat-lib.sh
+. "$SCRIPT_DIR/fm-seat-lib.sh"
 PAUSED_VERB=${FM_CLASSIFY_PAUSED_VERB:-$FM_CLASSIFY_PAUSED_VERB_DEFAULT}
 IFS= read -r -d '' CREWMATE_PAUSE_INSTRUCTIONS <<EOF || true
    Use \`$PAUSED_VERB: {why}\` - distinct from \`blocked:\` - when deliberately waiting for work or an external condition expected to clear on its own, including your own validation round.
@@ -226,6 +238,8 @@ FORGE=none
 FORGE_SET=0
 SHAPE=
 SHAPE_SET=0
+SEATS=()
+SEAT_PATHS=()
 POS=()
 want_value=
 for a in "$@"; do
@@ -239,6 +253,8 @@ for a in "$@"; do
       base-branch) BASE_BRANCH=$a; BASE_BRANCH_SET=1 ;;
       forge) FORGE=$a; FORGE_SET=1 ;;
       shape) SHAPE=$a; SHAPE_SET=1 ;;
+      seat) SEATS+=("$a") ;;
+      path) SEAT_PATHS+=("$a") ;;
       *) echo "error: internal parser state for --$want_value" >&2; exit 1 ;;
     esac
     want_value=
@@ -259,6 +275,10 @@ for a in "$@"; do
     --forge=*) FORGE=${a#--forge=}; FORGE_SET=1 ;;
     --shape) want_value=shape ;;
     --shape=*) SHAPE=${a#--shape=}; SHAPE_SET=1 ;;
+    --seat) want_value=seat ;;
+    --seat=*) SEATS+=("${a#--seat=}") ;;
+    --path) want_value=path ;;
+    --path=*) SEAT_PATHS+=("${a#--path=}") ;;
     # yolo never reaches the worker: it is firstmate's merge authority, not a
     # brief input. Refuse it loudly so it is never silently dropped here and then
     # believed to have been recorded.
@@ -336,6 +356,21 @@ printf -v BRANCH_Q '%q' "$BRANCH"
 if [ "$KIND" = secondmate ] && [ "$HERDR_LAB" -eq 1 ]; then
   echo "error: --herdr-lab applies only to crewmate ship or scout briefs" >&2
   exit 1
+fi
+
+# Seats are validated whether or not seat memory is on, so a typo never waits
+# for the flag to surface.
+if [ "${#SEATS[@]}" -gt 0 ] || [ "${#SEAT_PATHS[@]}" -gt 0 ]; then
+  [ "$KIND" != secondmate ] || {
+    echo "error: --seat and --path apply only to ship and scout briefs" >&2
+    exit 1
+  }
+  for a in ${SEATS[@]+"${SEATS[@]}"}; do
+    fm_seat_name_valid "$a" || {
+      echo "error: --seat must match [A-Za-z0-9][A-Za-z0-9._-]* (got '$a')" >&2
+      exit 1
+    }
+  done
 fi
 
 if [ "$NO_PROJECTS" -eq 1 ] && [ "$KIND" != secondmate ]; then
@@ -535,6 +570,26 @@ fi
 
 REPO=${POS[1]}
 
+# The optional seat feed. Empty unless seat memory is on and a seat was named,
+# so a brief without it is byte-identical; when set it carries its own
+# trailing blank line.
+SEAT_SECTION=
+SEAT_DECISIONS=
+if fm_seat_memory_enabled "$CONFIG" && SEAT_PROJECT=$(fm_seat_project_key "$REPO"); then
+  for a in ${SEAT_PATHS[@]+"${SEAT_PATHS[@]}"}; do
+    a=$(fm_seat_for_path "$(fm_seat_dir "$DATA" "$SEAT_PROJECT")/seats.txt" "$a") && SEATS+=("$a")
+  done
+  SEAT_UNIQUE=()
+  for a in ${SEATS[@]+"${SEATS[@]}"}; do
+    case " ${SEAT_UNIQUE[*]-} " in *" $a "*) ;; *) SEAT_UNIQUE+=("$a") ;; esac
+  done
+  [ "${#SEAT_UNIQUE[@]}" -eq 0 ] ||
+    SEAT_SECTION="$(fm_seat_feed_block "$DATA" "$SEAT_PROJECT" "${SEAT_UNIQUE[@]}")"$'\n\n'
+fi
+if [ "$KIND" = scout ] && fm_seat_memory_enabled "$CONFIG"; then
+  SEAT_DECISIONS="$(fm_seat_decisions_dod_block "$DATA/$ID" scout)"$'\n'
+fi
+
 if [ "$HERDR_LAB" -eq 1 ]; then
 HERDR_LAB_HELPER=$(shell_quote "$FM_ROOT/bin/fm-herdr-lab.sh")
 # shellcheck disable=SC2016  # single quotes are deliberate: these lines are literal brief text whose backtick-wrapped $(...) and "$HERDR_LAB_SESSION" snippets must reach the reading agent verbatim, not expand at scaffold time; only the '"$VAR"' break-outs interpolate.
@@ -629,7 +684,7 @@ You are a crewmate: an autonomous worker agent managed by firstmate. Work on you
 
 $TASK_SECTION
 
-$HERDR_SECTION
+$SEAT_SECTION$HERDR_SECTION
 
 # Setup
 $SETUP_BASE
@@ -666,7 +721,7 @@ Write your findings to \`$DATA/$ID/report.md\`.
 The report must stand alone: what you did, what you found, the evidence (commands run, output, file:line references), and what you recommend.
 $LAVISH_LINE
 Before reporting done, read and follow \`$FM_ROOT/.agents/skills/captain-hold-lifecycle/SKILL.md\` and pass its shared completion gate for the report and any visual review.
-When the report is complete, append \`done [at=<epoch>]: {one-line conclusion}\` to the status file and stop.
+${SEAT_DECISIONS}When the report is complete, append \`done [at=<epoch>]: {one-line conclusion}\` to the status file and stop.
 If your findings reveal work that should ship (e.g. you reproduced a bug and the fix is clear), say so in the report; firstmate may promote this task in place, and you would then receive mode-specific ship instructions as a follow-up message.
 EOF
 append_brief_include
@@ -712,7 +767,7 @@ $(fm_scope_allowance_block "$FM_ROOT")
 
 $(fm_building_blocks_block "$FM_ROOT" "$REPO")
 
-$HERDR_SECTION
+$SEAT_SECTION$HERDR_SECTION
 
 # Setup
 $SETUP_BASE
