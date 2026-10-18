@@ -432,15 +432,11 @@ STUB
 # replacement worker relaunches from carry the same Existing building blocks as a
 # scaffolded ship brief, and only for Firstmate's own repository.
 test_promotion_carries_existing_building_blocks() {
-  local home project id out mode origin
+  local home project id out
   home="$TMP_ROOT/promote-blocks/home"
   mkdir -p "$home/state" "$home/data" "$home/projects"
-  origin=$(git -C "$ROOT" remote get-url origin 2>/dev/null) || origin="https://example.invalid/firstmate.git"
-  for project in firstmate other; do
-    git init -q "$home/projects/$project"
-  done
-  git -C "$home/projects/firstmate" remote add origin "$origin"
-  git -C "$home/projects/other" remote add origin https://example.invalid/other.git
+  mkdir -p "$home/projects/firstmate/docs" "$home/projects/other"
+  cp "$ROOT/docs/scripts.md" "$home/projects/firstmate/docs/scripts.md"
   for project in firstmate other; do
     id="promote-blocks-$project"
     printf 'window=fm-%s\nkind=scout\nworktree=/tmp/wt\nproject=%s\n' "$id" "$home/projects/$project" > "$home/state/$id.meta"
@@ -457,7 +453,7 @@ test_promotion_carries_existing_building_blocks() {
       fi
     done
   done
-  pass "fm-promote: promoted ships get the existing building blocks only for Firstmate's own repository"
+  pass "fm-promote: promoted ships get the existing building blocks only for a project that carries the table"
 }
 
 test_promotion_persists_the_selected_ship_branch() {

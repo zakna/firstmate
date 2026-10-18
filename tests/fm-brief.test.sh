@@ -618,20 +618,13 @@ test_ship_scope_allowance() {
 # exists, so a Firstmate ship brief lists the shared libraries docs/scripts.md calls
 # the single owner of a contract, and every ship definition of done asks the report
 # to name the reused helper where that delivery mode has somewhere to put it. The
-# list is read from that table, not kept by hand, and never reaches another project.
+# list is read from the task project's own table, not kept by hand, so a project
+# without one gets nothing.
 test_ship_existing_building_blocks() {
-  local home root mode id brief origin
+  local home mode id brief
   home="$TMP_ROOT/building-blocks-home"
-  root="$TMP_ROOT/building-blocks-root"
-  origin="https://example.invalid/firstmate.git"
-  mkdir -p "$home/data" "$home/projects" "$root/docs"
-  git init -q "$home/projects/fm"
-  git -C "$home/projects/fm" remote add origin "$origin"
-  git init -q "$home/projects/other"
-  git -C "$home/projects/other" remote add origin https://example.invalid/other.git
-  git init -q "$root"
-  git -C "$root" remote add origin "$origin"
-  cat > "$root/docs/scripts.md" <<'EOF'
+  mkdir -p "$home/data" "$home/projects/fm/docs" "$home/projects/other"
+  cat > "$home/projects/fm/docs/scripts.md" <<'EOF'
 | Script | Purpose |
 | ------ | ------- |
 | `fm-alpha-lib.sh` | Single owner of alpha parsing; extra detail follows |
@@ -643,7 +636,7 @@ test_ship_existing_building_blocks() {
 EOF
   for mode in no-mistakes direct-PR local-only; do
     id="brief-blocks-$mode"
-    FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" fm --mode "$mode" >/dev/null 2>&1
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" fm --mode "$mode" >/dev/null 2>&1
     brief="$home/data/$id/brief.md"
     assert_present "$brief" "$mode brief was not scaffolded"
     assert_grep "# Existing building blocks" "$brief" "$mode brief lost the building blocks section"
@@ -665,21 +658,21 @@ EOF
   assert_no_grep "- (d) the existing helper you reused" \
     "$home/data/brief-blocks-direct-PR/brief.md" "PR-based landing note asked for the reuse report the PR carries"
   git -C "$home/projects/fm" remote set-url origin "git@example.invalid:firstmate"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh fm --mode direct-PR >/dev/null 2>&1
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh fm --mode direct-PR >/dev/null 2>&1
   assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh/brief.md" \
     "a registered clone with an SSH origin was not recognised as Firstmate"
   git -C "$home/projects/fm" remote set-url origin "ssh://git@example.invalid:22/firstmate.git/"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh-port fm --mode direct-PR >/dev/null 2>&1
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-ssh-port fm --mode direct-PR >/dev/null 2>&1
   assert_grep "# Existing building blocks" "$home/data/brief-blocks-ssh-port/brief.md" \
     "a registered clone with an explicit-port ssh:// origin was not recognised as Firstmate"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-other other --mode direct-PR >/dev/null 2>&1
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-other/brief.md" \
     "another project's brief listed Firstmate's libraries"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout fm --scout >/dev/null 2>&1
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-scout fm --scout >/dev/null 2>&1
   assert_no_grep "Existing building blocks" "$home/data/brief-blocks-scout/brief.md" \
     "scout brief received the ship building blocks"
-  rm -rf "$root/docs"
-  FM_ROOT_OVERRIDE="$root" FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs fm --mode direct-PR >/dev/null 2>&1
+  rm -rf "$home/projects/fm/docs"
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-blocks-nodocs fm --mode direct-PR >/dev/null 2>&1
   assert_present "$home/data/brief-blocks-nodocs/brief.md" "brief was not scaffolded without docs/scripts.md"
   assert_no_grep "# Existing building blocks" "$home/data/brief-blocks-nodocs/brief.md" \
     "brief printed an empty building blocks section"

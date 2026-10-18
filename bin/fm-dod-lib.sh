@@ -631,40 +631,21 @@ However narrowly the task above states its scope, the smallest downstream change
 EOF
 }
 
-# 0 when <project> names Firstmate's own repository: the registered clone (or the
-# directory itself) shares the code root's git directory or origin URL.
-fm_project_is_firstmate() {  # <fm-root> <fm-home> <project>
-  local root=$1 home=$2 project=$3 dir='' a b
-  [ -n "$project" ] || return 1
-  if [ -d "$home/projects/$project" ]; then dir="$home/projects/$project"
-  elif [ -d "$project" ]; then dir=$project
-  else return 1; fi
-  a=$(cd "$dir" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || a=''
-  b=$(cd "$root" 2>/dev/null && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || b=''
-  [ -z "$a" ] || [ "$a" != "$b" ] || return 0
-  a=$(fm_origin_identity "$dir")
-  b=$(fm_origin_identity "$root")
-  [ -n "$a" ] && [ "$a" = "$b" ]
-}
-
-# <dir>'s origin URL as host/owner/repo, so the SSH, HTTPS, and `.git`-suffixed
-# forms of one repository compare equal.
-fm_origin_identity() {  # <dir>
-  git -C "$1" remote get-url origin 2>/dev/null \
-    | sed -E 's#^([a-zA-Z][a-zA-Z0-9+.-]*://[^/]*):[0-9]+/#\1/#; s#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#/+$##; s#\.git$##'
-}
-
 # The "Existing building blocks" section of a Firstmate ship brief: the shared
 # libraries docs/scripts.md already describes as the single owner of a contract
 # ("Single owner", "One executable owner", "Single fleet-wide owner", ...), one
 # `name - purpose` line each, read from that table rather than kept by hand.
-# Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing for any other
-# project, whose worktree has neither these libraries nor that table, or when the
-# table is absent.
-fm_building_blocks_block() {  # <fm-root> <fm-home> <project>
-  local table="$1/docs/scripts.md" rows
+# The table is read from the task's own project (the registered clone under
+# <fm-home>/projects, or the directory itself), so only a project that carries such
+# a table - Firstmate's own repository - gets the section, at its own revision.
+# Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints nothing otherwise.
+fm_building_blocks_block() {  # <fm-home> <project-name-or-dir>
+  local dir='' table rows
+  if [ -d "$1/projects/$2" ]; then dir="$1/projects/$2"
+  elif [ -d "$2" ]; then dir=$2
+  else return 0; fi
+  table="$dir/docs/scripts.md"
   [ -r "$table" ] || return 0
-  fm_project_is_firstmate "$1" "$2" "$3" || return 0
   rows=$(awk -F'|' '
     $2 ~ /-lib\.sh/ && $3 ~ /^ *(Single|One)( [A-Za-z-]+)?( [A-Za-z-]+)? owner/ {
       name = $2; sub(/^[^`]*`/, "", name); sub(/`.*$/, "", name)

@@ -710,7 +710,7 @@ $TASK_SECTION
 
 $(fm_scope_allowance_block "$FM_ROOT")
 
-$(fm_building_blocks_block "$FM_ROOT" "$FM_HOME" "$REPO")
+$(fm_building_blocks_block "$FM_HOME" "$REPO")
 
 $HERDR_SECTION
 
