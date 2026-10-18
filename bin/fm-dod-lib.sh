@@ -638,7 +638,7 @@ EOF
 # The table is only ever the code root's own copy (trusted, never the task
 # project's text), and the section is only for a task on this Firstmate repository:
 # the registry name `firstmate`, or an absolute project directory whose origin URL
-# equals the code root's. Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints
+# equals the code root's or whose basename is `firstmate`. Rendered by bin/fm-brief.sh and bin/fm-promote.sh; prints
 # nothing otherwise.
 fm_building_blocks_block() {  # <fm-root> <project-name-or-absolute-dir>
   local table="$1/docs/scripts.md" rows origin

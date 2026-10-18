@@ -618,8 +618,8 @@ test_ship_scope_allowance() {
 # exists, so a Firstmate ship brief lists the shared libraries docs/scripts.md calls
 # the single owner of a contract, and every ship definition of done asks the report
 # to name the reused helper where that delivery mode lets the worker write it. The
-# list is read from the task project's own table, not kept by hand, so a project
-# without one gets nothing.
+# list is read from the code root's own table, not kept by hand, and only a task on
+# the Firstmate repository gets it; any other project gets nothing.
 test_ship_existing_building_blocks() {
   local home root mode id brief
   home="$TMP_ROOT/building-blocks-home"
