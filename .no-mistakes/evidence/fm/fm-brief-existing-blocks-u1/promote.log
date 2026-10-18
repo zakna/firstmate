@@ -1,0 +1,14 @@
+== bin/fm-promote.sh live-promote-firstmate --mode no-mistakes --yolo off
+warn: no registry at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/projects.md; defaulting firstmate to no-mistakes off
+promoted live-promote-firstmate to ship mode=no-mistakes yolo=off (teardown protection restored)
+wrote ship instructions for mode=no-mistakes: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-promote-firstmate/ship-instructions.md
+exit=
+live-promote-firstmate/ship-instructions.md: blocks=1 libs=10 reuse-rule=1
+live-promote-firstmate/brief.md: blocks=1 libs=10 reuse-rule=1
+== bin/fm-promote.sh live-promote-other --mode no-mistakes --yolo off
+warn: no registry at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/projects.md; defaulting other to no-mistakes off
+promoted live-promote-other to ship mode=no-mistakes yolo=off (teardown protection restored)
+wrote ship instructions for mode=no-mistakes: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-promote-other/ship-instructions.md
+exit=
+live-promote-other/ship-instructions.md: blocks=0 libs=0 reuse-rule=1
+live-promote-other/brief.md: blocks=0 libs=0 reuse-rule=1

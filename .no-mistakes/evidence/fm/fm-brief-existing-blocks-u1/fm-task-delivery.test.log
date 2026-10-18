@@ -16,7 +16,7 @@ ok - fm-promote: a promoted worker receives the same mode-specific delivery cont
 ●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ok - fm-promote: a selected branch prefix reaches both worker instructions and durable task state
-Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-task-delivery.NnhYc2/promote-branch-shell-safe-marker)/promote-branch-safe-e3'
+Switched to a new branch '$(touch${IFS}/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-task-delivery.BueH62/promote-branch-shell-safe-marker)/promote-branch-safe-e3'
 ok - fm-promote: ref-format-valid shell metacharacters stay literal in promotion branch commands
 ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ●  WATCHER DOWN - SUPERVISION IS OFF
@@ -38,9 +38,8 @@ ok - fm-spawn: the brief must carry the spawn's selected ship branch, and the se
 ok - fm-spawn: a ship branch that deviates from the registered prefix is announced, never blocked
 ok - fm-spawn: a registry forge token the parser refuses stops the launch, reason included
 ok - fm-promote: a promoted worker receives the project's registered forge contract with no flag to remember
-ok - fm-promote: promoted ships get the existing building blocks only for Firstmate's own repository
+ok - fm-promote: promoted ships get the existing building blocks only for a project that carries the table
 ok - fm-spawn/fm-promote: leftover Task placeholders are refused until both subsections are filled
 ok - fm-spawn/fm-promote: a Firstmate spec handing gate responses to the worker draws a warning and proceeds; the stated rule does not
 ok - fm-project-mode: --branch-prefix resolves order-independently and defaults to the legacy fm/ prefix
 # all fm-task-delivery tests passed
-bash tests/fm-task-delivery.test.sh  17.40s user 20.85s system 83% cpu 45.856 total

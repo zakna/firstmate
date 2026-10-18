@@ -1,0 +1,14 @@
+== bin/fm-brief.sh live-no-mistakes firstmate --mode no-mistakes
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+== bin/fm-brief.sh live-direct-PR firstmate --mode direct-PR
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-direct-PR/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+== bin/fm-brief.sh live-local-only firstmate --mode local-only
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+== gerrit
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-gerrit/brief.md (ship, mode=direct-PR forge=gerrit shape=squash; replace {TASK} and {FIRSTMATE_SPEC})
+== other
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-other/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+== scout
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-scout/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+== relative .
+scaffolded: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-dot/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})

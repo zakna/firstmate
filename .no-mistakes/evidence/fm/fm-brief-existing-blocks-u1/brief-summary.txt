@@ -1,6 +1,22 @@
-### t-direct-PR: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
-### t-local-only: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, as answer (d) of your landing note | landing: with four short answers | (d): 1
-### t-no-mistakes: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
-### t-port: building-blocks=1 rows=10 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
-### t-other: building-blocks=0 rows=0 reuse-rule: name the one you reused, or the search that found none, in the PR description | landing: with three short answers | (d): 0
-### t-scout: building-blocks=0 rows=0 reuse-rule:  | landing:  | (d): 0
+### live-no-mistakes: blocks=1 libs=10
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, as answer (d) of your landing note.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-no-mistakes/landing-note.md` with four short answers:
+- (d) the existing helper you reused, or the search that found none.
+### live-direct-PR: blocks=1 libs=10
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, in the PR description.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-direct-PR/landing-note.md` with three short answers:
+### live-local-only: blocks=1 libs=10
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, as answer (d) of your landing note.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-local-only/landing-note.md` with four short answers:
+- (d) the existing helper you reused, or the search that found none.
+### live-gerrit: blocks=1 libs=10
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, as answer (d) of your landing note.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-gerrit/landing-note.md` with four short answers:
+- (d) the existing helper you reused, or the search that found none.
+### live-other: blocks=0 libs=0
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, in the PR description.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-other/landing-note.md` with three short answers:
+### live-scout: blocks=0 libs=0
+### live-dot: blocks=0 libs=0
+Before adding a helper, search for an existing one and name the one you reused, or the search that found none, in the PR description.
+Before the `done:` line that finishes this task - the ready report - write `/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.PDKmnz/data/live-dot/landing-note.md` with three short answers:
