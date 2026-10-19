@@ -1,0 +1,15 @@
+window=primary:fm-usage-live1
+endpoint_task_id=usage-live1
+worktree=/Users/olivier/.treehouse/proj-6c01e6/1/proj
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.ew16Ku/proj
+harness=claude
+kind=ship
+mode=local-only
+yolo=on
+branch=fm/usage-live1
+tasktmp=/tmp/fm-usage-live1
+model=default
+effort=default
+claude_root=/Users/olivier/.claude
+busy_gen=g1792432918.43474.30709
+spawn_gen=s1792432919.42832.4994

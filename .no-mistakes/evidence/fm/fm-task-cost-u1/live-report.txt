@@ -1,0 +1,7 @@
+period: 1970-01-01 to 2026-10-19 UTC, by cleanup time
+tasks[2]{task,project,cleaned_up,input,output,cache_write,cache_read,cost_usd}:
+  usage-live1,proj,2026-10-19,4,134,19026,38739,~0.1627
+  usage-live2,proj,2026-10-19,4,161,16698,42527,~0.1453
+projects[1]{project,tasks,unmeasured,input,output,cache_write,cache_read,cost_usd}:
+  proj,2,0,8,295,35724,81266,~0.3080
+note: ~ marks a cost estimated from list prices, not a billed amount

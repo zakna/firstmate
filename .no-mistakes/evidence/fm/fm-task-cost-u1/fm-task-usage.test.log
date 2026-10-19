@@ -1,0 +1,11 @@
+ok - dispatch window: repeated lines count once (last wins), subagents and subdirectory-cwd responses count, and synthetic, earlier, and other-cwd responses do not
+ok - launch window: without a dispatch time, only responses since the record's spawn_gen count
+ok - named sessions: a named earlier session counts whatever its age, and a launch with no recorded id still counts through the window
+ok - prior roots: sessions an earlier launch left under another Claude root are counted, named or in the window
+ok - cost: estimated from the dated list-price table per model, 1-hour writes and Haiku's long-prompt card included, and an unknown model leaves the total unpriced rather than partial
+ok - cost: the tool's own cost is used when every response reports one, otherwise the estimate
+ok - capture: the window starts at this incarnation's dispatch, a saved figure of the same launch is kept, and nothing to measure saves null
+ok - capture: a response written after launch but before the dispatch record is counted
+ok - unmeasurable: no transcript, the byte bound, another harness, a second mate, or no record print nothing and exit 0
+ok - report: a retried cleanup counts once, a reused task id never takes an earlier incarnation's project, costs keep sub-cent precision, and the period filters by cleanup time
+rc=0
