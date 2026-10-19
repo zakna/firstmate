@@ -54,18 +54,20 @@ test_dispatch_window_counts_each_response_once() {
     msg s1 m3 '<synthetic>' 0 0 0 0
     msg s1 m4 claude-opus-5-5 900 900 900 900 2020-01-01T00:00:00.000Z
     msg s1 m5 claude-opus-5-5 800 800 800 800 "$NOW_ISO" /somewhere/else
+    msg s1 m7 claude-opus-5-5 700 700 700 700 "$NOW_ISO" "$WT-sibling"
+    msg s1 m8 claude-sonnet-5-5 4 6 0 0 "$NOW_ISO" "$WT/sub/dir"
     printf 'not json at all "usage"\n'
   } > "$TDIR/s1.jsonl"
   mkdir -p "$TDIR/s1/subagents"
   msg s1 m6 claude-haiku-5-5 2 4 10 0 > "$TDIR/s1/subagents/agent-a.jsonl"
   out=$(read_usage --since "$((NOW - 3600))") || fail "read exited non-zero"
   assert_equals "$(jq -cn --argjson since "$((NOW - 3600))" '{source: "claude-transcript", basis: "dispatch-window", since: $since,
-    sessions: 1, messages: 3, input_tokens: 6, output_tokens: 31, cache_write_tokens: 110, cache_read_tokens: 1050,
+    sessions: 1, messages: 4, input_tokens: 10, output_tokens: 37, cache_write_tokens: 110, cache_read_tokens: 1050,
     models: {"claude-haiku-5-5": {messages: 1, input_tokens: 2, output_tokens: 4, cache_write_tokens: 10, cache_read_tokens: 0},
       "claude-opus-5-5": {messages: 1, input_tokens: 3, output_tokens: 20, cache_write_tokens: 100, cache_read_tokens: 1000},
-      "claude-sonnet-5-5": {messages: 1, input_tokens: 1, output_tokens: 7, cache_write_tokens: 0, cache_read_tokens: 50}}}')" \
+      "claude-sonnet-5-5": {messages: 2, input_tokens: 5, output_tokens: 13, cache_write_tokens: 0, cache_read_tokens: 50}}}')" \
     "$out" "dispatch-window usage"
-  pass "dispatch window: repeated lines count once (last wins), subagents count, and synthetic, earlier, and other-cwd responses do not"
+  pass "dispatch window: repeated lines count once (last wins), subagents and subdirectory-cwd responses count, and synthetic, earlier, and other-cwd responses do not"
 }
 
 test_launch_window_falls_back_to_spawn_gen() {

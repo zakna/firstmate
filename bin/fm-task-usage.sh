@@ -30,8 +30,8 @@
 #   session-ids      the record names claude_session_id= (and any
 #                    claude_prior_session_ids=): exactly those sessions
 #   dispatch-window  otherwise, with --since: every message in that worktree's
-#                    transcripts whose cwd is the worktree and whose timestamp
-#                    is at or after --since
+#                    transcripts whose cwd is the worktree or a directory
+#                    under it and whose timestamp is at or after --since
 #   launch-window    otherwise the same, from the start epoch of the record's
 #                    spawn_gen=, which covers only the latest launch of a
 #                    relaunched task
@@ -117,6 +117,7 @@ claude_files() {  # <root> <worktree> <since> <session-ids, comma-separated>
 # shellcheck disable=SC2016 # jq variables, not shell expansion
 CLAUDE_JQ='
 def num: if type == "number" then . else null end;
+def under($p): . == $p or startswith($p + "/");
 def ts: (.timestamp // "") | tostring | sub("\\.[0-9]+"; "") | (try fromdateiso8601 catch null);
 def tally: {
   messages: length,
@@ -129,7 +130,7 @@ def tally: {
   | select(type == "object" and .type == "assistant" and (.message | type) == "object")
   | select((.message.usage | type) == "object" and (.message.model // "") != "<synthetic>")
   | select((.message.usage.input_tokens | num) != null and (.message.usage.output_tokens | num) != null)
-  | select(($window | not) or ((.cwd == $a or .cwd == $b) and ((ts // -1) >= $since)))
+  | select(($window | not) or (((.cwd // "") | tostring | under($a) or under($b)) and ((ts // -1) >= $since)))
   | {key: [(.message.id // .uuid // ""), (.requestId // "")], session: .sessionId,
      model: (.message.model // "unknown"), u: .message.usage, cost: (.costUSD | num)}]
 | group_by(.key) | map(.[-1])
