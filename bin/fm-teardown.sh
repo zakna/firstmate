@@ -333,7 +333,11 @@
 # recorded by bin/fm-pipeline-spend.sh, which owns the attribution and the
 # ledger. It runs before the task branch it attributes runs by is deleted and
 # before state/<id>.meta is removed, and is best effort: a failure warns and
-# never blocks cleanup.
+# never blocks cleanup. Right after it, when config/fleet-ledger opts this home
+# in, a ship or scout task whose local copy this teardown still owns has its
+# worker's usage saved by bin/fm-task-usage.sh capture, before the copy is
+# returned or removed, for the ledger's cleaned_up record; it is bounded and
+# silent, and never blocks cleanup.
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -3809,6 +3813,12 @@ if [ "$KIND" = ship ] && teardown_owns_worktree && [ -e "$CONFIG/pipeline-spend"
     "$SCRIPT_DIR/fm-pipeline-spend.sh" record "$ID" >/dev/null \
     || echo "warning: could not record $ID's no-mistakes pipeline spend; cleanup continues" >&2
 fi
+# Opt-in fleet activity ledger: save the worker's own usage now, while the
+# stopped worker's worktree is still this task's, for the cleaned_up record
+# below (bin/fm-task-usage.sh owns the read and its bound).
+if [ "$KIND" != secondmate ] && teardown_owns_worktree && [ -e "$CONFIG/fleet-ledger" ]; then
+  "$SCRIPT_DIR/fm-task-usage.sh" capture "$STATE/$ID.meta" >/dev/null 2>&1 || true
+fi
 
 # Fix 3 (see script header): sweep remote job workers abandoned by an already
 # pruned code root. Best effort - a sweep failure never blocks this teardown.
@@ -4031,7 +4041,7 @@ retire_busy_state "$STATE" "$ID" "$BUSY_GEN" || exit 1
 teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 status_retire_presentation_task "$STATE" "$ID" || exit 1
 fm_wake_queue_prune_task "$STATE" "$ID" "$T" 2>/dev/null || true
-rm -f "$STATE/$ID.turn-ended" "$STATE/$ID.progress" \
+rm -f "$STATE/$ID.turn-ended" "$STATE/$ID.progress" "$STATE/$ID.usage" \
   "$(fm_wake_signal_seen_path "$STATE" "$STATE/$ID.turn-ended")" \
   "$STATE/$ID.pi-ext.ts" "$STATE/$ID.omp-ext.ts" "$STATE/$ID.grok-turnend-token" \
   "$STATE/$ID.kimi-turnend-token" "$STATE/$ID.muse-session" \

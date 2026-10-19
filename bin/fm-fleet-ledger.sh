@@ -42,12 +42,12 @@
 # the status file's directory.
 # pr_ready, merged, and cleaned_up first capture their own task, so its status
 # records precede them. cleaned_up then deletes the task's offset, because teardown
-# retires that status log right after. Before taking the lock, cleaned_up runs
-# bin/fm-task-usage.sh read on state/<task>.meta, bounded at USAGE_TIMEOUT
-# seconds, with --since the ts of the task's latest task.dispatched record when
-# no later task.cleaned_up record for the same id follows it; any failure,
-# timeout, or empty result leaves the usage member out. dispatched deletes any
-# leftover offset so a reused task id starts at byte 0 of its fresh log.
+# retires that status log right after. cleaned_up records the spawn_gen of
+# state/<task>.meta and, when state/<task>.usage (written by
+# bin/fm-task-usage.sh capture before the worktree was released) names that
+# same spawn_gen, its usage; it never reads a transcript itself. dispatched
+# deletes any leftover offset so a reused task id starts at byte 0 of its
+# fresh log.
 # Every write holds state/.fleet-ledger.lock.
 #
 # Environment: FM_HOME, FM_STATE_OVERRIDE, and FM_CONFIG_OVERRIDE resolve the
@@ -67,7 +67,6 @@ CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
 LEDGER="$STATE/fleet-ledger.jsonl"
 LOCK="$STATE/.fleet-ledger.lock"
 TEXT_MAX_CHARS=2000
-USAGE_TIMEOUT=30
 
 usage() {
   echo "usage: fm-fleet-ledger.sh dispatched <task> <kind> <project> <harness> <model> | pr_ready <task> <url> | merged <task> pr <url> | merged <task> local | cleaned_up <task> | capture | appended <config> <state>/<task>.status" >&2
@@ -199,20 +198,17 @@ fi
 
 load_libs || exit 1
 
-# cleaned_up's optional usage member (bin/fm-task-usage.sh), read before the
-# lock and bounded, so a slow or failed read only leaves the member out.
+# cleaned_up's optional members: the incarnation's spawn_gen from its record,
+# and the usage bin/fm-task-usage.sh capture saved for that incarnation.
+SPAWN_GEN=
 USAGE=
-if [ "$cmd" = cleaned_up ] && [ -f "$STATE/$2.meta" ]; then
-  usage_since=
-  if [ -f "$LEDGER" ]; then
+if [ "$cmd" = cleaned_up ]; then
+  SPAWN_GEN=$(sed -n 's/^spawn_gen=//p' "$STATE/$2.meta" 2>/dev/null | tail -1) || SPAWN_GEN=
+  if [ -f "$STATE/$2.usage" ]; then
     # shellcheck disable=SC2016 # jq variables, not shell expansion
-    usage_since=$(grep -F "\"task\":\"$2\"" "$LEDGER" 2>/dev/null \
-      | jq -r --arg t "$2" 'select(.task == $t and (.event == "task.dispatched" or .event == "task.cleaned_up")) | "\(.event) \(.ts)"' 2>/dev/null \
-      | tail -1 | sed -n 's/^task\.dispatched \([0-9][0-9]*\)$/\1/p') || usage_since=
+    USAGE=$(jq -c --arg sg "$SPAWN_GEN" 'select(.spawn_gen == $sg and (.usage | type) == "object") | .usage' \
+      "$STATE/$2.usage" 2>/dev/null) || USAGE=
   fi
-  USAGE=$(fm_run_timed "$USAGE_TIMEOUT" "$SCRIPT_DIR/fm-task-usage.sh" read "$STATE/$2.meta" \
-    ${usage_since:+--since "$usage_since"} 2>/dev/null) || USAGE=
-  printf '%s' "$USAGE" | jq -e 'type == "object"' >/dev/null 2>&1 || USAGE=
 fi
 
 fm_lock_acquire_wait "$LOCK" || exit 1
@@ -248,8 +244,9 @@ case "$cmd" in
     ;;
   cleaned_up)
     capture_task "$2" || rc=1
-    append task.cleaned_up "$2" 'if $usage == "" then {} else {usage: ($usage | fromjson)} end' \
-      --arg usage "$USAGE" || rc=1
+    append task.cleaned_up "$2" \
+      '(if $sg == "" then {} else {spawn_gen: $sg} end) + (if $usage == "" then {} else {usage: ($usage | fromjson)} end)' \
+      --arg sg "$SPAWN_GEN" --arg usage "$USAGE" || rc=1
     [ "$rc" -ne 0 ] || rm -f -- "$(offset_path "$2")"
     ;;
 esac

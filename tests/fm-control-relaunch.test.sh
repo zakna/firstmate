@@ -435,7 +435,9 @@ test_relaunch_recap_reads_the_predecessor_account_root() {
   assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another root's transcript"
   [ "$(meta_field "$dir" rl60 claude_root)" = "$dir/user-home/.claude" ] \
     || fail "the replacement's record should carry the root it launched under, got '$(meta_field "$dir" rl60 claude_root)'"
-  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded root"
+  [ "$(meta_field "$dir" rl60 claude_prior_roots)" = "$dir/pinned" ] \
+    || fail "the replacement's record should keep the predecessor's root, got '$(meta_field "$dir" rl60 claude_prior_roots)'"
+  pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded root, and the record keeps that root"
 }
 
 test_relaunch_recap_reads_no_transcript_without_a_recorded_root() {
