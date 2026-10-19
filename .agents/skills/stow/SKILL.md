@@ -26,7 +26,7 @@ Markers are compact trailing HTML comments, deliberately cheap because marker by
 - `<!--g-->` - migration-only: an unconfirmed legacy entry that has consumed its one grace cycle, carrying no date because grace is not reinforcement.
 
 ```markdown
-- Treehouse pool slots share one repo, so workers must create their task branch before editing. <!--a:2026-08-03-->
+- When a worker starts in a Treehouse pool slot, it creates its task branch before editing, because slots share one repo. [ev: two lanes collided on one branch; h] <!--a:2026-08-03-->
 - While state/.afk exists, the away-daemon owns triage (until the afk-wake fix lands; tracked: afk-pi-wake-bypass-r1). <!--p:2026-07-20-->
 - Never restart the shared no-mistakes daemon while runs are active. <!--P-->
 - Codex writes its trust prompt to stderr, not stdout. <!--a:2026-07-28/6-->
@@ -51,6 +51,18 @@ Marking rules:
 - Inspect each editable file's header pointer on every pass and add or correct it; for a read-only `data/captain-shared.md`, leave the file byte-identical and route a missing or outdated pointer to the primary owner.
   The required receipt action for that file is `routed`, not `unchanged`; name the ownership exception and do not declare the session reset-safe.
 - A pre-existing missing or hand-dropped marker is never grounds for destructive treatment: it means the file's default tier; an unmarked entry in a default-pinned file is simply pinned, while an unmarked entry in a file whose default tier carries a clock follows the migration rule below.
+
+### Lesson shape in data/learnings.md
+
+Every `data/learnings.md` entry the pass writes, and every one whose date it refreshes, states four things so that one lucky run does not become a rule:
+
+- the cue: the situation where the lesson applies, written as its opening clause;
+- the lesson itself;
+- the evidence: a short `[ev: ...]` clause before the marker naming what the lesson rests on;
+- the confidence, as the clause's last letter: `h` when independent instances or the mechanism read in source confirm it, `m` when one clean observation has a named cause.
+
+Write an explicit `no entry` instead, and name it in the receipt with its reason, when the evidence is mixed, confounded, or a single unexplained success; such a finding is not admitted at any tier.
+An entry being refreshed that lacks the shape is rewritten into it in the same edit, while entries the pass does not write or refresh are not migrated.
 
 Decay advances only when a pass runs, so a home stowed less often than a clock experiences that clock at its stow interval.
 
@@ -98,7 +110,7 @@ Every `/stow` invocation performs this complete pass, even when the session cont
    Where the optional pass horizon is enabled, refreshing that date also clears the entry's unreinforced-pass counter, and nothing else clears it.
    **Hard rule: reinforcement requires independent evidence from this session that you can name in the receipt; plausibility, importance, prior knowledge, and the entry's own text are not evidence, and any explicit statement that no confirming session evidence exists requires the no-evidence path.**
    For an unmarked `data/learnings.md` entry with no such evidence, the no-evidence path is always to append `<!--g-->` and retain it for this entire pass; never stamp or archive it during that same invocation.
-   Stamp each newly written entry with today's date and its tier per the marking rules, and admit a new `perishable` entry only with its named checkable expiry condition in the prose.
+   Stamp each newly written entry with today's date and its tier per the marking rules, give each new or refreshed `data/learnings.md` entry the lesson shape above, and admit a new `perishable` entry only with its named checkable expiry condition in the prose.
 5. Evaluate every dated entry in each editable memory file against its tier clock.
    Where the optional pass horizon is enabled, first increment the unreinforced-pass counter of every dated entry step 4 did not reinforce - that increment is the pass tick - then judge each dated entry against both of its horizons and treat it as stale at whichever it reaches first.
    Re-validate a stale `aging` entry from current evidence and refresh its date, or archive it.
@@ -261,7 +273,7 @@ Report the outcome in plain captain-facing language with all of these facts:
 
 - effective startup-memory budget and total estimated tokens before and after;
 - one or more actions for each of `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, using only `unchanged`, `added`, `rewritten`, `pruned`, `routed`, `archived`, or `proposed-offload`; adding or replacing a migration marker is `rewritten`, never a new action verb such as `migrated`;
-- each durable finding filed outside memory and its authoritative owner;
+- each durable finding filed outside memory and its authoritative owner, and each `no entry` lesson with its reason;
 - each archived entry's reason, each autonomous offload's live destination and actual relief, and, when a pinned candidate was proposed, the `proposed-offload` section with every candidate's fields;
 - every unresolved exception, including a primary-owned shared-file constraint in a secondmate home, and every concrete captain decision opened for an over-budget result;
 - each open record this pass filed or corrected, and each one it deliberately left alone with the judgment it is waiting on;

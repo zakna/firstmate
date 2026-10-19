@@ -223,8 +223,10 @@ Each proposal must pass all four gates, which exist to stop overfitting to one t
 3. Small ongoing cost: minutes or one command per future ticket, and small against what it prevents.
 4. Checkable and retirable: it names one metric from the block, the number of tickets after which it is judged, and the condition under which it is dropped.
 
-For each proposal, write: the routing class, the evidence with its record, the owner file or configuration it would change, the drafted text or check, the four gate answers, and its cost stated honestly.
+For each proposal, write: the routing class, the cue - the future situation from gate 2 - the evidence with its record, the owner file or configuration it would change, the drafted text or check, the four gate answers, its confidence, and its cost stated honestly.
+Confidence is high when independent tickets or the mechanism read in the artefact confirm the cause, and medium when one occurrence has a named cause.
 A candidate that fails a gate goes in one line under "Considered and not proposed", with the gate it failed.
+A candidate whose evidence is mixed or confounded, such as one run that might have passed by luck, is not proposed: record it there as `no entry` with what would settle it.
 
 ### 8. Could not establish
 
