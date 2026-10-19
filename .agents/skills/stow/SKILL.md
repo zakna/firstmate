@@ -26,7 +26,7 @@ Markers are compact trailing HTML comments, deliberately cheap because marker by
 - `<!--g-->` - migration-only: an unconfirmed legacy entry that has consumed its one grace cycle, carrying no date because grace is not reinforcement.
 
 ```markdown
-- When a worker starts in a Treehouse pool slot, it creates its task branch before editing, because slots share one repo. [ev: two lanes collided on one branch; h] <!--a:2026-08-03-->
+- When a worker starts in a Treehouse pool slot, it creates its task branch before editing, because slots share one repo. [ev: two lanes collided on one branch; m] <!--a:2026-08-03-->
 - While state/.afk exists, the away-daemon owns triage (until the afk-wake fix lands; tracked: afk-pi-wake-bypass-r1). <!--p:2026-07-20-->
 - Never restart the shared no-mistakes daemon while runs are active. <!--P-->
 - Codex writes its trust prompt to stderr, not stdout. <!--a:2026-07-28/6-->
@@ -63,8 +63,7 @@ Every `data/learnings.md` entry the pass newly writes or merges in consolidation
 
 Write an explicit `no entry` instead, and name it in the receipt with its reason, when the evidence is mixed, confounded, or a single observation with neither a named cause nor direct confirmation; such a finding is not admitted at any tier.
 A `no entry` verdict only refuses admission of a new finding and never removes an entry that step 4 or step 5 legitimately refreshed.
-An entry being refreshed that lacks the shape is rewritten into it in the same edit.
-An entry added since the previous pass, such as one a session wrote outside `/stow`, that lacks the shape is shaped from named session evidence in this pass or, when none can be named, takes the step 4 no-evidence path; entries already present at the previous pass are not migrated.
+An entry being refreshed that lacks the shape is rewritten into it in the same edit; an entry with no `[ev: ...]` clause that this session wrote, or whose marker date is on or after the 2026-10-19 adoption date, is shaped from named session evidence or, with none, left on its existing clock without a refreshed date; unmarked entries keep the legacy migration path and older dated entries are never migrated.
 A marker-only change, such as appending `<!--g-->`, advancing a `/N` counter, or correcting a header pointer, is not a write here and never requires the shape.
 
 Decay advances only when a pass runs, so a home stowed less often than a clock experiences that clock at its stow interval.
