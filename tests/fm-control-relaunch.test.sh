@@ -423,19 +423,19 @@ test_relaunch_recap_reads_the_predecessor_account_root() {
   dir=$(new_case recap-account rl60)
   add_ship_task "$dir" rl60 claude
   enc=$(printf '%s' "$dir/wt" | sed 's/[^A-Za-z0-9]/-/g')
-  mkdir -p "$dir/pinned/projects/$enc" "$dir/user-home/.claude/projects/$enc"
+  mkdir -p "$dir/pin,ned/projects/$enc" "$dir/user-home/.claude/projects/$enc"
   printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE PREDECESSOR ACCOUNT"}}\n' "$dir/wt" \
-    >"$dir/pinned/projects/$enc/s1.jsonl"
+    >"$dir/pin,ned/projects/$enc/s1.jsonl"
   printf '{"type":"user","cwd":"%s","message":{"role":"user","content":"FROM THE AMBIENT ACCOUNT"}}\n' "$dir/wt" \
     >"$dir/user-home/.claude/projects/$enc/s2.jsonl"
-  printf 'claude_root=%s\nspawn_gen=s%s.1.1\n' "$dir/pinned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
+  printf 'claude_root=%s\nspawn_gen=s%s.1.1\n' "$dir/pin,ned" "$(( $(date +%s) - 60 ))" >> "$dir/home/state/rl60.meta"
   out=$(run_control "$dir" rl60 relaunch --note "recap account check"); rc=$?
   expect_code 0 "$rc" "the relaunch should succeed"$'\n'"$out"
   assert_grep "FROM THE PREDECESSOR ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap should read the predecessor's recorded root"
   assert_no_grep "FROM THE AMBIENT ACCOUNT" "$dir/home/data/rl60/launch-brief.md" "the recap must not read another root's transcript"
   [ "$(meta_field "$dir" rl60 claude_root)" = "$dir/user-home/.claude" ] \
     || fail "the replacement's record should carry the root it launched under, got '$(meta_field "$dir" rl60 claude_root)'"
-  [ "$(meta_field "$dir" rl60 claude_prior_roots)" = "$dir/pinned" ] \
+  [ "$(meta_field "$dir" rl60 claude_prior_roots)" = "${dir//%/%25}/pin%2Cned" ] \
     || fail "the replacement's record should keep the predecessor's root, got '$(meta_field "$dir" rl60 claude_prior_roots)'"
   pass "fm-control relaunch: the predecessor recap reads the predecessor's recorded root, and the record keeps that root"
 }

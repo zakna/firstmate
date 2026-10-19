@@ -85,7 +85,8 @@ run_lifecycle() {  # [<command...>]
     commit -qm 'landed'
   out=$(in_home "$ROOT/bin/fm-merge-local.sh" "$TASK" 2>&1) || fail "local merge failed: $out"
   [ "$#" -eq 0 ] || "$@"
-  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) || fail "teardown failed: $out"
+  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) \
+    || [ "${EXPECT_TEARDOWN_FAILURE:-0}" = 1 ] || fail "teardown failed: $out"
 }
 
 # Write a Claude transcript for the case's worktree, as the worker would have.
@@ -173,6 +174,38 @@ test_cleanup_usage_is_taken_before_the_worktree_is_returned() {
   row=$(ledger_rows 'select(.event == "task.cleaned_up") | .usage | [.sessions, .messages, .input_tokens]')
   assert_equals '[1,1,3]' "$row" "cleanup usage after a later lease"
   pass "flag on: usage is saved before the worktree goes back to the pool, so the next worker in that worktree is not charged to this task"
+}
+
+# Fail the cleanup after its record is written: the pool return swaps the task
+# record for a link to a copy, which the final record removal refuses.
+fail_after_the_record() {
+  write_transcript
+  cat > "$FAKEBIN/treehouse" <<SH
+#!/usr/bin/env bash
+if [ "\${1:-}" = return ]; then
+  mv -f "$HOME_DIR/state/$TASK.meta" "$HOME_DIR/state/$TASK.meta-real"
+  ln -s "$HOME_DIR/state/$TASK.meta-real" "$HOME_DIR/state/$TASK.meta"
+fi
+exit 0
+SH
+  chmod +x "$FAKEBIN/treehouse"
+}
+
+test_retried_cleanup_keeps_the_saved_usage() {
+  local out rows report
+  make_case on-usage-retry on
+  EXPECT_TEARDOWN_FAILURE=1 run_lifecycle fail_after_the_record
+  assert_present "$HOME_DIR/state/$TASK.meta" "the failed cleanup should keep the task record"
+  assert_present "$HOME_DIR/state/$TASK.usage" "the failed cleanup should keep the saved usage"
+  mv -f "$HOME_DIR/state/$TASK.meta-real" "$HOME_DIR/state/$TASK.meta"
+  fm_fake_exit0 "$FAKEBIN" treehouse
+  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) || fail "the retried cleanup failed: $out"
+  assert_absent "$HOME_DIR/state/$TASK.usage" "the saved usage should go with the task record"
+  rows=$(ledger_rows 'select(.event == "task.cleaned_up") | [.usage.messages, .usage.input_tokens]' | paste -sd' ' -)
+  assert_equals '[1,3] [1,3]' "$rows" "both cleanup records carry the usage"
+  report=$(in_home "$ROOT/bin/fm-task-usage.sh" report --json | jq -c '[(.tasks | length), .tasks[0].measured, .tasks[0].messages]')
+  assert_equals '[1,true,1]' "$report" "the report counts the retried cleanup once, measured"
+  pass "flag on: a cleanup retried after its record was written records the saved usage again, and the report counts it once"
 }
 
 test_cleanup_without_readable_usage_still_completes() {
@@ -347,6 +380,7 @@ test_flag_on_records_the_task_lifecycle
 test_cleanup_records_the_worker_usage
 test_cleanup_without_readable_usage_still_completes
 test_cleanup_usage_is_taken_before_the_worktree_is_returned
+test_retried_cleanup_keeps_the_saved_usage
 test_flag_on_records_a_pr_merge_once
 test_flag_on_records_a_pr_registration
 test_worker_status_line_is_recorded_when_written

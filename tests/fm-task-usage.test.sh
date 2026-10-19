@@ -101,16 +101,17 @@ test_named_sessions_add_to_the_window_without_replacing_it() {
 test_prior_roots_are_searched() {
   local out old_root old_dir
   make_case roots
-  old_root="$CASE_DIR/claude-old"
+  # A root may hold `,` and `%`, which the record writes as %2C and %25.
+  old_root="$CASE_DIR/claude,old%2C"
   old_dir="$old_root/projects/$(printf '%s' "$WT" | sed 's/[^A-Za-z0-9]/-/g')"
   mkdir -p "$old_dir"
-  printf 'claude_prior_roots=%s\nclaude_prior_session_ids=eeee-5\n' "$old_root" >> "$META"
+  printf 'claude_prior_roots=%s,%s\nclaude_prior_session_ids=eeee-5\n' "$CASE_DIR/none" "$CASE_DIR/claude%2Cold%252C" >> "$META"
   msg eeee-5 m1 claude-opus-5-5 1 1 0 0 2020-01-01T00:00:00Z > "$old_dir/eeee-5.jsonl"
   msg ffff-6 m2 claude-opus-5-5 2 2 0 0 > "$old_dir/ffff-6.jsonl"
   msg gggg-7 m3 claude-opus-5-5 4 4 0 0 > "$TDIR/gggg-7.jsonl"
   out=$(read_usage --since "$((NOW - 3600))" | jq -c '[.sessions, .messages, .input_tokens]')
   assert_equals '[3,3,7]' "$out" "usage across roots"
-  pass "prior roots: sessions an earlier launch left under another Claude root are counted, named or in the window"
+  pass "prior roots: sessions an earlier launch left under another Claude root, even one whose path holds a comma, are counted, named or in the window"
 }
 
 test_cost_is_estimated_from_the_dated_price_table() {
@@ -121,12 +122,12 @@ test_cost_is_estimated_from_the_dated_price_table() {
       '{"message":{"usage":{"cache_creation":{"ephemeral_1h_input_tokens":250000,"ephemeral_5m_input_tokens":750000}}}}'
     msg s1 m2 claude-haiku-5-5 50000 1000000 0 0
     msg s1 m3 claude-haiku-5-5 150000 1000000 0 0
-    msg s1 m4 claude-sonnet-5-5-20261001 1000000 0 0 0
+    msg s1 m4 claude-sonnet-5-5-20261001 1000000 0 0 1000000
   } > "$TDIR/s1.jsonl"
   out=$(read_usage | jq -c '[.cost_usd, .cost_source, .price_table_date, .unpriced_models,
     (.models | to_entries | map([.key, .value.cost_usd]))]')
-  # opus: 4 + 20 + 0.75*5 + 0.25*8 + 0.2 = 29.95; haiku: 0.005+0.5 and 0.075+2.5 (over 100K); sonnet: 2
-  assert_equals '[35.03,"price-table","2026-10-06",[],[["claude-haiku-5-5",3.08],["claude-opus-5-5",29.95],["claude-sonnet-5-5-20261001",2]]]' \
+  # opus: 4 + 20 + 0.75*5 + 0.25*8 + 0.2 = 29.95; haiku: 0.005+0.5 and 0.075+2.5 (over 100K); sonnet: 2 + 0.1
+  assert_equals '[35.13,"price-table","2026-10-19",[],[["claude-haiku-5-5",3.08],["claude-opus-5-5",29.95],["claude-sonnet-5-5-20261001",2.1]]]' \
     "$(printf '%s' "$out" | jq -c '.[0] |= (. * 100 | round / 100) | .[4] |= map(.[1] |= (. * 100 | round / 100))')" "estimated cost"
   msg s1 m5 claude-unknown-9 1 1 0 0 >> "$TDIR/s1.jsonl"
   out=$(read_usage | jq -c '[.cost_usd, .unpriced_models, .models["claude-unknown-9"].cost_usd, (.models["claude-opus-5-5"].cost_usd != null)]')
@@ -140,13 +141,40 @@ test_reported_cost_is_used_when_every_response_has_one() {
   {
     msg s1 m1 claude-opus-5-5 1 1 0 0 "$NOW_ISO" "$WT" '{"costUSD":0.25}'
     msg s1 m2 claude-opus-5-5 1 1 0 0 "$NOW_ISO" "$WT" '{"costUSD":0.5}'
+    msg s1 m3 claude-sonnet-5-5 1 1 0 0 "$NOW_ISO" "$WT" '{"costUSD":0.125}'
   } > "$TDIR/s1.jsonl"
-  out=$(read_usage | jq -c '[.cost_usd, .cost_source, has("price_table_date")]')
-  assert_equals '[0.75,"claude-transcript",false]' "$out" "reported cost"
-  msg s1 m3 claude-opus-5-5 1 1 0 0 >> "$TDIR/s1.jsonl"
+  out=$(read_usage | jq -c '[.cost_usd, .cost_source, has("price_table_date"), .models["claude-opus-5-5"].cost_usd, .models["claude-sonnet-5-5"].cost_usd]')
+  assert_equals '[0.875,"claude-transcript",false,0.75,0.125]' "$out" "reported cost"
+  # One response served by two models cannot be split between them.
+  msg s1 m4 claude-sonnet-5-5 1 1 0 0 "$NOW_ISO" "$WT" \
+    '{"costUSD":1,"message":{"usage":{"iterations":[{"type":"message","model":"claude-opus-5-5","input_tokens":1,"output_tokens":0},{"type":"fallback_message","model":"claude-sonnet-5-5","input_tokens":1,"output_tokens":1}]}}}' \
+    >> "$TDIR/s1.jsonl"
+  out=$(read_usage | jq -c '[.cost_usd, .models["claude-opus-5-5"].cost_usd, .models["claude-sonnet-5-5"].cost_usd]')
+  assert_equals '[1.875,null,null]' "$out" "reported cost across models"
+  msg s1 m5 claude-opus-5-5 1 1 0 0 >> "$TDIR/s1.jsonl"
   out=$(read_usage | jq -c '[.cost_source, .messages]')
-  assert_equals '["price-table",3]' "$out" "partial reported cost"
-  pass "cost: the tool's own cost is used when every response reports one, otherwise the estimate"
+  assert_equals '["price-table",5]' "$out" "partial reported cost"
+  pass "cost: the tool's own cost is used, in total and per model, when every response reports one, otherwise the estimate"
+}
+
+test_usage_iterations_are_summed_per_model() {
+  local out
+  make_case iterations
+  {
+    # A compaction step: the top-level counts leave it out.
+    msg s1 m1 claude-opus-5-5 10 20 0 0 "$NOW_ISO" "$WT" \
+      '{"message":{"usage":{"iterations":[{"type":"compaction","input_tokens":1000,"output_tokens":300},{"type":"message","input_tokens":10,"output_tokens":20}]}}}'
+    # A fallback: the declined attempt ran on another model.
+    msg s1 m2 claude-opus-4-8 412 264 0 0 "$NOW_ISO" "$WT" \
+      '{"message":{"usage":{"iterations":[{"type":"message","model":"claude-fable-5","input_tokens":535,"output_tokens":0},{"type":"fallback_message","model":"claude-opus-4-8","input_tokens":412,"output_tokens":264}]}}}'
+  } > "$TDIR/s1.jsonl"
+  out=$(read_usage | jq -c '[.messages, .input_tokens, .output_tokens,
+    (.models | to_entries | map([.key, .value.messages, .value.input_tokens, .value.output_tokens, (.value.cost_usd * 1e6 | round)])),
+    (.cost_usd * 1e6 | round)]')
+  # opus-5-5: 1010*4 + 320*20; fable-5: 535*10; opus-4-8: 412*5 + 264*25 (micro-dollars)
+  assert_equals '[2,1957,584,[["claude-fable-5",1,535,0,5350],["claude-opus-4-8",1,412,264,8660],["claude-opus-5-5",1,1010,320,10440]],24450]' \
+    "$out" "usage iterations"
+  pass "iterations: a response's server-side steps and fallback attempts are summed, each under the model that ran it"
 }
 
 test_capture_takes_the_dispatch_window_and_keeps_its_figures() {
@@ -257,6 +285,7 @@ test_named_sessions_add_to_the_window_without_replacing_it
 test_prior_roots_are_searched
 test_cost_is_estimated_from_the_dated_price_table
 test_reported_cost_is_used_when_every_response_has_one
+test_usage_iterations_are_summed_per_model
 test_capture_takes_the_dispatch_window_and_keeps_its_figures
 test_capture_counts_responses_written_before_the_dispatch_record
 test_unmeasurable_usage_prints_nothing

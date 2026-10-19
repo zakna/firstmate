@@ -4041,7 +4041,7 @@ retire_busy_state "$STATE" "$ID" "$BUSY_GEN" || exit 1
 teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
 status_retire_presentation_task "$STATE" "$ID" || exit 1
 fm_wake_queue_prune_task "$STATE" "$ID" "$T" 2>/dev/null || true
-rm -f "$STATE/$ID.turn-ended" "$STATE/$ID.progress" "$STATE/$ID.usage" \
+rm -f "$STATE/$ID.turn-ended" "$STATE/$ID.progress" \
   "$(fm_wake_signal_seen_path "$STATE" "$STATE/$ID.turn-ended")" \
   "$STATE/$ID.pi-ext.ts" "$STATE/$ID.omp-ext.ts" "$STATE/$ID.grok-turnend-token" \
   "$STATE/$ID.kimi-turnend-token" "$STATE/$ID.muse-session" \
@@ -4103,6 +4103,9 @@ else
     exit 1
   fi
 fi
+# The saved usage outlives a failed transition above, so a retried cleanup,
+# which can no longer read it, still records it; it goes with the task record.
+rm -f "$STATE/$ID.usage"
 fm_lock_release "$META_LOCK"
 META_LOCK_HELD=0
 if [ "$KIND" != scout ] && [ "$KIND" != secondmate ] && [ "$MODE" != local-only ]; then

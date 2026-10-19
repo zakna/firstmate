@@ -54,7 +54,7 @@ Example:
 {"v":1,"ts":1790133400,"event":"task.status","task":"fix-login","state":"done","key":null,"text":" PR https://github.com/acme/webapp/pull/7 checks green"}
 {"v":1,"ts":1790133410,"event":"task.pr_ready","task":"fix-login","pr":"https://github.com/acme/webapp/pull/7"}
 {"v":1,"ts":1790133900,"event":"task.merged","task":"fix-login","via":"pr","pr":"https://github.com/acme/webapp/pull/7"}
-{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login","spawn_gen":"s1790132857.4193.32297","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1790132857,"partial":false,"sessions":1,"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"models":{"claude-opus-5-5":{"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"cost_usd":1.26848}},"cost_usd":1.26848,"cost_source":"price-table","price_table_date":"2026-10-06","unpriced_models":[]}}
+{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login","spawn_gen":"s1790132857.4193.32297","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1790132857,"partial":false,"sessions":1,"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"models":{"claude-opus-5-5":{"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"cost_usd":1.26848}},"cost_usd":1.26848,"cost_source":"price-table","price_table_date":"2026-10-19","unpriced_models":[]}}
 ```
 
 ## Task usage
@@ -71,12 +71,13 @@ Reading it is bounded and can never stop or fail a cleanup: when it cannot be re
 | `partial` | `true` for `launch-window`, whose figures can miss earlier launches of a relaunched task |
 | `sessions`, `messages` | Agent sessions and model responses counted |
 | `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens` | Token totals; the four are disjoint, so input excludes cache reads and writes |
-| `models` | The same token totals, message count, and cost per model name |
+| `models` | The same token totals, message count, and cost per model name; a response that ran on two models, such as a fallback, counts under each |
 | `cost_usd` | The cost in US dollars, or `null` when a counted model has no known price; never a partial sum |
 | `cost_source` | `claude-transcript` when the agent tool reported the cost of every counted response, or `price-table` for an estimate at Anthropic's list prices |
 | `price_table_date`, `unpriced_models` | For a `price-table` estimate: the date of the price table used, and the counted models it has no price for |
 
-A `price-table` cost is an estimate at Anthropic's published per-token API prices, not a billed amount, and a worker on a subscription plan is not billed per token at all.
+A `price-table` cost is an estimate at Anthropic's published per-token API prices on the table's date, not a billed amount, and a worker on a subscription plan is not billed per token at all.
+Tokens a response spent on server-side steps, such as compaction or an attempt on a fallback model, are counted and priced under the model that ran them.
 Current Claude transcripts report no cost, so Claude records carry the estimate.
 The `task.cleaned_up` record also carries `spawn_gen`, the identifier of the task's latest launch, so a reader can recognize the repeated record a retried cleanup writes.
 

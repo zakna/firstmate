@@ -5274,8 +5274,9 @@ if [ "$HARNESS" = claude ] && [ "$RAW_LAUNCH" = 0 ] && [ "$KIND" != secondmate ]
   CLAUDE_SESSION_ID=$(fm_seat_session_uuid)
 fi
 # claude_prior_roots= likewise keeps every Claude root an earlier launch used,
-# comma-separated, so bin/fm-task-usage.sh finds sessions a relaunch under
-# another account left behind.
+# comma-separated with each root's `%` and `,` written as `%25` and `%2C`, so
+# bin/fm-task-usage.sh finds sessions a relaunch under another account left
+# behind.
 CLAUDE_PRIOR_ROOTS=
 if [ "$RELAUNCH" -eq 1 ]; then
   CLAUDE_PRIOR_SESSION_IDS=$(fm_meta_get "$RELAUNCH_META" claude_prior_session_ids)
@@ -5284,8 +5285,10 @@ if [ "$RELAUNCH" -eq 1 ]; then
   CLAUDE_PRIOR_ROOTS=$(fm_meta_get "$RELAUNCH_META" claude_prior_roots)
   prior_root=$(fm_meta_get "$RELAUNCH_META" claude_root)
   case "$prior_root" in
-    /*,*|'') ;;
-    /*) case ",$CLAUDE_PRIOR_ROOTS," in *",$prior_root,"*) ;; *) CLAUDE_PRIOR_ROOTS=${CLAUDE_PRIOR_ROOTS:+$CLAUDE_PRIOR_ROOTS,}$prior_root ;; esac ;;
+    /*)
+      prior_root=${prior_root//%/%25}; prior_root=${prior_root//,/%2C}
+      case ",$CLAUDE_PRIOR_ROOTS," in *",$prior_root,"*) ;; *) CLAUDE_PRIOR_ROOTS=${CLAUDE_PRIOR_ROOTS:+$CLAUDE_PRIOR_ROOTS,}$prior_root ;; esac
+      ;;
   esac
 fi
 

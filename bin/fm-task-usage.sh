@@ -38,9 +38,9 @@
 # transcripts in <session>/subagents/*.jsonl. The roots searched are the
 # record's claude_root= (else its account= pin: `ordinary` is $HOME/.claude, a
 # path is that root) and every root in claude_prior_roots=, the roots earlier
-# launches of a relaunched task used (bin/fm-spawn.sh). The worktree is encoded
-# as Claude does, every non-alphanumeric character replaced by `-`, for both
-# the recorded and the physical path. A response counts when either:
+# launches of a relaunched task used (bin/fm-spawn.sh owns its encoding). The
+# worktree is encoded as Claude does, every non-alphanumeric character
+# replaced by `-`, for both the recorded and the physical path. A response counts when either:
 #   - its session is named by claude_session_id= or claude_prior_session_ids=
 #     (opt-in seat memory), whatever its time; or
 #   - its cwd is the worktree or a directory under it, and its timestamp is at
@@ -57,16 +57,23 @@
 # repeat its usage, so responses are deduplicated by message id and request id
 # and the last line of each counts. Synthetic responses (model "<synthetic>")
 # are skipped. A response counts only when its input and output token counts
-# are numbers; its cache counts default to 0 when the response omits them.
-# Claude's input_tokens excludes cache reads and cache writes, so the four
-# token members are disjoint. A cache write is priced at the 1-hour rate for
-# the part the response's cache_creation reports as ephemeral_1h, and at the
-# 5-minute rate otherwise.
+# are numbers. When its usage carries a non-empty iterations array (a
+# server-side step such as compaction, or a fallback to another model), its
+# tokens are the sum of those entries, each under its own model or else the
+# response's, because the top-level counts then cover only part of the
+# request; an attempt that declined before any output is counted like the
+# rest. Missing token counts count as 0. Claude's input_tokens excludes cache
+# reads and cache writes, so the four token members are disjoint. A cache
+# write is priced at the 1-hour rate for the part cache_creation reports as
+# ephemeral_1h, and at the 5-minute rate otherwise. A model's message count is
+# the responses that used it.
 #
 # Cost. When every counted response carries a numeric costUSD, cost_usd is
 # their sum and cost_source is "claude-transcript"; current Claude Code
-# transcripts carry none. Otherwise cost_usd is an estimate at the PRICES
-# table below, cost_source is "price-table", and price_table_date is
+# transcripts carry none. Each model's cost_usd is then the sum for the
+# responses that used only that model, or null when one of its responses
+# also used another. Otherwise cost_usd is an estimate at the PRICES table
+# below, cost_source is "price-table", and price_table_date is
 # PRICE_TABLE_DATE. A model is matched by its name with any trailing
 # -YYYYMMDD removed. A model the table does not list stays unpriced: it is
 # named in unpriced_models, its own cost_usd is null, and the task's cost_usd
@@ -99,24 +106,28 @@ case "$MAX_BYTES" in ''|*[!0-9]*) MAX_BYTES=268435456 ;; esac
 TIMEOUT=${FM_TASK_USAGE_TIMEOUT:-30}
 case "$TIMEOUT" in ''|0|*[!0-9]*) TIMEOUT=30 ;; esac
 
-# Anthropic first-party API list prices in USD per million tokens, as the
-# Claude API reference listed them on PRICE_TABLE_DATE: input, output, 5-minute
-# cache write, 1-hour cache write, cache read. claude-haiku-5-5 has a second
-# card for prompts over 100K tokens (input + cache write + cache read).
-PRICE_TABLE_DATE=2026-10-06
+# Anthropic first-party API list prices in USD per million tokens, as
+# https://platform.claude.com/docs/en/about-claude/pricing listed them on
+# PRICE_TABLE_DATE: input, output, 5-minute cache write, 1-hour cache write,
+# cache read. claude-haiku-5-5 has a second card for a request whose prompt
+# (input + cache write + cache read) is over 100,000 tokens.
+PRICE_TABLE_DATE=2026-10-19
 # shellcheck disable=SC2016 # jq, not shell expansion
 PRICES='{
   "claude-fable-5-1":  [10, 50, 12.5, 20, 0.25],
   "claude-mythos-5-1": [10, 50, 12.5, 20, 0.25],
   "claude-fable-5":    [10, 50, 12.5, 20, 1],
+  "claude-mythos-5":   [10, 50, 12.5, 20, 1],
   "claude-opus-5-5":   [4, 20, 5, 8, 0.2],
   "claude-opus-5":     [5, 25, 6.25, 10, 0.5],
   "claude-opus-4-8":   [5, 25, 6.25, 10, 0.5],
   "claude-opus-4-7":   [5, 25, 6.25, 10, 0.5],
   "claude-opus-4-6":   [5, 25, 6.25, 10, 0.5],
-  "claude-sonnet-5-5": [2, 10, 2.5, 4, 0.2],
+  "claude-opus-4-5":   [5, 25, 6.25, 10, 0.5],
+  "claude-sonnet-5-5": [2, 10, 2.5, 4, 0.1],
   "claude-sonnet-5":   [2, 10, 2.5, 4, 0.2],
   "claude-sonnet-4-6": [3, 15, 3.75, 6, 0.3],
+  "claude-sonnet-4-5": [3, 15, 3.75, 6, 0.3],
   "claude-haiku-5-5":  [0.1, 0.5, 0.125, 0.2, 0.01],
   "claude-haiku-5-5>100k": [0.5, 2.5, 0.625, 1, 0.05],
   "claude-haiku-4-5":  [1, 5, 1.25, 2, 0.1]
@@ -171,12 +182,12 @@ def under($p): . == $p or startswith($p + "/");
 def ts: (.timestamp // "") | tostring | sub("\\.[0-9]+"; "") | (try fromdateiso8601 catch null);
 def model_key: sub("-[0-9]{8}$"; "");
 def tok: {
-  input_tokens: .u.input_tokens,
-  output_tokens: .u.output_tokens,
-  cache_write_tokens: (.u.cache_creation_input_tokens // 0),
-  cache_read_tokens: (.u.cache_read_input_tokens // 0)
+  input_tokens: (.u.input_tokens | num // 0),
+  output_tokens: (.u.output_tokens | num // 0),
+  cache_write_tokens: (.u.cache_creation_input_tokens | num // 0),
+  cache_read_tokens: (.u.cache_read_input_tokens | num // 0)
 };
-def w1h: ([(.u.cache_creation.ephemeral_1h_input_tokens | num // 0), (.u.cache_creation_input_tokens // 0)] | min);
+def w1h: ([(.u.cache_creation.ephemeral_1h_input_tokens | num // 0), (.u.cache_creation_input_tokens | num // 0)] | min);
 def price:
   (.model | model_key) as $m
   | tok as $t
@@ -185,8 +196,13 @@ def price:
   | if $p == null then null
     else ($t.input_tokens * $p[0] + $t.output_tokens * $p[1] + ($t.cache_write_tokens - w1h) * $p[2]
           + w1h * $p[3] + $t.cache_read_tokens * $p[4]) / 1000000 end;
-def tally: {
-  messages: length,
+def parts:
+  . as $r
+  | (if (.u.iterations | type) == "array" then [.u.iterations[] | select(type == "object")] else [] end)
+  | (if length == 0 then [{u: $r.u}] else map({u: .}) end)
+  | map(. + {model: ((.u.model | if type == "string" and . != "" then . else null end) // $r.model)})
+  | map(. + {t: tok, est: price});
+def sums: {
   input_tokens: (map(.t.input_tokens) | add),
   output_tokens: (map(.t.output_tokens) | add),
   cache_write_tokens: (map(.t.cache_write_tokens) | add),
@@ -201,20 +217,27 @@ def total_cost: if all(.[]; .est != null) then (map(.est) | add) else null end;
       or (((.cwd // "") | tostring | under($a) or under($b)) and ((ts // -1) >= $since)))
   | {key: [(.message.id // .uuid // ""), (.requestId // "")], session: .sessionId,
      model: (.message.model // "unknown"), u: .message.usage, cost: (.costUSD | num)}]
-| group_by(.key) | map(.[-1]) | map(. + {t: tok, est: price})
+| group_by(.key) | map(.[-1]) | map(. + {parts: parts} | . + {models: (.parts | map(.model) | unique)})
 | if length == 0 then empty else
-  (all(.[]; .cost != null)) as $reported
+  . as $responses
+  | (all(.[]; .cost != null)) as $reported
+  | [.[].parts[]] as $parts
   | {source: "claude-transcript", basis: $basis, since: $since, partial: ($basis == "launch-window"),
-     sessions: (map(.session) | unique | length)}
-  + tally
-  + {models: (group_by(.model) | map({key: .[0].model, value: (tally + (if $reported then {} else {cost_usd: total_cost} end))}) | from_entries)}
+     sessions: (map(.session) | unique | length), messages: length}
+  + ($parts | sums)
+  + {models: ($parts | group_by(.model) | map(.[0].model as $m
+      | [$responses[] | select(any(.models[]; . == $m))] as $used
+      | {key: $m, value: ({messages: ($used | length)} + sums
+          + {cost_usd: (if $reported
+              then (if all($used[]; .models | length == 1) then ($used | map(.cost) | add) else null end)
+              else total_cost end)})}) | from_entries)}
   + (if $reported then {cost_usd: (map(.cost) | add), cost_source: "claude-transcript"}
-     else {cost_usd: total_cost, cost_source: "price-table", price_table_date: $date,
-           unpriced_models: (map(select(.est == null) | .model) | unique)} end)
+     else {cost_usd: ($parts | total_cost), cost_source: "price-table", price_table_date: $date,
+           unpriced_models: ($parts | map(select(.est == null) | .model) | unique)} end)
   end'
 
 cmd_read() {
-  local meta=$1 since=$2 harness kind root account wt wtp roots prior ids basis files total size f
+  local meta=$1 since=$2 harness kind root account wt wtp roots prior p ids basis files total size f
   [ -f "$meta" ] || return 0
   command -v jq >/dev/null 2>&1 || return 0
   harness=$(meta_value "$meta" harness)
@@ -229,8 +252,13 @@ cmd_read() {
       /*) root=$account ;;
     esac
   fi
+  roots=$root
   prior=$(meta_value "$meta" claude_prior_roots)
-  roots=$(printf '%s\n%s\n' "$root" "${prior//,/$'\n'}" | awk 'NF && !seen[$0]++')
+  while IFS= read -r p; do
+    p=${p//%2C/,}
+    roots=$roots$'\n'${p//%25/%}
+  done <<< "${prior//,/$'\n'}"
+  roots=$(printf '%s\n' "$roots" | awk 'NF && !seen[$0]++')
   [ -n "$roots" ] || return 0
   wt=$(meta_value "$meta" worktree)
   case "$wt" in /*) ;; *) return 0 ;; esac

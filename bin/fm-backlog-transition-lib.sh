@@ -1198,6 +1198,9 @@ fm_backlog_close_marker_replay() {  # <state-dir> <marker-path> <authorized-data
     cleanup_incomplete=1
     fm_backlog_atomic_transition remove "$meta" "the interrupted task record" "$state" \
       || return 1
+    # Teardown keeps the record's saved usage (bin/fm-task-usage.sh) until
+    # the record is gone.
+    rm -f "$state/$id.usage"
   fi
   if fm_backlog_row_probe "$data" "$id"; then
     row_state=$FM_BACKLOG_ROW_STATE
