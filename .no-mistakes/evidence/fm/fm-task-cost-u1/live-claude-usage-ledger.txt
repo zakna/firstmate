@@ -1,0 +1,48 @@
+$ fm-task-usage.sh read state/live-usage.meta
+{
+  "source": "claude-transcript",
+  "basis": "launch-window",
+  "since": 1792437523,
+  "partial": true,
+  "sessions": 1,
+  "messages": 2,
+  "input_tokens": 4,
+  "output_tokens": 151,
+  "cache_write_tokens": 26346,
+  "cache_read_tokens": 25894,
+  "models": {
+    "claude-haiku-5-5": {
+      "messages": 2,
+      "input_tokens": 4,
+      "output_tokens": 151,
+      "cache_write_tokens": 26346,
+      "cache_read_tokens": 25894,
+      "cost_usd": 0.00560404
+    }
+  },
+  "cost_usd": 0.00560404,
+  "cost_source": "price-table",
+  "price_table_date": "2026-10-19",
+  "unpriced_models": []
+}
+rc=0
+$ fm-fleet-ledger.sh dispatched live-usage ship sample claude haiku
+rc=0
+$ fm-task-usage.sh capture state/live-usage.meta
+rc=0
+--- state/live-usage.usage:
+{"spawn_gen":"s1792437523.1.2","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1792437523,"partial":false,"sessions":1,"messages":2,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"models":{"claude-haiku-5-5":{"messages":2,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"cost_usd":0.00560404}},"cost_usd":0.00560404,"cost_source":"price-table","price_table_date":"2026-10-19","unpriced_models":[]}}
+$ fm-fleet-ledger.sh cleaned_up live-usage
+rc=0
+--- state/fleet-ledger.jsonl:
+{"v":1,"ts":1792437564,"event":"task.dispatched","task":"live-usage","kind":"ship","project":"sample","harness":"claude","model":"haiku"}
+{"v":1,"ts":1792437564,"event":"task.cleaned_up","task":"live-usage","spawn_gen":"s1792437523.1.2","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1792437523,"partial":false,"sessions":1,"messages":2,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"models":{"claude-haiku-5-5":{"messages":2,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"cost_usd":0.00560404}},"cost_usd":0.00560404,"cost_source":"price-table","price_table_date":"2026-10-19","unpriced_models":[]}}
+$ fm-task-usage.sh report
+period: 1970-01-01 to 2026-10-19 UTC, by cleanup time
+tasks[1]{task,project,cleaned_up,input,output,cache_write,cache_read,cost_usd}:
+  live-usage,sample,2026-10-19,4,151,26346,25894,~0.0056
+projects[1]{project,tasks,unmeasured,input,output,cache_write,cache_read,cost_usd}:
+  sample,1,0,4,151,26346,25894,~0.0056
+note: ~ marks a cost estimated from list prices, not a billed amount
+$ fm-task-usage.sh report --json
+{"since":0,"until":1792437565,"tasks":[{"task":"live-usage","ts":1792437564,"project":"sample","harness":"claude","measured":true,"basis":"dispatch-window","partial":false,"sessions":1,"messages":2,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"cost_usd":0.00560404,"cost_source":"price-table"}],"projects":[{"project":"sample","tasks":1,"measured":1,"unmeasured":0,"input_tokens":4,"output_tokens":151,"cache_write_tokens":26346,"cache_read_tokens":25894,"cost_usd":0.00560404,"estimated":true}]}

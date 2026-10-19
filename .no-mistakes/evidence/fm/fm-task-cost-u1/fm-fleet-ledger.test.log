@@ -2,6 +2,7 @@ ok - flag on: dispatch, polled status lines, the local merge after its task's pe
 ok - flag on: cleanup records the Claude worker's tokens since its dispatch, with a price-table cost estimate
 ok - flag on: a garbled transcript leaves usage out of the cleanup record and the cleanup completes
 ok - flag on: usage is saved before the worktree goes back to the pool, so the next worker in that worktree is not charged to this task
+ok - flag on: a cleanup retried after its record was written records the saved usage again, and the report counts it once
 ok - flag on: a PR merge is recorded once, after the task's pending status lines
 ok - flag on: registering a PR records task.pr_ready with its full URL after the task's pending status lines, and the merge-time re-record adds nothing
 ok - flag on: a worker's status command records its line at once, and the watcher backstop does not record it again
