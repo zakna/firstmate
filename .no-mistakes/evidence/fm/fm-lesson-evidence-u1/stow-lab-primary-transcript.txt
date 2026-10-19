@@ -1,0 +1,62 @@
+
+ ▐▛███▛█   Claude Code v2.1.303
+▝▜██████▀  Opus 5.5 (1M context) with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M5AFC6G8SCS08CHT2T5SAE16
+
+⚠ Your login expires in 1 day · run /login to renew
+
+❯ This is a lab test of the stow skill; FM_HOME is a disposable lab home, do not touch anything outside it and do not spawn crewmates. Session findings to consider for memory: (1) I read
+  bin/fm-spawn.sh in this repo and confirmed by its header that a concurrent Herdr resume refuses on session-lock contention unless --herdr-resume-lock-wait is passed; CI also failed twice on two
+  separate PRs because of exactly that. (2) Once, the herdr e2e test passed after I set TERM=dumb, but I changed several other things at the same time and have no idea whether TERM mattered; it may
+  have been luck. (3) No other entry in data/learnings.md was exercised this session. Now run /stow on this home.
+
+⏺ Skill(stow)
+  ⎿  Successfully loaded skill
+
+  Thought for 23s, ran 4 shell commands
+
+⏺ Captain, the memory-size check refused to run because this lab home has no memory budget setting. I'm curating the lessons file anyway and will flag that.
+
+  Thought for 9s, ran 1 shell command
+
+⏺ Captain, the lessons file is curated, but I can't call this session safe to reset yet. The memory-size check refused to run before and after the pass because this lab home has no
+  config/startup-memory-budget setting. It does not fill in a default, so I couldn't measure the budget or the before and after totals. Creating that setting is normally done at home setup, so I left
+  it for you to decide.
+
+  Memory files
+  - data/captain.md: unchanged (it doesn't exist).
+  - data/captain-shared.md: unchanged (it doesn't exist).
+  - data/learnings.md: added, rewritten and archived.
+    - Added your first finding. When two Herdr resumes can run at the same time, as in CI, the second one refuses because of contention on the session lock unless --herdr-resume-lock-wait is passed to
+      bin/fm-spawn.sh. I marked it high confidence because the fm-spawn.sh header confirms it and it caused CI failures on two separate PRs.
+    - Rewritten: I added the missing header line that points to the stow skill for how entries age.
+    - Archived "Herdr pane ids are reused after a workspace close." It was last confirmed 48 days ago, which is past its 30-day limit, and nothing this session confirmed it. It's now in the new
+      data/memory-archive.md with its history.
+    - Kept as-is: the permanent rule about not restarting the no-mistakes daemon, and the Codex stderr entry (9 days old, still within its limit).
+
+  Not saved: the TERM=dumb observation. It came from a single run where several other things changed at the same time, so it isn't a lesson.
+
+  Other checks
+  - No open work was held in this session, so no work records were filed or corrected.
+  - This home has no second mates, so nothing was passed on to other homes. I spawned no workers and touched nothing outside the lab home.
+
+  Safe to reset: not yet. Nothing from this session has been lost, but the budget couldn't be checked. That means nothing this session knew is missing; it doesn't mean the home's records are correct.
+  Once the budget setting exists, a re-run of /stow can measure it and confirm.
+
+✻ Churned for 43s · done 7:21 PM
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ create the budget config and re-run /stow
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M5AFC6G8SCS08CHT2T5SAE16 ctx 64741/1000000  Opus medium | 5h [░░░░░░] 0% →00:20 | 7d [██░░░░] 30% →Sat 19:00
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+
+[exited with code 0]

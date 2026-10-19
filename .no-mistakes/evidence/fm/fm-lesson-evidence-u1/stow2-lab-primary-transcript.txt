@@ -1,0 +1,43 @@
+❯ Second lab pass. Another process (not this session) just appended two entries to data/learnings.md. New session finding: I ran jq --version once just now and it printed jq-1.7.1; nothing else
+  checked it. Nothing this session exercised the Treehouse or Lavish entries. Run /stow again. In the receipt, explicitly say for each learnings entry what you did and why.
+
+  Thought for 4s
+
+⏺ Skill(stow)
+  ⎿  Successfully loaded skill
+
+  Thought for 21s, ran 3 shell commands
+
+⏺ Captain, I made one change to the lessons file this pass, but the session still isn't safe to reset. The memory-size check refused again before and after the pass because
+  config/startup-memory-budget is still missing, so I couldn't measure the budget or the totals.
+
+  What happened to each lesson in data/learnings.md:
+  1. "Never restart the shared no-mistakes daemon while runs are active." I left it unchanged. It's marked permanent, so it never expires.
+  2. "Codex writes its trust prompt to stderr…" I left it unchanged. It was last confirmed 9 days ago, within its 30-day limit, and nothing this session confirmed it, so its date wasn't refreshed.
+  3. The Herdr resume lock lesson. I left it unchanged. It was written last pass with today's date and its evidence, and nothing new about it came up.
+  4. "Treehouse get prints the slot path on its last stdout line." (added by the other process) I left it unchanged. It's dated today, so it isn't expired. It doesn't state its evidence and
+     confidence, but nothing in this session supports it, so I kept its date as-is rather than make that evidence up. If nothing supports it by the time it's 30 days old, it will be archived.
+  5. "Lavish sessions survive a daemon restart." (added by the other process, with no date) I marked it as being on its one grace period and kept it, because there's no evidence for it either way. If
+     the next /stow still has nothing confirming it, it gets archived as "never confirmed".
+
+  Not saved: "jq here is 1.7.1". It's a single version reading that will go stale on the next upgrade, and running jq --version gets it again instantly. That isn't a lasting lesson worth loading into
+  every session.
+
+  Other files
+  - data/captain.md and data/captain-shared.md: unchanged (neither exists).
+  - The archive (data/memory-archive.md): unchanged, since nothing expired this pass.
+
+  Other checks
+  - No open work was held this session, so no work records were filed or corrected.
+  - This home has no second mates, so nothing was passed on.
+
+  Safe to reset: no. Nothing this session knew has been lost, but the budget still can't be checked. That isn't a claim that the home's records are correct. Adding the budget setting would let the
+  next /stow measure it and confirm.
+
+✻ Cooked for 30s · done 7:22 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M5AFC6G8SCS08CHT2T5SAE16 ctx 67902/1000000  Opus medium | 5h [░░░░░░] 1% →00:20 | 7d [██░░░░] 30% →Sat 19:00
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
