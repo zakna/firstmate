@@ -62,8 +62,9 @@ in_home() {  # <command...>: run one real script against the case home
     PATH="$FAKEBIN:$PATH" "$@"
 }
 
-# Spawn, write status lines, poll once, land locally, clean up.
-run_lifecycle() {
+# Spawn, write status lines, poll once, land locally, clean up; an optional
+# command runs just before cleanup.
+run_lifecycle() {  # [<command...>]
   local out
   out=$(in_home "$ROOT/bin/fm-spawn.sh" "$TASK" "$PROJ_DIR" --mode local-only --yolo off 2>&1) \
     || fail "spawn failed: $out"
@@ -83,7 +84,27 @@ run_lifecycle() {
   git -C "$WT_DIR" -c user.name='Firstmate Tests' -c user.email='tests@example.invalid' \
     commit -qm 'landed'
   out=$(in_home "$ROOT/bin/fm-merge-local.sh" "$TASK" 2>&1) || fail "local merge failed: $out"
+  [ "$#" -eq 0 ] || "$@"
   out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) || fail "teardown failed: $out"
+}
+
+# Write a Claude transcript for the case's worktree, as the worker would have.
+write_transcript() {
+  local dir now
+  dir="$HOME_DIR/user-home/.claude/projects/$(printf '%s' "$WT_DIR" | sed 's/[^A-Za-z0-9]/-/g')"
+  now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+  mkdir -p "$dir"
+  jq -cn --arg cwd "$WT_DIR" --arg ts "$now" '
+    {type: "assistant", sessionId: "s1", cwd: $cwd, timestamp: $ts, requestId: "r1",
+     message: {id: "m1", model: "claude-opus-5-5",
+       usage: {input_tokens: 3, output_tokens: 40, cache_creation_input_tokens: 500, cache_read_input_tokens: 6000}}}' \
+    > "$dir/s1.jsonl"
+  TRANSCRIPT="$dir/s1.jsonl"
+}
+
+garbled_transcript() {
+  write_transcript
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":\n' > "$TRANSCRIPT"
 }
 
 ledger_rows() {  # <jq filter>: print one compact row per ledger record
@@ -114,6 +135,25 @@ EOF
   assert_contains "$LEDGER_AFTER_POLL" '"state":"needs-decision"' "the watcher poll did not record the status lines"
   assert_absent "$HOME_DIR/state/.$TASK.fleet-ledger-offset" "cleanup left the task's ledger offset behind"
   pass "flag on: dispatch, polled status lines, the local merge after its task's pending lines, and cleanup are recorded in order"
+}
+
+test_cleanup_records_the_worker_usage() {
+  local row dispatched
+  make_case on-usage on
+  run_lifecycle write_transcript
+  dispatched=$(ledger_rows 'select(.event == "task.dispatched") | .ts')
+  row=$(ledger_rows 'select(.event == "task.cleaned_up") | .usage | [.source, .basis, .since, .sessions, .messages, .input_tokens, .output_tokens, .cache_write_tokens, .cache_read_tokens, has("cost_usd")]')
+  assert_equals "[\"claude-transcript\",\"dispatch-window\",$dispatched,1,1,3,40,500,6000,false]" "$row" "cleanup usage"
+  pass "flag on: cleanup records the Claude worker's tokens since its dispatch, with no cost the tool did not report"
+}
+
+test_cleanup_without_readable_usage_still_completes() {
+  local rows
+  make_case on-usage-garbled on
+  run_lifecycle garbled_transcript
+  rows=$(ledger_rows 'select(.event == "task.cleaned_up") | keys')
+  assert_equals '["event","task","ts","v"]' "$rows" "cleanup record members"
+  pass "flag on: a garbled transcript leaves usage out of the cleanup record and the cleanup completes"
 }
 
 test_flag_on_records_a_pr_merge_once() {
@@ -276,6 +316,8 @@ test_flag_off_writes_nothing() {
 }
 
 test_flag_on_records_the_task_lifecycle
+test_cleanup_records_the_worker_usage
+test_cleanup_without_readable_usage_still_completes
 test_flag_on_records_a_pr_merge_once
 test_flag_on_records_a_pr_registration
 test_worker_status_line_is_recorded_when_written

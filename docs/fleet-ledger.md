@@ -33,7 +33,7 @@ Readers must ignore members and events they do not recognize, so later versions 
 | `task.status`      | `state`, `key`, `text`                         | A complete, nonblank line in the task's status log is captured. |
 | `task.pr_ready`    | `pr`                                           | Firstmate records the task's PR as ready for review. |
 | `task.merged`      | `via` (`"pr"` or `"local"`), plus `pr` when `via` is `"pr"` | The task's PR merge is recorded, or its local-only branch landed. |
-| `task.cleaned_up`  | none                                           | The task's worker and local copy were removed. |
+| `task.cleaned_up`  | `usage`, only when measured                    | The task's worker and local copy were removed. |
 
 `task.dispatched` members: `kind` is `ship`, `scout`, or `secondmate`; `project` is the project directory name, or `null` for a remote second mate; `harness` names the agent tool; `model` is the requested model, or `null` for the tool's default.
 
@@ -44,6 +44,8 @@ It is written each time firstmate records a PR for the task, so registering a re
 `key` is the line's `[key=...]` decision key, or `null`.
 `text` is the status line after its first colon, verbatim, capped at 2000 characters; if the line has no colon, it is the whole line.
 
+`task.cleaned_up` members: `usage` is the worker's own token usage over the task, described under [Task usage](#task-usage); it is left out, never zero, when the worker's agent tool records none that firstmate can read.
+
 Example:
 
 ```json
@@ -52,8 +54,31 @@ Example:
 {"v":1,"ts":1790133400,"event":"task.status","task":"fix-login","state":"done","key":null,"text":" PR https://github.com/acme/webapp/pull/7 checks green"}
 {"v":1,"ts":1790133410,"event":"task.pr_ready","task":"fix-login","pr":"https://github.com/acme/webapp/pull/7"}
 {"v":1,"ts":1790133900,"event":"task.merged","task":"fix-login","via":"pr","pr":"https://github.com/acme/webapp/pull/7"}
-{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login"}
+{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1790132857,"sessions":1,"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"models":{"claude-opus-5-5":{"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000}}}}
 ```
+
+## Task usage
+
+The `usage` member records the tokens the task's own worker spent, read from its agent tool's records when the task is cleaned up.
+Reading it is bounded and can never stop or fail a cleanup: when it cannot be read in time, or the tool records nothing firstmate can read, the member is left out.
+
+| Member | Meaning |
+| ------ | ------- |
+| `source` | Where the figures come from; currently `claude-transcript` |
+| `basis` | Which sessions were counted: `session-ids` (the sessions the task record names), `dispatch-window` (the worker's sessions since the task's `task.dispatched` record), or `launch-window` (since the latest launch only, when the ledger holds no dispatch record for the task, so earlier launches of a relaunched task are missed) |
+| `since` | The window start in Unix seconds, or `null` for `session-ids` |
+| `sessions`, `messages` | Agent sessions and model responses counted |
+| `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens` | Token totals; the four are disjoint, so input excludes cache reads and writes |
+| `models` | The same token totals and message count per model name |
+| `cost_usd`, `cost_source` | Present only when the agent tool itself reported a cost for every counted response; firstmate never derives a price |
+
+Covered agent tools: Claude ship and scout workers, from their session transcripts, including subagents.
+Not covered: every other agent tool, second mates, and the no-mistakes pipeline's own agents, whose spend `config/pipeline-spend` records separately (see [configuration](configuration.md#no-mistakes-pipeline-spend-configpipeline-spend)).
+Current Claude transcripts report no cost, so Claude records carry tokens only.
+`bin/fm-task-usage.sh`'s header owns how sessions are chosen and responses counted.
+
+To see usage per task and per project over a period, run `bin/fm-task-usage.sh report`, optionally with `--since` and `--until` as Unix seconds or a UTC date such as `2026-10-01`, and `--json` for the same figures as JSON.
+It reads the ledger file whether or not the ledger is on, attributes each cleaned-up task to the project of its own dispatch record, and lists a task with no `usage` member as unmeasured rather than as zero.
 
 ## Limits
 
