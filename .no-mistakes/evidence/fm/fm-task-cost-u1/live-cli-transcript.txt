@@ -1,0 +1,34 @@
+$ fm-task-usage.sh read (session-ids basis, claude_session_id recorded, kind=scout)
+{"source":"claude-transcript","basis":"session-ids","since":null,"sessions":1,"messages":2,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826,"models":{"claude-haiku-5-5":{"messages":2,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826}}}
+$ read, harness=codex (not covered)
+rc=0 output-bytes-above=0
+$ read, kind=secondmate
+rc=0
+$ read, dispatch window starting after the session (since=now+5)
+rc=0
+$ codex task: dispatched + cleaned_up through the ledger
+rc=0
+$ claude task cleaned_up with FM_TASK_USAGE_MAX_BYTES=1 (transcript over the bound)
+rc=0
+$ tail of fleet-ledger.jsonl
+{"v":1,"ts":1792427820,"event":"task.dispatched","task":"cx","kind":"ship","project":"other","harness":"codex","model":"null"}
+{"v":1,"ts":1792427820,"event":"task.cleaned_up","task":"cx"}
+{"v":1,"ts":1792427820,"event":"task.dispatched","task":"big","kind":"ship","project":"demo","harness":"claude","model":"null"}
+{"v":1,"ts":1792427821,"event":"task.cleaned_up","task":"big"}
+
+$ fm-task-usage.sh report
+period: 1970-01-01 to 2026-10-19 UTC, by cleanup time
+tasks[3]{task,project,cleaned_up,input,output,cache_write,cache_read,cost_usd}:
+  usage-live,demo,2026-10-19,4,124,26195,25826,-
+  cx,other,2026-10-19,unmeasured
+  big,demo,2026-10-19,unmeasured
+projects[2]{project,tasks,unmeasured,input,output,cache_write,cache_read,cost_usd}:
+  demo,2,1,4,124,26195,25826,-
+  other,1,1,0,0,0,0,-
+note: token totals cover measured tasks only; a project with unmeasured tasks has a lower bound and no cost
+$ fm-task-usage.sh report --json
+{"since":0,"until":1792427822,"tasks":[{"task":"usage-live","ts":1792427798,"project":"demo","harness":"claude","measured":true,"basis":"dispatch-window","sessions":1,"messages":2,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826,"cost_usd":null},{"task":"cx","ts":1792427820,"project":"other","harness":"codex","measured":false},{"task":"big","ts":1792427821,"project":"demo","harness":"claude","measured":false}],"projects":[{"project":"demo","tasks":2,"measured":1,"unmeasured":1,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826,"cost_usd":null},{"project":"other","tasks":1,"measured":0,"unmeasured":1,"input_tokens":0,"output_tokens":0,"cache_write_tokens":0,"cache_read_tokens":0,"cost_usd":null}]}
+$ report --since bogus
+error: --since takes an epoch or YYYY-MM-DD
+rc=2
+rc=0 lines before=       6 after=       6

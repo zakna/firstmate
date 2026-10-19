@@ -1,0 +1,2 @@
+{"v":1,"ts":1792427783,"event":"task.dispatched","task":"usage-live","kind":"ship","project":"demo","harness":"claude","model":"null"}
+{"v":1,"ts":1792427798,"event":"task.cleaned_up","task":"usage-live","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1792427783,"sessions":1,"messages":2,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826,"models":{"claude-haiku-5-5":{"messages":2,"input_tokens":4,"output_tokens":124,"cache_write_tokens":26195,"cache_read_tokens":25826}}}}
