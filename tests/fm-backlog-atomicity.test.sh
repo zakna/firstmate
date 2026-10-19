@@ -1811,6 +1811,29 @@ test_completion_fails_loudly_and_records_the_close_it_still_owes() {
   pass "completion refuses to report success while its item is still open, and records what it owes"
 }
 
+test_replayed_close_removes_the_saved_usage_of_a_removed_record() {
+  local case_dir home id out rc=0
+  id=atomic-close-usage-b7
+  case_dir=$(make_home close-usage)
+  home=$(home_of "$case_dir")
+  add_item "$case_dir" "$id"
+  start_item "$case_dir" "$id"
+  write_task_meta "$case_dir" "$id" ship local-only "spawn_gen=spawn-close-usage"
+  printf '{"spawn_gen":"spawn-close-usage","usage":null}\n' > "$home/state/$id.usage"
+  break_verb "$case_dir" "done"
+
+  out=$(run_teardown "$case_dir" "$id") || rc=$?
+  [ "$rc" -ne 0 ] || fail "teardown reported success while its item was still In flight"
+  assert_absent "$home/state/$id.meta" "teardown kept the task record before its backlog close"
+  assert_present "$home/state/$id.usage" "the failed close should not have reached the usage removal"
+  rm -f "$case_dir/fakebin/tasks-axi"
+
+  out=$(run_bootstrap "$case_dir")
+  [ "$(row_state "$case_dir" "$id")" = "done" ] || fail "restart did not replay the close: $out"
+  assert_absent "$home/state/$id.usage" "replay left the removed record's saved usage behind"
+  pass "a replayed close removes the saved usage of a task record already removed"
+}
+
 test_interrupted_destructive_cleanup_leaves_a_recoverable_close() {
   local case_dir home id marker out rc=0
   id=atomic-close-destructive-interrupt-b8
@@ -3149,6 +3172,7 @@ test_trailing_newline_data_path_fails_closed
 test_control_character_data_path_is_refused_before_cleanup
 test_completion_preserves_records_when_meta_removal_fails
 test_completion_fails_loudly_and_records_the_close_it_still_owes
+test_replayed_close_removes_the_saved_usage_of_a_removed_record
 test_interrupted_destructive_cleanup_leaves_a_recoverable_close
 test_completion_refuses_a_close_target_symlinked_to_a_directory
 test_completion_fails_when_its_close_marker_cannot_be_removed
