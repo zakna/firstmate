@@ -22,7 +22,9 @@
 # bounded by fm_run_timed at FM_TASK_USAGE_TIMEOUT seconds (default 30), with
 # --since the ts of the task's latest task.dispatched record in
 # <state>/fleet-ledger.jsonl when no task.cleaned_up of another incarnation (a
-# different or missing spawn_gen) follows it. Any failure saves usage null,
+# different or missing spawn_gen) follows it, or the start epoch of the
+# record's spawn_gen when that is earlier, since the dispatch record is
+# written after the worker has launched. Any failure saves usage null,
 # and capture always exits 0 apart from a usage error (2).
 # bin/fm-fleet-ledger.sh cleaned_up copies the saved usage into the record.
 #
@@ -259,7 +261,7 @@ cmd_read() {
 }
 
 cmd_capture() {
-  local meta=$1 dir task out spawn_gen since='' usage=''
+  local meta=$1 dir task out spawn_gen gen_epoch since='' usage=''
   dir=$(dirname "$meta")
   task=$(basename "$meta" .meta)
   out="$dir/$task.usage"
@@ -279,6 +281,11 @@ cmd_capture() {
           elif ($r.spawn_gen // "") != $sg or $sg == "" then null else . end)
       | . // empty' 2>/dev/null) || since=
   fi
+  gen_epoch=${spawn_gen#s}; gen_epoch=${gen_epoch%%.*}
+  case "$since$gen_epoch" in
+    *[!0-9]*) ;;
+    *) [ -n "$since" ] && [ -n "$gen_epoch" ] && [ "$gen_epoch" -lt "$since" ] && since=$gen_epoch ;;
+  esac
   # shellcheck source=bin/fm-timeout-lib.sh
   . "$SCRIPT_DIR/fm-timeout-lib.sh" 2>/dev/null || return 0
   usage=$(fm_run_timed "$TIMEOUT" "$SCRIPT_DIR/fm-task-usage.sh" read "$meta" ${since:+--since "$since"} 2>/dev/null) || usage=

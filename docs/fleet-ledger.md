@@ -66,7 +66,7 @@ Reading it is bounded and can never stop or fail a cleanup: when it cannot be re
 | Member | Meaning |
 | ------ | ------- |
 | `source` | Where the figures come from; currently `claude-transcript` |
-| `basis` | Where the counted window starts: `dispatch-window` (the task's `task.dispatched` record) or `launch-window` (the latest launch, when the ledger holds no dispatch record for this run of the task) |
+| `basis` | Where the counted window starts: `dispatch-window` (the task's `task.dispatched` record, or its latest launch when that is earlier, since the record is written after the launch) or `launch-window` (the latest launch, when the ledger holds no dispatch record for this run of the task) |
 | `since` | The window start in Unix seconds |
 | `partial` | `true` for `launch-window`, whose figures can miss earlier launches of a relaunched task |
 | `sessions`, `messages` | Agent sessions and model responses counted |

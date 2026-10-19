@@ -173,6 +173,17 @@ test_capture_takes_the_dispatch_window_and_keeps_its_figures() {
   pass "capture: the window starts at this incarnation's dispatch, a saved figure of the same launch is kept, and nothing to measure saves null"
 }
 
+test_capture_counts_responses_written_before_the_dispatch_record() {
+  local out
+  make_case early
+  msg s1 m1 claude-opus-5-5 5 5 0 0 "$(jq -nr --argjson t "$((NOW - 45))" '$t | todate')" > "$TDIR/s1.jsonl"
+  printf '{"v":1,"ts":%s,"event":"task.dispatched","task":"early"}\n' "$((NOW - 30))" > "$CASE_DIR/state/fleet-ledger.jsonl"
+  "$USAGE" capture "$META" || fail "capture exited non-zero"
+  out=$(jq -c '[.usage.basis, .usage.since, .usage.input_tokens]' "$CASE_DIR/state/early.usage")
+  assert_equals "[\"dispatch-window\",$((NOW - 60)),5]" "$out" "a response between launch and dispatch record"
+  pass "capture: a response written after launch but before the dispatch record is counted"
+}
+
 test_unmeasurable_usage_prints_nothing() {
   local out rc
   make_case absent
@@ -247,5 +258,6 @@ test_prior_roots_are_searched
 test_cost_is_estimated_from_the_dated_price_table
 test_reported_cost_is_used_when_every_response_has_one
 test_capture_takes_the_dispatch_window_and_keeps_its_figures
+test_capture_counts_responses_written_before_the_dispatch_record
 test_unmeasurable_usage_prints_nothing
 test_report_totals_tasks_and_projects_over_a_period

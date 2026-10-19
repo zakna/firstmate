@@ -143,7 +143,7 @@ test_cleanup_records_the_worker_usage() {
   local row dispatched
   make_case on-usage on
   run_lifecycle write_transcript
-  dispatched=$(ledger_rows 'select(.event == "task.dispatched") | .ts')
+  dispatched=$(ledger_rows 'select(.event == "task.cleaned_up") | .spawn_gen | ltrimstr("s") | split(".")[0] | tonumber')
   row=$(ledger_rows 'select(.event == "task.cleaned_up") | .usage | [.source, .basis, .since, .partial, .sessions, .messages, .input_tokens, .output_tokens, .cache_write_tokens, .cache_read_tokens, .cost_usd, .cost_source]')
   assert_equals "[\"claude-transcript\",\"dispatch-window\",$dispatched,false,1,1,3,40,500,6000,0.004512,\"price-table\"]" "$row" "cleanup usage"
   pass "flag on: cleanup records the Claude worker's tokens since its dispatch, with a price-table cost estimate"
