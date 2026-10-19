@@ -59,10 +59,12 @@ Every `data/learnings.md` entry the pass newly writes or merges in consolidation
 - the cue: the situation where the lesson applies, written as its opening clause;
 - the lesson itself;
 - the evidence: a short `[ev: ...]` clause before the marker naming what the lesson rests on;
-- the confidence, as the clause's last letter: `h` when independent instances or the mechanism read in source confirm it, `m` when one clean observation has a named cause.
+- the confidence, as the clause's last letter: `h` when independent instances or the mechanism read in source confirm it, `m` when one clean observation directly confirms a stated fact or has a named cause.
 
-Write an explicit `no entry` instead, and name it in the receipt with its reason, when the evidence is mixed, confounded, or weaker than `m`, such as a single observation with no named cause; such a finding is not admitted at any tier.
-An entry being refreshed that lacks the shape is rewritten into it in the same edit, while entries the pass does not write, merge, or refresh are not migrated.
+Write an explicit `no entry` instead, and name it in the receipt with its reason, when the evidence is mixed, confounded, or a single observation with neither a named cause nor direct confirmation; such a finding is not admitted at any tier.
+A `no entry` verdict only refuses admission of a new finding and never removes an entry that step 4 or step 5 legitimately refreshed.
+An entry being refreshed that lacks the shape is rewritten into it in the same edit.
+An entry added since the previous pass, such as one a session wrote outside `/stow`, that lacks the shape is shaped from named session evidence in this pass or, when none can be named, takes the step 4 no-evidence path; entries already present at the previous pass are not migrated.
 A marker-only change, such as appending `<!--g-->`, advancing a `/N` counter, or correcting a header pointer, is not a write here and never requires the shape.
 
 Decay advances only when a pass runs, so a home stowed less often than a clock experiences that clock at its stow interval.
