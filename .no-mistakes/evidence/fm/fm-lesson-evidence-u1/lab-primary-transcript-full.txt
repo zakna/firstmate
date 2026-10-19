@@ -1,0 +1,50 @@
+    - I added the stow header pointer.
+    - jq entry: at 48 days it was past its 30-day limit. I refreshed it to today and rewrote it to say:
+      - when it applies: running bin/fm-fleet-ledger.sh;
+      - the rule: jq must be on PATH;
+      - why: every ledger event is built with jq -cn and nothing checks for jq first;
+      - confidence: high, because the evidence is the append() code I read in this session.
+    - Herdr lab-name entry: unchanged. It's dated today so it isn't stale, and nothing this session confirmed it, so I didn't refresh it.
+
+  Archived: nothing, so no archive file was created.
+
+  Not added to memory:
+  - The lab-home refusal: the script and its library already record why it refuses.
+  - The fm-stow-cascade test flake: one failure with no known cause. As you asked, I didn't file it.
+
+  Open work: none held in this session.
+
+  Second mates: none are registered here, so nothing cascaded.
+
+  Exceptions: none.
+
+✻ Worked for 30s · done 6:30 PM
+
+❯ New check: in this lab home, run TMUX_TMPDIR="$FM_HOME/tmux" tmux -L fm-lab ls and also plain tmux ls, and tell me which server holds the "primary" session. That routing is a fleet-local fact for
+  this home. Then run /stow.
+
+  Thought for 21s, ran 3 shell commands
+
+⏺ Captain, the "primary" session is on the lab server, not the default tmux server.
+
+  Why the two commands looked the same: both listed main and primary. Plain tmux ls only showed them because this shell runs inside the lab server. $TMUX points at the lab socket under
+  $FM_HOME/tmux/tmux-501/fm-lab, and TMUX_TMPDIR is set to $FM_HOME/tmux. Asking primary for its socket path returns that same lab socket. With both variables removed, plain tmux ls reports no server
+  running on the default socket (/private/tmp/tmux-501/default).
+
+  Stow receipt: the pass is complete. The session is safe to reset, meaning nothing this session learned is lost; the pass does not check the rest of the home's records.
+  - Budget: 4000 tokens. Memory went from 145 to 276 estimated tokens.
+  - data/learnings.md (added): one new entry. It records that in this lab home "primary" lives on the fm-lab server under $FM_HOME/tmux, and that plain tmux only reaches it through the inherited
+    $TMUX. Confidence is medium: it rests on one direct observation of the socket path plus the check with the variables removed.
+  - Other learnings: the jq entry was refreshed earlier today, so I left it alone. The Herdr lab-name entry is also unchanged; this check involved tmux sessions, not Herdr, so it doesn't confirm that
+    entry.
+  - data/captain.md and data/captain-shared.md: unchanged. The shared file doesn't exist in this home.
+  - Archived: nothing. Open work: none. Exceptions: none.
+  - Second mates: none are registered here.
+
+✻ Cooked for 27s · done 6:31 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ show me data/learnings.md
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M5AFC6G8SCS08CHT2T5SAE16 ctx 88382/1000000  Opus medium | 5h [░░░░░░] 7% →19:20 | 7d [██░░░░] 29% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle)

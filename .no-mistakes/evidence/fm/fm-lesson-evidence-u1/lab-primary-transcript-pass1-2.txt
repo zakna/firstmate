@@ -1,0 +1,50 @@
+  - bin/fm-fleet-ledger.sh does invoke jq. Every ledger event goes through append(), which builds the JSON line with jq -cn ... (bin/fm-fleet-ledger.sh:147). That covers dispatched, ready PR, merged,
+    cleanup and the others. The script never checks up front whether jq exists. Without jq, that jq call fails, so append returns 1 and the command exits non-zero.
+
+  This means the "fleet ledger script needs jq on PATH" learning is confirmed from the source. On the next /stow it can be refreshed and kept rather than archived. I've also seen that the budget is
+  now set to 4000.
+
+✻ Sautéed for 19s · done 6:30 PM
+
+❯ /stow
+
+  Thought for 8s, ran 2 shell commands
+
+⏺ Captain, the stow pass is complete and this home is within budget. The session is safe to reset. That means nothing this session learned will be lost; it does not mean every durable record in the
+  home has been checked.
+
+  Budget: 4000 tokens. Memory went from 65 to 145 estimated tokens. The increase is the stow header pointers plus the fuller wording and source note on the jq entry.
+
+  Per file:
+  - data/captain.md: rewritten.
+    - I added the stow header pointer.
+    - I dropped the redundant pinned marker from "Prefers concise reports", since everything in this file is pinned by default.
+  - data/captain-shared.md: unchanged, because it doesn't exist in this home.
+  - data/learnings.md: rewritten.
+    - I added the stow header pointer.
+    - jq entry: at 48 days it was past its 30-day limit. I refreshed it to today and rewrote it to say:
+      - when it applies: running bin/fm-fleet-ledger.sh;
+      - the rule: jq must be on PATH;
+      - why: every ledger event is built with jq -cn and nothing checks for jq first;
+      - confidence: high, because the evidence is the append() code I read in this session.
+    - Herdr lab-name entry: unchanged. It's dated today so it isn't stale, and nothing this session confirmed it, so I didn't refresh it.
+
+  Archived: nothing, so no archive file was created.
+
+  Not added to memory:
+  - The lab-home refusal: the script and its library already record why it refuses.
+  - The fm-stow-cascade test flake: one failure with no known cause. As you asked, I didn't file it.
+
+  Open work: none held in this session.
+
+  Second mates: none are registered here, so nothing cascaded.
+
+  Exceptions: none.
+
+✻ Worked for 30s · done 6:30 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /clear
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M5AFC6G8SCS08CHT2T5SAE16 ctx 84825/1000000  Opus medium | 5h [░░░░░░] 7% →19:20 | 7d [██░░░░] 29% →Sat 19:00
+  ⏵⏵ auto mode on (shift+tab to cycle)
