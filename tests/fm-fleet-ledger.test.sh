@@ -62,8 +62,9 @@ in_home() {  # <command...>: run one real script against the case home
     PATH="$FAKEBIN:$PATH" "$@"
 }
 
-# Spawn, write status lines, poll once, land locally, clean up.
-run_lifecycle() {
+# Spawn, write status lines, poll once, land locally, clean up; an optional
+# command runs just before cleanup.
+run_lifecycle() {  # [<command...>]
   local out
   out=$(in_home "$ROOT/bin/fm-spawn.sh" "$TASK" "$PROJ_DIR" --mode local-only --yolo off 2>&1) \
     || fail "spawn failed: $out"
@@ -83,7 +84,28 @@ run_lifecycle() {
   git -C "$WT_DIR" -c user.name='Firstmate Tests' -c user.email='tests@example.invalid' \
     commit -qm 'landed'
   out=$(in_home "$ROOT/bin/fm-merge-local.sh" "$TASK" 2>&1) || fail "local merge failed: $out"
-  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) || fail "teardown failed: $out"
+  [ "$#" -eq 0 ] || "$@"
+  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) \
+    || [ "${EXPECT_TEARDOWN_FAILURE:-0}" = 1 ] || fail "teardown failed: $out"
+}
+
+# Write a Claude transcript for the case's worktree, as the worker would have.
+write_transcript() {
+  local dir now
+  dir="$HOME_DIR/user-home/.claude/projects/$(printf '%s' "$WT_DIR" | sed 's/[^A-Za-z0-9]/-/g')"
+  now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+  mkdir -p "$dir"
+  jq -cn --arg cwd "$WT_DIR" --arg ts "$now" '
+    {type: "assistant", sessionId: "s1", cwd: $cwd, timestamp: $ts, requestId: "r1",
+     message: {id: "m1", model: "claude-opus-5-5",
+       usage: {input_tokens: 3, output_tokens: 40, cache_creation_input_tokens: 500, cache_read_input_tokens: 6000}}}' \
+    > "$dir/s1.jsonl"
+  TRANSCRIPT="$dir/s1.jsonl"
+}
+
+garbled_transcript() {
+  write_transcript
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":\n' > "$TRANSCRIPT"
 }
 
 ledger_rows() {  # <jq filter>: print one compact row per ledger record
@@ -98,7 +120,7 @@ test_flag_on_records_the_task_lifecycle() {
   jq -e -s 'all(.[]; .v == 1 and (.ts | type) == "number" and (.task | type) == "string")' \
     "$HOME_DIR/state/fleet-ledger.jsonl" >/dev/null \
     || fail "every record must carry v, ts, event, and task: $(cat "$HOME_DIR/state/fleet-ledger.jsonl")"
-  rows=$(ledger_rows '[.event, .task] + (del(.v, .ts, .event, .task) | to_entries | map(.value))')
+  rows=$(ledger_rows '[.event, .task] + (del(.v, .ts, .event, .task, .spawn_gen) | to_entries | map(.value))')
   assert_equals "$(cat <<EOF
 ["task.dispatched","$TASK","ship","sample","claude",null]
 ["task.status","$TASK","working",null," setup done"]
@@ -112,8 +134,87 @@ EOF
 )" "$rows" "ledger rows"
   assert_not_contains "$LEDGER_AFTER_POLL" "partial line" "the poll recorded a line before its newline arrived"
   assert_contains "$LEDGER_AFTER_POLL" '"state":"needs-decision"' "the watcher poll did not record the status lines"
+  assert_equals '"s"' "$(ledger_rows 'select(.event == "task.cleaned_up") | .spawn_gen[0:1]')" "cleanup spawn_gen"
   assert_absent "$HOME_DIR/state/.$TASK.fleet-ledger-offset" "cleanup left the task's ledger offset behind"
+  assert_absent "$HOME_DIR/state/$TASK.usage" "cleanup left the task's saved usage behind"
   pass "flag on: dispatch, polled status lines, the local merge after its task's pending lines, and cleanup are recorded in order"
+}
+
+test_cleanup_records_the_worker_usage() {
+  local row dispatched
+  make_case on-usage on
+  run_lifecycle write_transcript
+  dispatched=$(ledger_rows 'select(.event == "task.cleaned_up") | .spawn_gen | ltrimstr("s") | split(".")[0] | tonumber')
+  row=$(ledger_rows 'select(.event == "task.cleaned_up") | .usage | [.source, .basis, .since, .partial, .sessions, .messages, .input_tokens, .output_tokens, .cache_write_tokens, .cache_read_tokens, .cost_usd, .cost_source]')
+  assert_equals "[\"claude-transcript\",\"dispatch-window\",$dispatched,false,1,1,3,40,500,6000,0.004512,\"price-table\"]" "$row" "cleanup usage"
+  pass "flag on: cleanup records the Claude worker's tokens since its dispatch, with a price-table cost estimate"
+}
+
+# The pool hands the returned worktree to another worker, which writes to the
+# same transcript folder before this cleanup reaches its ledger record.
+lease_after_return() {
+  write_transcript
+  cat > "$FAKEBIN/treehouse" <<SH
+#!/usr/bin/env bash
+if [ "\${1:-}" = return ]; then
+  jq -cn --arg cwd "$WT_DIR" --arg ts "\$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" '
+    {type: "assistant", sessionId: "next", cwd: \$cwd, timestamp: \$ts, requestId: "r9",
+     message: {id: "m9", model: "claude-opus-5-5", usage: {input_tokens: 900, output_tokens: 900}}}' >> "$TRANSCRIPT"
+fi
+exit 0
+SH
+  chmod +x "$FAKEBIN/treehouse"
+}
+
+test_cleanup_usage_is_taken_before_the_worktree_is_returned() {
+  local row
+  make_case on-usage-lease on
+  run_lifecycle lease_after_return
+  grep -q '"m9"' "$TRANSCRIPT" || fail "the fake pool return did not write the next worker's response"
+  row=$(ledger_rows 'select(.event == "task.cleaned_up") | .usage | [.sessions, .messages, .input_tokens]')
+  assert_equals '[1,1,3]' "$row" "cleanup usage after a later lease"
+  pass "flag on: usage is saved before the worktree goes back to the pool, so the next worker in that worktree is not charged to this task"
+}
+
+# Fail the cleanup after its record is written: the pool return swaps the task
+# record for a link to a copy, which the final record removal refuses.
+fail_after_the_record() {
+  write_transcript
+  cat > "$FAKEBIN/treehouse" <<SH
+#!/usr/bin/env bash
+if [ "\${1:-}" = return ]; then
+  mv -f "$HOME_DIR/state/$TASK.meta" "$HOME_DIR/state/$TASK.meta-real"
+  ln -s "$HOME_DIR/state/$TASK.meta-real" "$HOME_DIR/state/$TASK.meta"
+fi
+exit 0
+SH
+  chmod +x "$FAKEBIN/treehouse"
+}
+
+test_retried_cleanup_keeps_the_saved_usage() {
+  local out rows report
+  make_case on-usage-retry on
+  EXPECT_TEARDOWN_FAILURE=1 run_lifecycle fail_after_the_record
+  assert_present "$HOME_DIR/state/$TASK.meta" "the failed cleanup should keep the task record"
+  assert_present "$HOME_DIR/state/$TASK.usage" "the failed cleanup should keep the saved usage"
+  mv -f "$HOME_DIR/state/$TASK.meta-real" "$HOME_DIR/state/$TASK.meta"
+  fm_fake_exit0 "$FAKEBIN" treehouse
+  out=$(in_home "$ROOT/bin/fm-teardown.sh" "$TASK" 2>&1) || fail "the retried cleanup failed: $out"
+  assert_absent "$HOME_DIR/state/$TASK.usage" "the saved usage should go with the task record"
+  rows=$(ledger_rows 'select(.event == "task.cleaned_up") | [.usage.messages, .usage.input_tokens]' | paste -sd' ' -)
+  assert_equals '[1,3] [1,3]' "$rows" "both cleanup records carry the usage"
+  report=$(in_home "$ROOT/bin/fm-task-usage.sh" report --json | jq -c '[(.tasks | length), .tasks[0].measured, .tasks[0].messages]')
+  assert_equals '[1,true,1]' "$report" "the report counts the retried cleanup once, measured"
+  pass "flag on: a cleanup retried after its record was written records the saved usage again, and the report counts it once"
+}
+
+test_cleanup_without_readable_usage_still_completes() {
+  local rows
+  make_case on-usage-garbled on
+  run_lifecycle garbled_transcript
+  rows=$(ledger_rows 'select(.event == "task.cleaned_up") | keys')
+  assert_equals '["event","spawn_gen","task","ts","v"]' "$rows" "cleanup record members"
+  pass "flag on: a garbled transcript leaves usage out of the cleanup record and the cleanup completes"
 }
 
 test_flag_on_records_a_pr_merge_once() {
@@ -276,6 +377,10 @@ test_flag_off_writes_nothing() {
 }
 
 test_flag_on_records_the_task_lifecycle
+test_cleanup_records_the_worker_usage
+test_cleanup_without_readable_usage_still_completes
+test_cleanup_usage_is_taken_before_the_worktree_is_returned
+test_retried_cleanup_keeps_the_saved_usage
 test_flag_on_records_a_pr_merge_once
 test_flag_on_records_a_pr_registration
 test_worker_status_line_is_recorded_when_written

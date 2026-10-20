@@ -333,7 +333,11 @@
 # recorded by bin/fm-pipeline-spend.sh, which owns the attribution and the
 # ledger. It runs before the task branch it attributes runs by is deleted and
 # before state/<id>.meta is removed, and is best effort: a failure warns and
-# never blocks cleanup.
+# never blocks cleanup. Right after it, when config/fleet-ledger opts this home
+# in, a ship or scout task whose local copy this teardown still owns has its
+# worker's usage saved by bin/fm-task-usage.sh capture, before the copy is
+# returned or removed, for the ledger's cleaned_up record; it is bounded and
+# silent, and never blocks cleanup.
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -3809,6 +3813,12 @@ if [ "$KIND" = ship ] && teardown_owns_worktree && [ -e "$CONFIG/pipeline-spend"
     "$SCRIPT_DIR/fm-pipeline-spend.sh" record "$ID" >/dev/null \
     || echo "warning: could not record $ID's no-mistakes pipeline spend; cleanup continues" >&2
 fi
+# Opt-in fleet activity ledger: save the worker's own usage now, while the
+# stopped worker's worktree is still this task's, for the cleaned_up record
+# below (bin/fm-task-usage.sh owns the read and its bound).
+if [ "$KIND" != secondmate ] && teardown_owns_worktree && [ -e "$CONFIG/fleet-ledger" ]; then
+  "$SCRIPT_DIR/fm-task-usage.sh" capture "$STATE/$ID.meta" >/dev/null 2>&1 || true
+fi
 
 # Fix 3 (see script header): sweep remote job workers abandoned by an already
 # pruned code root. Best effort - a sweep failure never blocks this teardown.
@@ -4093,6 +4103,9 @@ else
     exit 1
   fi
 fi
+# The saved usage outlives a failed transition above, so a retried cleanup,
+# which can no longer read it, still records it; it goes with the task record.
+rm -f "$STATE/$ID.usage"
 fm_lock_release "$META_LOCK"
 META_LOCK_HELD=0
 if [ "$KIND" != scout ] && [ "$KIND" != secondmate ] && [ "$MODE" != local-only ]; then

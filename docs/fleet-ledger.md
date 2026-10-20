@@ -33,7 +33,7 @@ Readers must ignore members and events they do not recognize, so later versions 
 | `task.status`      | `state`, `key`, `text`                         | A complete, nonblank line in the task's status log is captured. |
 | `task.pr_ready`    | `pr`                                           | Firstmate records the task's PR as ready for review. |
 | `task.merged`      | `via` (`"pr"` or `"local"`), plus `pr` when `via` is `"pr"` | The task's PR merge is recorded, or its local-only branch landed. |
-| `task.cleaned_up`  | none                                           | The task's worker and local copy were removed. |
+| `task.cleaned_up`  | `spawn_gen`, and `usage` only when measured    | The task's worker and local copy were removed. |
 
 `task.dispatched` members: `kind` is `ship`, `scout`, or `secondmate`; `project` is the project directory name, or `null` for a remote second mate; `harness` names the agent tool; `model` is the requested model, or `null` for the tool's default.
 
@@ -44,6 +44,8 @@ It is written each time firstmate records a PR for the task, so registering a re
 `key` is the line's `[key=...]` decision key, or `null`.
 `text` is the status line after its first colon, verbatim, capped at 2000 characters; if the line has no colon, it is the whole line.
 
+`task.cleaned_up` members: `spawn_gen` identifies the task's latest launch, when its record names one; `usage` is the worker's own token usage and cost over the task, described under [Task usage](#task-usage), and is left out, never zero, when the worker's agent tool records none that firstmate can read.
+
 Example:
 
 ```json
@@ -52,8 +54,39 @@ Example:
 {"v":1,"ts":1790133400,"event":"task.status","task":"fix-login","state":"done","key":null,"text":" PR https://github.com/acme/webapp/pull/7 checks green"}
 {"v":1,"ts":1790133410,"event":"task.pr_ready","task":"fix-login","pr":"https://github.com/acme/webapp/pull/7"}
 {"v":1,"ts":1790133900,"event":"task.merged","task":"fix-login","via":"pr","pr":"https://github.com/acme/webapp/pull/7"}
-{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login"}
+{"v":1,"ts":1790133960,"event":"task.cleaned_up","task":"fix-login","spawn_gen":"s1790132857.4193.32297","usage":{"source":"claude-transcript","basis":"dispatch-window","since":1790132857,"partial":false,"sessions":1,"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"models":{"claude-opus-5-5":{"messages":42,"input_tokens":120,"output_tokens":18400,"cache_write_tokens":96000,"cache_read_tokens":2100000,"cost_usd":1.26848}},"cost_usd":1.26848,"cost_source":"price-table","price_table_date":"2026-10-19","unpriced_models":[]}}
 ```
+
+## Task usage
+
+The `usage` member records the tokens the task's own worker spent, and what they cost, read from its agent tool's records during cleanup.
+It is read after the worker is stopped and before its worktree is returned to the pool or removed, so a worker that is given the same worktree afterwards is never counted.
+Reading it is bounded and can never stop or fail a cleanup: when it cannot be read in time, or the tool records nothing firstmate can read, the member is left out.
+
+| Member | Meaning |
+| ------ | ------- |
+| `source` | Where the figures come from; currently `claude-transcript` |
+| `basis` | Where the counted window starts: `dispatch-window` (the task's `task.dispatched` record, or its latest launch when that is earlier, since the record is written after the launch) or `launch-window` (the latest launch, when the ledger holds no dispatch record for this run of the task) |
+| `since` | The window start in Unix seconds |
+| `partial` | `true` for `launch-window`, whose figures can miss earlier launches of a relaunched task |
+| `sessions`, `messages` | Agent sessions and model responses counted |
+| `input_tokens`, `output_tokens`, `cache_write_tokens`, `cache_read_tokens` | Token totals; the four are disjoint, so input excludes cache reads and writes |
+| `models` | The same token totals, message count, and cost per model name; a response that ran on two models, such as a fallback, counts under each |
+| `cost_usd` | The cost in US dollars, or `null` when a counted model has no known price; never a partial sum |
+| `cost_source` | `claude-transcript` when the agent tool reported the cost of every counted response, or `price-table` for an estimate at Anthropic's list prices |
+| `price_table_date`, `unpriced_models` | For a `price-table` estimate: the date of the price table used, and the counted models it has no price for |
+
+A `price-table` cost is an estimate at Anthropic's published per-token API prices on the table's date, not a billed amount, and a worker on a subscription plan is not billed per token at all.
+Tokens a response spent on server-side steps, such as compaction or an attempt on a fallback model, are counted and priced under the model that ran them.
+Current Claude transcripts report no cost, so Claude records carry the estimate.
+The `task.cleaned_up` record also carries `spawn_gen`, the identifier of the task's latest launch, so a reader can recognize the repeated record a retried cleanup writes.
+
+Covered agent tools: Claude ship and scout workers, from their session transcripts, including subagents and sessions an earlier launch left under another Claude account.
+Not covered: every other agent tool, second mates, and the no-mistakes pipeline's own agents, whose spend `config/pipeline-spend` records separately (see [configuration](configuration.md#no-mistakes-pipeline-spend-configpipeline-spend)).
+`bin/fm-task-usage.sh`'s header owns how sessions are chosen, responses counted, and costs priced, and holds the price table.
+
+To see usage per task and per project over a period, run `bin/fm-task-usage.sh report`, optionally with `--since` and `--until` as Unix seconds or a UTC date such as `2026-10-01`, and `--json` for the same figures as JSON.
+It reads the ledger file whether or not the ledger is on, counts a retried cleanup once, attributes each cleaned-up task to the project of its own dispatch record, and lists a task with no `usage` member as unmeasured rather than as zero.
 
 ## Limits
 

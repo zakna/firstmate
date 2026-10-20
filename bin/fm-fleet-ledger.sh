@@ -42,8 +42,12 @@
 # the status file's directory.
 # pr_ready, merged, and cleaned_up first capture their own task, so its status
 # records precede them. cleaned_up then deletes the task's offset, because teardown
-# retires that status log right after. dispatched deletes any leftover offset
-# so a reused task id starts at byte 0 of its fresh log.
+# retires that status log right after. cleaned_up records the spawn_gen of
+# state/<task>.meta and, when state/<task>.usage (written by
+# bin/fm-task-usage.sh capture before the worktree was released) names that
+# same spawn_gen, its usage; it never reads a transcript itself. dispatched
+# deletes any leftover offset so a reused task id starts at byte 0 of its
+# fresh log.
 # Every write holds state/.fleet-ledger.lock.
 #
 # Environment: FM_HOME, FM_STATE_OVERRIDE, and FM_CONFIG_OVERRIDE resolve the
@@ -193,6 +197,20 @@ if [ "$cmd" = capture ]; then
 fi
 
 load_libs || exit 1
+
+# cleaned_up's optional members: the incarnation's spawn_gen from its record,
+# and the usage bin/fm-task-usage.sh capture saved for that incarnation.
+SPAWN_GEN=
+USAGE=
+if [ "$cmd" = cleaned_up ]; then
+  SPAWN_GEN=$(sed -n 's/^spawn_gen=//p' "$STATE/$2.meta" 2>/dev/null | tail -1) || SPAWN_GEN=
+  if [ -f "$STATE/$2.usage" ]; then
+    # shellcheck disable=SC2016 # jq variables, not shell expansion
+    USAGE=$(jq -c --arg sg "$SPAWN_GEN" 'select(.spawn_gen == $sg and (.usage | type) == "object") | .usage' \
+      "$STATE/$2.usage" 2>/dev/null) || USAGE=
+  fi
+fi
+
 fm_lock_acquire_wait "$LOCK" || exit 1
 trap 'fm_lock_release "$LOCK"' EXIT
 rc=0
@@ -226,7 +244,9 @@ case "$cmd" in
     ;;
   cleaned_up)
     capture_task "$2" || rc=1
-    append task.cleaned_up "$2" '{}' || rc=1
+    append task.cleaned_up "$2" \
+      '(if $sg == "" then {} else {spawn_gen: $sg} end) + (if $usage == "" then {} else {usage: ($usage | fromjson)} end)' \
+      --arg sg "$SPAWN_GEN" --arg usage "$USAGE" || rc=1
     [ "$rc" -ne 0 ] || rm -f -- "$(offset_path "$2")"
     ;;
 esac

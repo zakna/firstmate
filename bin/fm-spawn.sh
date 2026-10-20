@@ -532,11 +532,12 @@
 # With config/seat-memory present, a templated claude ship or scout launch also
 # starts with --session-id and records it as claude_session_id=, so the task
 # record names its conversation; a relaunch keeps earlier ids in
-# claude_prior_session_ids= (bin/fm-seat-lib.sh). With the flag, a ship or
-# scout launch brief whose source names no seat also gains a "# Seat decisions"
-# section inferred from its filled `# Task` text (fm_seat_launch_feed), and one
-# scaffolded with --seat or --path has that section rebuilt from the current
-# index (fm_seat_launch_source).
+# claude_prior_session_ids= (bin/fm-seat-lib.sh). Any relaunch also keeps the
+# earlier launches' claude_root= values in claude_prior_roots=. With the flag,
+# a ship or scout launch brief whose source names no seat also gains a
+# "# Seat decisions" section inferred from its filled `# Task` text
+# (fm_seat_launch_feed), and one scaffolded with --seat or --path has that
+# section rebuilt from the current index (fm_seat_launch_source).
 # When the home session's frozen trace-context decision is enabled (see
 # docs/configuration.md and bin/fm-trace-context-lib.sh), the meta also records
 # one W3C traceparent= carrier, the same value injected into the pane as
@@ -5272,10 +5273,23 @@ CLAUDE_PRIOR_SESSION_IDS=
 if [ "$HARNESS" = claude ] && [ "$RAW_LAUNCH" = 0 ] && [ "$KIND" != secondmate ] && fm_seat_memory_enabled "$CONFIG"; then
   CLAUDE_SESSION_ID=$(fm_seat_session_uuid)
 fi
+# claude_prior_roots= likewise keeps every Claude root an earlier launch used,
+# comma-separated with each root's `%` and `,` written as `%25` and `%2C`, so
+# bin/fm-task-usage.sh finds sessions a relaunch under another account left
+# behind.
+CLAUDE_PRIOR_ROOTS=
 if [ "$RELAUNCH" -eq 1 ]; then
   CLAUDE_PRIOR_SESSION_IDS=$(fm_meta_get "$RELAUNCH_META" claude_prior_session_ids)
   prior_session=$(fm_meta_get "$RELAUNCH_META" claude_session_id)
   [ -z "$prior_session" ] || CLAUDE_PRIOR_SESSION_IDS=${CLAUDE_PRIOR_SESSION_IDS:+$CLAUDE_PRIOR_SESSION_IDS,}$prior_session
+  CLAUDE_PRIOR_ROOTS=$(fm_meta_get "$RELAUNCH_META" claude_prior_roots)
+  prior_root=$(fm_meta_get "$RELAUNCH_META" claude_root)
+  case "$prior_root" in
+    /*)
+      prior_root=${prior_root//%/%25}; prior_root=${prior_root//,/%2C}
+      case ",$CLAUDE_PRIOR_ROOTS," in *",$prior_root,"*) ;; *) CLAUDE_PRIOR_ROOTS=${CLAUDE_PRIOR_ROOTS:+$CLAUDE_PRIOR_ROOTS,}$prior_root ;; esac
+      ;;
+  esac
 fi
 
 META_WINDOW=$T
@@ -5325,7 +5339,7 @@ raw_claude_config_dir() {
 preserve_relaunch_meta() {
   awk -F= '
     BEGIN {
-      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp base_branch model effort account account_provider claude_root claude_session_id claude_prior_session_ids busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
+      split("window endpoint_task_id worktree project harness kind mode yolo branch tasktmp base_branch model effort account account_provider claude_root claude_prior_roots claude_session_id claude_prior_session_ids busy_gen spawn_gen traceparent backend herdr_session herdr_workspace_id herdr_tab_id herdr_pane_id zellij_session zellij_tab_id zellij_pane_id orca_worktree_id terminal cmux_workspace_id cmux_surface_id home projects control_relaunch_tx", keys, " ")
       for (i in keys) owned[keys[i]] = 1
     }
     !($1 in owned)
@@ -5372,6 +5386,7 @@ preserve_relaunch_meta() {
   fi
   [ -z "$CLAUDE_SESSION_ID" ] || echo "claude_session_id=$CLAUDE_SESSION_ID"
   [ -z "$CLAUDE_PRIOR_SESSION_IDS" ] || echo "claude_prior_session_ids=$CLAUDE_PRIOR_SESSION_IDS"
+  [ -z "$CLAUDE_PRIOR_ROOTS" ] || echo "claude_prior_roots=$CLAUDE_PRIOR_ROOTS"
   [ -z "${BUSY_GEN:-}" ] || echo "busy_gen=$BUSY_GEN"
   echo "spawn_gen=$SPAWN_GEN"
   # Default-off writes no traceparent= line.
