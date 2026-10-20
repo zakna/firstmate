@@ -55,6 +55,7 @@ data/                personal fleet records; LOCAL, gitignored as a whole
   learnings.md       fleet-local operational facts and gotchas; LOCAL, gitignored; dated, evidence-backed, curated, and updated with inspect-then-update - rewrite and prune rather than append forever, the same contract as captain.md; each new entry takes the cue/lesson/evidence/confidence shape or is a `no entry` per the stow skill's lesson-shape section; created lazily, absent until this home has a learning to store
   recovery-lessons.md  one dated line per recovered stuck worker (symptom, cause, fix); LOCAL, gitignored, supervisor-only, created lazily, pruned when a line stops applying; owned by stuck-crewmate-recovery
   projects.md        thin fleet navigation registry recording each project's standing delivery posture and optional ship-branch prefix; firstmate-private, parsed by fm-project-mode.sh (section 6)
+  project-intents.md  optional owner-written one-line intent per registered project, shown above # Task in every ship and scout brief and in the Claude post-compaction refocus; firstmate never writes it; bin/fm-brief.sh's header owns the line format
   secondmates.md      local and remote secondmate routing table; firstmate-private, maintained by the secondmate seed helpers (section 6)
   <id>/brief.md      per-task crewmate brief, or per-secondmate charter brief when kind=secondmate
   <id>/report.md     scout task deliverable, written by the crewmate; survives teardown

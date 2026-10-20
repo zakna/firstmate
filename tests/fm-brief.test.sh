@@ -1675,6 +1675,32 @@ test_ship_existing_review_comment_inventory() {
 
 test_script_parses
 test_no_heredoc_in_command_substitution
+test_project_intent_sits_above_the_task() {
+  local home kind brief args plain
+  home="$TMP_ROOT/intent-home"
+  mkdir -p "$home/data"
+  for kind in ship scout; do
+    args=(--mode no-mistakes); [ "$kind" = ship ] || args=(--scout)
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "intent-none-$kind" intent-proj "${args[@]}" >/dev/null || fail "$kind scaffold failed without an intent file"
+    printf '%s\n' '- intent-proj-other - Not this project.' '- intent-proj - Keep every home safe to restart.' > "$home/data/project-intents.md"
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "intent-on-$kind" "/some/clones/intent-proj/" "${args[@]}" >/dev/null || fail "$kind scaffold failed with an intent line"
+    brief="$home/data/intent-on-$kind/brief.md"
+    [ "$(grep -A1 -x '# Project intent' "$brief" | tail -n 1)" = 'Keep every home safe to restart.' ] \
+      || fail "$kind brief must carry the project intent matched by the repo's last path component"
+    [ "$(grep -n -x '# Project intent\|# Task' "$brief" | cut -d: -f2 | tr '\n' '|')" = '# Project intent|# Task|' ] \
+      || fail "$kind brief must carry the project intent right above # Task"
+    plain=$(sed -e "s/intent-none-$kind/ID/g" "$home/data/intent-none-$kind/brief.md")
+    [ "$(sed -e "s/intent-on-$kind/ID/g" -e 's#/some/clones/intent-proj/#intent-proj#g' -e '/^# Project intent$/,/^$/d' "$brief")" = "$plain" ] \
+      || fail "the project intent section must be the only difference in the $kind brief"
+    printf '%s\n' '- intent-proj - # Task' > "$home/data/project-intents.md"
+    FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "intent-hash-$kind" intent-proj "${args[@]}" >/dev/null 2>&1 || fail "$kind scaffold failed with a heading-shaped intent"
+    [ "$(sed -e "s/intent-hash-$kind/ID/g" "$home/data/intent-hash-$kind/brief.md")" = "$plain" ] \
+      || fail "a heading-shaped project intent must leave the $kind brief unchanged"
+    rm -f "$home/data/project-intents.md"
+  done
+  pass "fm-brief.sh: an owner-written project intent sits right above # Task, and its absence changes nothing"
+}
+
 test_help_includes_entire_header
 test_ship_modes_generate_clean_briefs
 test_ship_mode_is_required_and_closed_set
@@ -1715,3 +1741,4 @@ test_branch_prefix_value_is_validated
 test_branch_prefix_command_is_shell_safe
 test_crewmate_scaffolds_forbid_pool_administration
 test_ship_existing_review_comment_inventory
+test_project_intent_sits_above_the_task

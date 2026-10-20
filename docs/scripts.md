@@ -20,6 +20,7 @@ The shared no-mistakes gate lifecycle boundary is summarized in [architecture.md
 | `fm-fleet-ledger.sh`     | Append the opt-in fleet activity ledger's records ([contract](fleet-ledger.md))      |
 | `fm-task-usage.sh`       | Save a task worker's token usage and estimated cost during cleanup for the ledger's cleanup record, and report recorded usage per task and per project over a period ([contract](fleet-ledger.md#task-usage)) |
 | `fm-seat-lib.sh`         | Single owner of opt-in seat memory: per-task decision records, their per-project seat index, and the brief feed ([contract](seat-memory.md)) |
+| `fm-seat.sh`             | Supersede or retract a seat decision record so the brief feed skips it, and trace which launch briefs received it ([contract](seat-memory.md#withdrawing-a-record)) |
 | `fm-fleet-view.sh`       | Render the fleet snapshot as a human Markdown view                                   |
 | `fm-bearings-snapshot.sh` | Project the bounded remote-ledger fleet snapshot to compact TOON; `--include-prs` adds live GitHub enrichment |
 | `fm-bearings-board.sh`   | Build and arm the stable interactive `/bearings lavish` fleet board                  |

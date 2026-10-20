@@ -162,6 +162,17 @@
 # seats from the filled `# Task` text when it writes the launch brief. Without
 # the flag both options are accepted and change nothing. Refused on
 # --secondmate.
+# Project intent: an optional owner-written line in data/project-intents.md,
+# one per registered project, shaped like the registry line in
+# data/projects.md:
+#   - <name> - <one line saying why the project exists>
+# <name> is matched literally against <repo-name>, else against its last path
+# component. When a line matches, ship and scout scaffolds carry it in a
+# "# Project intent" section right above "# Task", and bin/fm-claude-refocus.sh
+# re-reads that section after a compaction. Control characters are dropped,
+# and a line whose text is empty or opens with `#` is ignored with a warning,
+# since it would read as a heading. With no file or no matching line the
+# brief is unchanged. Nothing writes this file but its owner.
 # Refuses to overwrite an existing brief.
 set -eu
 
@@ -570,6 +581,30 @@ fi
 
 REPO=${POS[1]}
 
+# The optional "# Project intent" section (see the header). Empty unless a
+# line matches, so a brief without one is byte-identical; when set it carries
+# its own trailing blank line.
+project_intent_line() {  # <intents-file> <name>
+  [ -n "$2" ] && [ -f "$1" ] || return 1
+  awk -v n="$2" '
+    {
+      prefix = "- " n " - "
+      if (substr($0, 1, length(prefix)) != prefix) next
+      print substr($0, length(prefix) + 1); found = 1; exit
+    }
+    END { exit !found }' "$1"
+}
+PROJECT_INTENT_SECTION=
+INTENTS_FILE="$DATA/project-intents.md"
+if PROJECT_INTENT=$(project_intent_line "$INTENTS_FILE" "$REPO") ||
+  PROJECT_INTENT=$(project_intent_line "$INTENTS_FILE" "$(basename -- "${REPO%/}")"); then
+  PROJECT_INTENT=$(printf '%s' "$PROJECT_INTENT" | LC_ALL=C tr -d '\000-\037\177' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+  case "$PROJECT_INTENT" in
+    ''|'#'*) echo "warning: ignoring the project intent line for $REPO in $INTENTS_FILE: it is empty or opens with #" >&2 ;;
+    *) PROJECT_INTENT_SECTION="# Project intent"$'\n'"$PROJECT_INTENT"$'\n\n' ;;
+  esac
+fi
+
 # The optional seat feed. Empty unless seat memory is on and a seat was named,
 # so a brief without it is byte-identical; when set it carries its own
 # trailing blank line.
@@ -682,7 +717,7 @@ fi
 cat > "$BRIEF" <<EOF
 You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
 
-$TASK_SECTION
+$PROJECT_INTENT_SECTION$TASK_SECTION
 
 $SEAT_SECTION$HERDR_SECTION
 
@@ -761,7 +796,7 @@ fi
 cat >> "$BRIEF" <<EOF
 You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
 
-$TASK_SECTION
+$PROJECT_INTENT_SECTION$TASK_SECTION
 
 $(fm_scope_allowance_block "$FM_ROOT")
 

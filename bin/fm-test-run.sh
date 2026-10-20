@@ -1616,7 +1616,7 @@ families_for_changed_path() {
     bin/fm-x-*|bin/fm-check*|bin/fm-pipeline-spend.sh)
       printf '%s\n' pr-forge
       ;;
-    bin/fm-seat-lib.sh)
+    bin/fm-seat-lib.sh|bin/fm-seat.sh)
       # Opt-in seat memory: its own suite, the brief and definition-of-done
       # contracts that render it, and teardown's archiving.
       printf '%s\n' "__script__:fm-seat-memory.test.sh"
