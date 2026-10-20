@@ -560,6 +560,10 @@ test_trace_lists_the_launch_briefs_that_received_a_record() {
   [ "$(ls -lR "$data")" = "$before" ] || fail "trace must not change anything"
   out=$(FM_HOME=$home "$SEAT_CLI" trace t-unfed) || fail "trace of an unfed record failed"
   [ -z "$out" ] || fail "an unfed record must have no launch briefs: $out"
+  out=$(cd "$TMP_ROOT" && FM_HOME=./trace "$SEAT_CLI" trace t-src) || fail "trace with a relative FM_HOME failed"
+  [ "$out" = "$data/t-a/launch-brief.md" ] || fail "trace with a relative FM_HOME must find the absolute fed path: $out"
+  out=$(cd "$home" && FM_HOME=/nonexistent FM_DATA_OVERRIDE=data "$SEAT_CLI" trace t-src) || fail "trace with a relative FM_DATA_OVERRIDE failed"
+  [ "$out" = "$data/t-a/launch-brief.md" ] || fail "trace with a relative FM_DATA_OVERRIDE must find the absolute fed path: $out"
   FM_HOME=$home "$SEAT_CLI" trace >/dev/null 2>&1; expect_code 2 $? "trace without a task id must be a usage error"
   pass "trace lists the launch briefs that received a record and changes nothing"
 }
