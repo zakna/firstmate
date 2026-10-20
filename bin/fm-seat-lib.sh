@@ -21,6 +21,9 @@
 #   bin/fm-spawn.sh     fm_seat_session_uuid (claude --session-id and
 #                       claude_session_id= in the task record)
 #   bin/fm-teardown.sh  fm_seat_archive (index the task's decision record)
+#   bin/fm-seat.sh      fm_seat_mark and fm_seat_trace (the owner's retract,
+#                       supersede, and trace commands; they work whether or
+#                       not the flag is present)
 #
 # Concepts, ported from OpenRig without any OpenRig dependency: a rig is a
 # registered project, keyed by its clone directory name; a seat is a named,
@@ -32,11 +35,18 @@
 #   data/<task-id>/decisions.md      the full record a worker writes
 #   data/seats/<project>/index.tsv   one line per (record, seat):
 #                                    <epoch> TAB <seat> TAB <task-id> TAB <kind>
+#                                    and one mark line per withdrawn record:
+#                                    <epoch> TAB * TAB <task-id> TAB <mark> TAB <detail>
+#                                    where <mark> is `superseded` (<detail> is
+#                                    the later task id) or `retracted`
+#                                    (<detail> is the reason)
 #   data/seats/<project>/seats.txt   optional seat definitions, one per line:
 #                                    <seat> <path-prefix> [<path-prefix>...]
 #                                    (# comments and blank lines ignored)
 # The index points at the task's own record rather than copying it, so the
-# record has one home.
+# record has one home. The index is append-only: a mark withdraws the record
+# under every seat it is indexed under, the feed and seat inference skip it,
+# and the record file itself stays as history.
 #
 # A seat name matches [A-Za-z0-9][A-Za-z0-9._-]*. A path maps to the seat
 # whose defined prefix is its longest match (a prefix matches itself and
@@ -50,7 +60,7 @@
 # (fm_seat_changed_path_seats owns the range). The path mapping is the one
 # source for changed areas, since a worker never sees seats.txt.
 #
-# Feed bounds: at most 5 records, each cut to 12 lines, and the record
+# Feed bounds: at most 5 records that carry no mark, each cut to 12 lines, and the record
 # entries together held under 4000 bytes, newest first and one
 # entry per task even when it touched several seats. Every record line is
 # indented and stripped of control characters, so a record can never forge a
@@ -253,6 +263,7 @@ fm_seat_infer() {  # <data-dir> <project-key> <text>
       close(defs)
       while ((getline l < idx) > 0) {
         split(l, f, "\t")
+        if (f[2] == "*") continue
         if (!(tolower(f[2]) in known)) known[tolower(f[2])] = f[2]
       }
       close(idx)
@@ -352,6 +363,7 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
   { [ ! -f "$index" ] || LC_ALL=C sort -t "$(printf '\t')" -k1,1nr "$index"; } | LC_ALL=C awk -F'\t' \
     -v want="$seats_line" -v data="$data" -v count=5 -v lines=12 -v max=4000 -v idx="$index" -v lead="$lead" '
     BEGIN { n = split(want, w, " "); for (i = 1; i <= n; i++) ok[w[i]] = 1 }
+    $2 == "*" { if ($4 == "superseded" || $4 == "retracted") marked[$3] = 1; next }
     (n > 0 && !($2 in ok)) || $1 !~ /^[0-9]+$/ || $3 !~ /^[A-Za-z0-9][A-Za-z0-9._-]*$/ { next }
     { seats[$3] = ($3 in seats) ? seats[$3] ", " $2 : $2 }
     !($3 in at) { at[$3] = $1; order[++m] = $3 }
@@ -359,6 +371,7 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
       used = 0; shown = 0; skipped = 0
       for (k = 1; k <= m; k++) {
         id = order[k]; rec = data "/" id "/decisions.md"
+        if (id in marked) continue
         if ((getline probe < rec) <= 0) { close(rec); continue }
         close(rec)
         if (shown >= count) { skipped++; continue }
@@ -393,6 +406,53 @@ fm_seat_feed_block() {  # <data-dir> <project-key> [--inferred] [<seat>...]
       out = ""; cmd | getline out; close(cmd)
       return out == "" ? t : out
     }'
+}
+
+# Withdraw an indexed record from the feed by appending one mark line to its
+# project's index. `superseded` takes the later task id that replaces it, which
+# must not be indexed in this project earlier than the record itself;
+# `retracted` takes a one-line reason, with control characters dropped. A
+# record that is not indexed in the project, or already carries a mark, is
+# refused with exit 1 and nothing written.
+fm_seat_mark() {  # <data-dir> <project-key> <task-id> <superseded|retracted> <later-task-id|reason>
+  local data=$1 project=$2 id=$3 mark=$4 detail=$5 index first
+  fm_seat_name_valid "$project" || { echo "error: '$project' is not a seat-memory project name" >&2; return 1; }
+  fm_seat_name_valid "$id" || { echo "error: '$id' is not a task id" >&2; return 1; }
+  index="$(fm_seat_dir "$data" "$project")/index.tsv"
+  first=$(awk -F'\t' -v t="$id" '$2 != "*" && $3 == t && (f == "" || $1 < f) { f = $1 } END { print f }' "$index" 2>/dev/null)
+  [ -n "$first" ] || { echo "error: $id has no record indexed in $index" >&2; return 1; }
+  if awk -F'\t' -v t="$id" '$2 == "*" && $3 == t { f = 1 } END { exit !f }' "$index"; then
+    echo "error: $id is already marked in $index" >&2
+    return 1
+  fi
+  case "$mark" in
+    superseded)
+      fm_seat_name_valid "$detail" && [ "$detail" != "$id" ] \
+        || { echo "error: superseded needs the id of the later task that replaces $id" >&2; return 1; }
+      if awk -F'\t' -v t="$detail" -v f="$first" '$2 != "*" && $3 == t && $1 < f { e = 1 } END { exit !e }' "$index"; then
+        echo "error: $detail was indexed before $id, so it cannot supersede it" >&2
+        return 1
+      fi ;;
+    retracted)
+      detail=$(printf '%s' "$detail" | tr '\t\n' '  ' | LC_ALL=C tr -d '\001-\037\177')
+      [ -n "$(printf '%s' "$detail" | tr -d '[:space:]')" ] \
+        || { echo "error: retracted needs a reason" >&2; return 1; } ;;
+    *) echo "error: unknown mark '$mark'; use superseded or retracted" >&2; return 1 ;;
+  esac
+  printf '%s\t*\t%s\t%s\t%s\n' "$(date +%s)" "$id" "$mark" "$detail" >> "$index"
+}
+
+# The launch briefs that received a task's record, one path per line: every
+# data/*/launch-brief.md holding the feed entry that links the record's path,
+# which is exactly how fm_seat_feed_block writes it. Read-only.
+fm_seat_trace() {  # <data-dir> <task-id>
+  local data=$1 id=$2 f
+  fm_seat_name_valid "$id" || { echo "error: '$id' is not a task id" >&2; return 1; }
+  for f in "$data"/*/launch-brief.md; do
+    [ -f "$f" ] || continue
+    grep -Fq -- "): \`$data/$id/decisions.md\`" "$f" 2>/dev/null && printf '%s\n' "$f"
+  done
+  return 0
 }
 
 # The decision-record clause of a ship or scout definition of done, or nothing

@@ -55,7 +55,7 @@ Everything stays in the home's private `data/` tree, never in a project's `AGENT
 | Path | Contents |
 | --- | --- |
 | `data/<task-id>/decisions.md` | The full record the worker wrote |
-| `data/seats/<project>/index.tsv` | One line per record and seat: Unix time, seat, task id, task kind |
+| `data/seats/<project>/index.tsv` | One line per record and seat: Unix time, seat, task id, task kind; and one mark line per withdrawn record |
 | `data/seats/<project>/seats.txt` | Optional seat definitions, one per line: a seat name followed by the project paths it covers |
 
 `<project>` is the project's clone directory name.
@@ -73,6 +73,22 @@ Files the branch only took in from its base, through a rebase or a sync, do not 
 A scout's scratch changes are not its product, so a scout whose lines name no seat is not indexed.
 
 `bin/fm-seat-lib.sh`'s header owns the exact matching rules, feed bounds, and file formats.
+
+## Withdrawing a record
+
+A wrong record would otherwise reach every later worker on its seats until five newer records push it out.
+`bin/fm-seat.sh` lets the owner withdraw it:
+
+- `bin/fm-seat.sh supersede <project> <task-id> <later-task-id>` marks the record as replaced by a later task's record.
+  It is refused when the later task was indexed in that project before the record itself.
+- `bin/fm-seat.sh retract <project> <task-id> <reason>` marks the record as withdrawn, with a one-line reason.
+- `bin/fm-seat.sh trace <task-id>` lists the launch brief of every task that received the record, so the workers it already reached can be steered.
+  It changes nothing.
+
+A mark is one line appended to the project's `index.tsv`, so the index keeps its history.
+From then on the feed and seat inference skip the record under every seat, also in a brief whose section is rebuilt at launch.
+The record file stays in `data/<task-id>/` as history, and a record takes at most one mark.
+Marking works whether or not `config/seat-memory` is present.
 
 ## Limits
 

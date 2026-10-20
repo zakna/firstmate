@@ -19,6 +19,10 @@
 #      a heading word, else the newest records across all seats;
 #      a brief scaffolded with --seat or --path keeps its own seats, with
 #      the section rebuilt from the index at launch.
+#   6. Marks: bin/fm-seat.sh supersede and retract withdraw a record from the
+#      feed and from seat inference, refuse an unindexed, already-marked, or
+#      earlier superseding record, and trace lists the launch briefs that
+#      received a record without changing anything.
 # bin/fm-teardown.sh's archiving is covered in tests/fm-teardown.test.sh.
 set -u
 
@@ -496,6 +500,74 @@ test_feed_without_matching_records_has_no_lead_in() {
   pass "a feed whose seats have no record says so instead of a dangling lead-in"
 }
 
+SEAT_CLI="$ROOT/bin/fm-seat.sh"
+
+test_marks_withdraw_a_record_from_the_feed() {
+  local home data out index before
+  home=$(new_home marks on)
+  data=$home/data
+  write_record "$data" t-wrong bin "Wrong call"
+  write_record "$data" t-right bin "Right call"
+  write_record "$data" t-bad docs "Bad call"
+  write_record "$data" t-keep docs "Kept call"
+  index_line "$data" proj 1000000001 bin t-wrong
+  index_line "$data" proj 1000000001 docs t-wrong
+  index_line "$data" proj 1000000002 bin t-right
+  index_line "$data" proj 1000000003 docs t-bad
+  index_line "$data" proj 1000000004 docs t-keep
+  index=$data/seats/proj/index.tsv
+
+  out=$(FM_HOME=$home "$SEAT_CLI" supersede proj t-right t-wrong 2>&1) && fail "an earlier task must not supersede a later one"
+  assert_contains "$out" "cannot supersede" "the refusal must say why"
+  out=$(FM_HOME=$home "$SEAT_CLI" retract proj t-unknown "no such record" 2>&1) && fail "an unindexed record must be refused"
+  assert_contains "$out" "has no record indexed" "the refusal must name the missing record"
+  out=$(FM_HOME=$home "$SEAT_CLI" retract proj t-bad "   " 2>&1) && fail "a retraction without a reason must be refused"
+  before=$(cat "$index")
+  FM_HOME=$home "$SEAT_CLI" supersede /clones/proj t-wrong t-right || fail "supersede by a later task failed"
+  FM_HOME=$home "$SEAT_CLI" retract proj t-bad "relied on a" "flag that never shipped" || fail "retract failed"
+  [ "$(sed -n "1,$(printf '%s\n' "$before" | wc -l | tr -d ' ')p" "$index")" = "$before" ] || fail "marking must only append to the index"
+  out=$(FM_HOME=$home "$SEAT_CLI" retract proj t-bad "again" 2>&1) && fail "a second mark must be refused"
+  assert_contains "$out" "already marked" "the refusal must say the record is marked"
+  [ "$(awk -F'\t' '$2 == "*" { print $3, $4, $5 }' "$index")" = "t-wrong superseded t-right
+t-bad retracted relied on a flag that never shipped" ] || fail "the index must hold one mark line per withdrawn record: $(cat "$index")"
+
+  out=$(CONFIG=$home/config fm_seat_feed_block "$data" proj bin docs)
+  case "$out" in *t-wrong*|*t-bad*|*"Wrong call"*|*"Bad call"*) fail "a marked record must not be fed: $out" ;; esac
+  assert_contains "$out" "\`t-right\`" "an unmarked record must still be fed"
+  assert_contains "$out" "\`t-keep\`" "an unmarked record must still be fed"
+  case "$out" in *"not shown"*) fail "a marked record must not count as left out: $out" ;; esac
+  out=$(CONFIG=$home/config fm_seat_feed_block "$data" proj)
+  case "$out" in *t-wrong*|*t-bad*) fail "a marked record must not be fed across seats: $out" ;; esac
+  [ "$(fm_seat_infer "$data" proj "touch the docs and the bin tooling")" = "docs
+bin" ] || fail "seat inference must keep the seats and ignore mark lines"
+  [ -f "$data/t-wrong/decisions.md" ] || fail "a mark must keep the record file as history"
+  pass "supersede and retract append one mark that withdraws the record from the feed, with refusals for bad marks"
+}
+
+test_trace_lists_the_launch_briefs_that_received_a_record() {
+  local home data out
+  home=$(new_home trace on)
+  data=$home/data
+  write_record "$data" t-src bin "Shared call"
+  index_line "$data" proj 1000000001 bin t-src
+  mkdir -p "$data/t-a" "$data/t-b" "$data/t-c"
+  CONFIG=$home/config fm_seat_feed_block "$data" proj bin > "$data/t-a/launch-brief.md"
+  CONFIG=$home/config fm_seat_feed_block "$data" proj bin > "$data/t-c/brief.md"
+  printf '%s\n' "# Task" "Nothing fed here." > "$data/t-b/launch-brief.md"
+  before=$(ls -lR "$data")
+  out=$(FM_HOME=$home "$SEAT_CLI" trace t-src) || fail "trace failed"
+  [ "$out" = "$data/t-a/launch-brief.md" ] || fail "trace must list exactly the launch briefs fed the record: $out"
+  [ "$(ls -lR "$data")" = "$before" ] || fail "trace must not change anything"
+  out=$(FM_HOME=$home "$SEAT_CLI" trace t-unfed) || fail "trace of an unfed record failed"
+  [ -z "$out" ] || fail "an unfed record must have no launch briefs: $out"
+  out=$(cd "$TMP_ROOT" && FM_HOME=./trace "$SEAT_CLI" trace t-src) || fail "trace with a relative FM_HOME failed"
+  [ "$out" = "$data/t-a/launch-brief.md" ] || fail "trace with a relative FM_HOME must find the absolute fed path: $out"
+  out=$(cd "$home" && FM_HOME=/nonexistent FM_DATA_OVERRIDE=data "$SEAT_CLI" trace t-src) || fail "trace with a relative FM_DATA_OVERRIDE failed"
+  [ "$out" = "$data/t-a/launch-brief.md" ] || fail "trace with a relative FM_DATA_OVERRIDE must find the absolute fed path: $out"
+  FM_HOME=$home "$SEAT_CLI" trace >/dev/null 2>&1; expect_code 2 $? "trace without a task id must be a usage error"
+  pass "trace lists the launch briefs that received a record and changes nothing"
+}
+
 test_path_maps_to_longest_defined_prefix_else_first_component
 test_archive_indexes_named_seats_once
 test_archive_falls_back_to_brief_then_changed_paths
@@ -512,5 +584,7 @@ test_changed_paths_leave_out_what_the_branch_took_from_its_base
 test_changed_paths_count_both_sides_of_a_rename
 test_project_name_that_is_no_seat_name_turns_seat_memory_off
 test_feed_without_matching_records_has_no_lead_in
+test_marks_withdraw_a_record_from_the_feed
+test_trace_lists_the_launch_briefs_that_received_a_record
 
 echo "# all fm-seat-memory tests passed"

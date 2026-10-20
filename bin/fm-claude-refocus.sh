@@ -17,7 +17,9 @@
 # the model's context right after compaction; that is why the refocus rides
 # SessionStart.
 #
-# The block carries, in order: the brief's `## Captain's intent` subsection of
+# The block carries, in order: the brief's `# Project intent` section verbatim
+# when it has one (bin/fm-brief.sh owns where that line comes from), the
+# brief's `## Captain's intent` subsection of
 # `# Task` verbatim (or, for an accepted legacy brief without that subsection,
 # its whole `# Task` body), its last `# Definition of done` section verbatim
 # (a promoted brief's current contract), and the
@@ -57,6 +59,10 @@ section() {  # <title> <body-or-empty> <missing-line>
 
 if [ -f "$brief" ]; then
   dod=$(fm_brief_heading_last_body "$brief" "# Definition of done")
+  project_intent=$(fm_brief_heading_body "$brief" "# Project intent")
+  if [ -n "$(printf '%s' "$project_intent" | tr -d '[:space:]')" ]; then
+    section "# Project intent" "$project_intent" ""
+  fi
   if fm_brief_task_heading_present "$brief" "## Captain's intent"; then
     intent=$(fm_brief_task_heading_body "$brief" "## Captain's intent")
     section "## Captain's intent" "$intent" "(The brief's ## Captain's intent subsection is empty.)"

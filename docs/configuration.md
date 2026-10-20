@@ -75,7 +75,7 @@ Each effective `FM_HOME` contains private operational directories.
 
 `data/` holds durable private fleet records:
 
-- Project and secondmate registries.
+- Project and secondmate registries, and the optional owner-written one-line project intents in `data/project-intents.md` (`bin/fm-brief.sh` header).
 - Captain preferences and optional shared captain preferences.
 - Learnings, backlog, briefs, scout reports, and the optional per-task no-mistakes pipeline-spend ledger.
 - Optional per-task decision records and their per-project seat index under `data/seats/` ([seat memory](seat-memory.md)).

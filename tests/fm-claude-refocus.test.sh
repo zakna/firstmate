@@ -6,6 +6,8 @@
 #   2. With no unhandled steer it says so in one line and still exits 0.
 #   3. A missing brief is named rather than failing the hook.
 #   4. The hook reads only its own task's inbox, never another task's.
+#   5. A brief's `# Project intent` line comes first, above the Captain's
+#      intent; a brief without one gets no project-intent section.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -161,7 +163,23 @@ EOF2
   pass "refocus injects a promoted brief's current definition of done"
 }
 
+test_project_intent_comes_above_the_task_intent() {
+  local dir=$TMP_ROOT/project-intent out plain
+  mkdir -p "$dir/state"
+  write_brief "$dir/plain.md"
+  { printf '%s\n' "# Project intent" "Keep every home safe to restart." ""; cat "$dir/plain.md"; } >"$dir/brief.md"
+  out=$("$REFOCUS" "$dir/brief.md" "$dir/state" t7 </dev/null)
+  expect_code 0 $? "refocus with a project intent must exit 0"
+  case "$out" in *"# Project intent"*"Keep every home safe to restart."*"## Captain's intent"*"Ship the widget exactly as asked."*) ;; *) fail "project intent must come above the task intent: $out" ;; esac
+  plain=$("$REFOCUS" "$dir/plain.md" "$dir/state" t7 </dev/null)
+  case "$plain" in *"Project intent"*) fail "a brief without a project intent must get no such section: $plain" ;; esac
+  [ "$(printf '%s\n' "$out" | sed -e "s#$dir/brief.md#B#" -e '/^# Project intent$/,/^$/d')" = "$(printf '%s\n' "$plain" | sed "s#$dir/plain.md#B#")" ] \
+    || fail "the project intent must be the only difference in the block"
+  pass "refocus carries the project intent above the task intent, and nothing without one"
+}
+
 test_block_carries_anchors_and_newest_steer
+test_project_intent_comes_above_the_task_intent
 test_no_unhandled_steer
 test_missing_brief_is_named
 test_reads_only_its_own_task
