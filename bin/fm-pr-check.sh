@@ -23,12 +23,13 @@
 # never refuses arming.
 # From the same comments it also prints "bot findings: <n> unaddressed": each
 # top-level inline comment by a Bot-type author, on any head, whose thread is
-# not resolved and has no reply from a non-bot author. The head filter above
-# cannot serve this, because GitHub moves a comment's commit_id to the newest
-# head where its line survives, so a finding fixed earlier reads as raised on
-# the current head. The resolved state comes from one GraphQL read of the PR's
-# review threads; when that read fails or the PR has more than 100 threads,
-# the count prints "unknown". It never refuses arming.
+# not resolved and has no fix reply: a reply from the PR author that names a
+# commit SHA (7 or more hex characters). The head filter above cannot serve
+# this, because GitHub moves a comment's commit_id to the newest head where its
+# line survives, so a finding fixed earlier reads as raised on the current head.
+# The resolved state and the PR author come from one GraphQL read of the PR's
+# review threads; when that read fails or the PR has more than 100 threads, the
+# count prints "unknown". It never refuses arming.
 # The recorded pr= also frees the task's place in a declared project capacity
 # (bin/fm-project-capacity-lib.sh).
 # Usage: fm-pr-check.sh <task-id> <pr-url>
@@ -161,13 +162,15 @@ fi
 BOT_FINDINGS=
 if [ -n "$REVIEW_COMMENTS" ]; then
   # shellcheck disable=SC2016
-  THREADS_QUERY='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}'
+  THREADS_QUERY='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){author{login} reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}'
   if THREADS_JSON=$(gh api graphql -f query="$THREADS_QUERY" -f owner="${PROJECT_PATH%%/*}" -f name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
-    && RESOLVED=$(printf '%s' "$THREADS_JSON" | jq -ec \
-      '.data.repository.pullRequest.reviewThreads | select(.pageInfo.hasNextPage == false) | [.nodes[] | select(.isResolved) | .comments.nodes[0].databaseId]' 2>/dev/null) \
-    && BOT_FINDINGS=$(printf '%s' "$INLINE_JSON" | jq -er --argjson resolved "$RESOLVED" \
-      '[.[][]] as $all
-       | [$all[] | select(.in_reply_to_id != null and .user.type != "Bot") | .in_reply_to_id] as $replied
+    && THREADS=$(printf '%s' "$THREADS_JSON" | jq -ec \
+      '.data.repository.pullRequest | {author: (.author.login // ""), resolved: (.reviewThreads | select(.pageInfo.hasNextPage == false) | [.nodes[] | select(.isResolved) | .comments.nodes[0].databaseId])}' 2>/dev/null) \
+    && BOT_FINDINGS=$(printf '%s' "$INLINE_JSON" | jq -er --argjson threads "$THREADS" \
+      '$threads.resolved as $resolved | [.[][]] as $all
+       | [$all[] | select(.in_reply_to_id != null and .user.login == $threads.author
+           and ((.body // "") | test("(^|[^0-9A-Za-z])[0-9a-fA-F]{7,40}([^0-9A-Za-z]|$)")))
+         | .in_reply_to_id] as $replied
        | [$all[] | select(.in_reply_to_id == null and .user.type == "Bot")
           | select(.id as $id | ($replied + $resolved) | index($id) | not)] | length' 2>/dev/null); then
     case "$BOT_FINDINGS" in ''|*[!0-9]*) BOT_FINDINGS= ;; esac

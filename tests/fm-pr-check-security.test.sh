@@ -703,9 +703,10 @@ test_review_comments_on_recorded_head_are_counted() {
   pass "registration counts inline review comments on the exact recorded head"
 }
 
-# Registration counts the bot findings nobody has answered, on any head: a
+# Registration counts the bot findings nobody has addressed, on any head: a
 # finding fixed on an earlier head is still counted until its thread is resolved
-# or a person replies, and a bot's own follow-up is not an answer.
+# or the PR author replies naming a fix commit; a question, a reply naming no
+# commit, a SHA from someone else, and a bot's own follow-up are not fixes.
 test_unaddressed_bot_findings_are_counted() {
   local dir head old inline threads
   dir=$(make_case bot-findings)
@@ -715,17 +716,22 @@ test_unaddressed_bot_findings_are_counted() {
   old=89abcdef0123456789abcdef0123456789abcdef
   inline="[[{\"id\":1,\"commit_id\":\"$head\",\"original_commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
   inline="$inline{\"id\":2,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
-  inline="$inline{\"id\":3,\"commit_id\":\"$old\",\"in_reply_to_id\":2,\"user\":{\"type\":\"User\"}},"
+  inline="$inline{\"id\":3,\"commit_id\":\"$old\",\"in_reply_to_id\":2,\"user\":{\"type\":\"User\",\"login\":\"pr-author\"},\"body\":\"Fixed in abc1234.\"},"
   inline="$inline{\"id\":4,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
-  inline="$inline{\"id\":5,\"commit_id\":\"$old\",\"in_reply_to_id\":4,\"user\":{\"type\":\"Bot\"}}],"
+  inline="$inline{\"id\":5,\"commit_id\":\"$old\",\"in_reply_to_id\":4,\"user\":{\"type\":\"Bot\"},\"body\":\"See abc1234.\"},"
+  inline="$inline{\"id\":8,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":9,\"commit_id\":\"$old\",\"in_reply_to_id\":8,\"user\":{\"type\":\"User\",\"login\":\"captain\"},\"body\":\"Is this real?\"},"
+  inline="$inline{\"id\":10,\"commit_id\":\"$old\",\"in_reply_to_id\":8,\"user\":{\"type\":\"User\",\"login\":\"pr-author\"},\"body\":\"Looking into it.\"},"
+  inline="$inline{\"id\":11,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":12,\"commit_id\":\"$old\",\"in_reply_to_id\":11,\"user\":{\"type\":\"User\",\"login\":\"captain\"},\"body\":\"Fixed in abc1234.\"}],"
   inline="${inline}[{\"id\":6,\"commit_id\":\"$head\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
   inline="$inline{\"id\":7,\"commit_id\":\"$head\",\"in_reply_to_id\":null,\"user\":{\"type\":\"User\"}}]]"
-  threads='{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[{"isResolved":true,"comments":{"nodes":[{"databaseId":6}]}},{"isResolved":false,"comments":{"nodes":[{"databaseId":1}]}}]}}}}}'
+  threads='{"data":{"repository":{"pullRequest":{"author":{"login":"pr-author"},"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[{"isResolved":true,"comments":{"nodes":[{"databaseId":6}]}},{"isResolved":false,"comments":{"nodes":[{"databaseId":1}]}}]}}}}}'
   FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE=$inline FM_TEST_GH_THREADS=$threads \
     run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
     || fail "registration with bot findings failed: $(cat "$dir/stderr")"
-  grep -qxF "bot findings: 2 unaddressed" "$dir/stdout" \
-    || fail "registration did not count the unanswered bot findings 1 and 4: $(cat "$dir/stdout")"
+  grep -qxF "bot findings: 4 unaddressed" "$dir/stdout" \
+    || fail "registration did not count the unaddressed bot findings 1, 4, 8, and 11: $(cat "$dir/stdout")"
   grep -q '^armed: ' "$dir/stdout" || fail "counting bot findings stopped the merge poll from arming"
 
   FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE=$inline FM_TEST_GH_THREADS_FAIL=1 \
