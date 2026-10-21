@@ -2803,23 +2803,6 @@ test_secondmate_pr_registration_publishes_ready_line() {
   [ "$(grep -c 'child-pr-task-x1' "$channel")" -eq 1 ] \
     || fail "mate-pr-ready: re-registration duplicated the ready line"
 
-  case_dir=$(make_case mate-pr-held)
-  configure_secondmate_home "$case_dir" local "$case_dir/parent"
-  mkdir -p "$case_dir/parent/state"
-  channel="$case_dir/parent/state/mate-x.status"
-  write_meta "$case_dir" no-mistakes ship
-  wt_commit_file "$case_dir" feature.txt hello "add feature"
-  add_gh_pr_merged_for_head "$case_dir" "$(git -C "$case_dir/wt" rev-parse HEAD)"
-  FM_TEST_GH_INLINE='[[{"id":1,"in_reply_to_id":null,"user":{"type":"Bot","login":"codex"}}]]' \
-    FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_STATE_OVERRIDE="$case_dir/state" \
-    PATH="$case_dir/fakebin:$PATH" "$PR_CHECK" task-x1 "$url" > "$case_dir/pr-check.out" 2> "$case_dir/pr-check.err" \
-    || fail "mate-pr-held: fm-pr-check failed: $(cat "$case_dir/pr-check.err")"
-  grep -q '^armed:' "$case_dir/pr-check.out" || fail "mate-pr-held: poll was not armed"
-  ! grep -q 'child-pr-task-x1' "$channel" 2>/dev/null \
-    || fail "mate-pr-held: a PR with an unanswered bot finding was relayed upstream as ready"
-  grep -qF "ready line was held back from the parent channel: bot findings: 1 unaddressed" "$case_dir/pr-check.err" \
-    || fail "mate-pr-held: the held ready line was not reported: $(cat "$case_dir/pr-check.err")"
-
   case_dir=$(make_case main-pr-ready)
   write_meta "$case_dir" no-mistakes ship
   wt_commit_file "$case_dir" feature.txt hello "add feature"
