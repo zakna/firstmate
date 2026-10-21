@@ -142,6 +142,13 @@ printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
 case "${1:-} ${2:-}" in
   "api graphql")
     case " $* " in
+      *reviewThreads*)
+        [ "${FM_TEST_GH_THREADS_FAIL:-0}" = 0 ] || exit 1
+        threads=${FM_TEST_GH_THREADS:-}
+        [ -n "$threads" ] || threads='{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}'
+        printf '%s\n' "$threads"
+        exit 0
+        ;;
       *mergeCommit*)
         # The PR record read, answered in its --jq output shape.
         [ "${FM_TEST_GH_RECORD_FAIL:-0}" = 0 ] || exit 1
@@ -694,6 +701,52 @@ test_review_comments_on_recorded_head_are_counted() {
     || fail "an unreadable count was not disclosed as unknown: $(cat "$dir/stdout")"
   grep -q '^armed: ' "$dir/stdout" || fail "an unreadable count stopped the merge poll from arming"
   pass "registration counts inline review comments on the exact recorded head"
+}
+
+# Registration counts the bot findings nobody has addressed, on any head: a
+# finding fixed on an earlier head is still counted until its thread is resolved
+# or the PR author replies naming a fix commit; a question, a reply naming no
+# commit, a SHA from someone else, and a bot's own follow-up are not fixes.
+test_unaddressed_bot_findings_are_counted() {
+  local dir head old inline threads
+  dir=$(make_case bot-findings)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  head=0123456789abcdef0123456789abcdef01234567
+  old=89abcdef0123456789abcdef0123456789abcdef
+  inline="[[{\"id\":1,\"commit_id\":\"$head\",\"original_commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":2,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":3,\"commit_id\":\"$old\",\"in_reply_to_id\":2,\"user\":{\"type\":\"User\",\"login\":\"pr-author\"},\"body\":\"Fixed in abc1234.\"},"
+  inline="$inline{\"id\":4,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":5,\"commit_id\":\"$old\",\"in_reply_to_id\":4,\"user\":{\"type\":\"Bot\"},\"body\":\"See abc1234.\"},"
+  inline="$inline{\"id\":8,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":9,\"commit_id\":\"$old\",\"in_reply_to_id\":8,\"user\":{\"type\":\"User\",\"login\":\"captain\"},\"body\":\"Is this real?\"},"
+  inline="$inline{\"id\":10,\"commit_id\":\"$old\",\"in_reply_to_id\":8,\"user\":{\"type\":\"User\",\"login\":\"pr-author\"},\"body\":\"Looking into it.\"},"
+  inline="$inline{\"id\":11,\"commit_id\":\"$old\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":12,\"commit_id\":\"$old\",\"in_reply_to_id\":11,\"user\":{\"type\":\"User\",\"login\":\"captain\"},\"body\":\"Fixed in abc1234.\"}],"
+  inline="${inline}[{\"id\":6,\"commit_id\":\"$head\",\"in_reply_to_id\":null,\"user\":{\"type\":\"Bot\"}},"
+  inline="$inline{\"id\":7,\"commit_id\":\"$head\",\"in_reply_to_id\":null,\"user\":{\"type\":\"User\"}}]]"
+  threads='{"data":{"repository":{"pullRequest":{"author":{"login":"pr-author"},"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[{"isResolved":true,"comments":{"nodes":[{"databaseId":6}]}},{"isResolved":false,"comments":{"nodes":[{"databaseId":1}]}}]}}}}}'
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE=$inline FM_TEST_GH_THREADS=$threads \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration with bot findings failed: $(cat "$dir/stderr")"
+  grep -qxF "bot findings: 4 unaddressed" "$dir/stdout" \
+    || fail "registration did not count the unaddressed bot findings 1, 4, 8, and 11: $(cat "$dir/stdout")"
+  grep -q '^armed: ' "$dir/stdout" || fail "counting bot findings stopped the merge poll from arming"
+
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE=$inline FM_TEST_GH_THREADS_FAIL=1 \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "an unreadable thread state refused registration: $(cat "$dir/stderr")"
+  grep -qxF "bot findings: unknown unaddressed" "$dir/stdout" \
+    || fail "an unreadable thread state was not disclosed as unknown: $(cat "$dir/stdout")"
+
+  threads='{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":true},"nodes":[]}}}}}'
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE=$inline FM_TEST_GH_THREADS=$threads \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "a partial thread page refused registration: $(cat "$dir/stderr")"
+  grep -qxF "bot findings: unknown unaddressed" "$dir/stdout" \
+    || fail "a partial thread page was counted instead of disclosed as unknown: $(cat "$dir/stdout")"
+  pass "registration counts unaddressed bot findings on every head"
 }
 
 # A draft cannot be merged, so arming a merge poll on one would wait for an event
@@ -3671,6 +3724,7 @@ test_unpushed_named_head_refuses_registration
 test_direct_pr_unpushed_commit_refuses_registration
 test_valid_recording_and_merge_derivation
 test_review_comments_on_recorded_head_are_counted
+test_unaddressed_bot_findings_are_counted
 test_rejected_metacharacter_bytes_are_inert
 test_static_poll_contract
 test_atomic_interruption_leaves_no_partial_artifact

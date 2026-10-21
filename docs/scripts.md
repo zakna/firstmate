@@ -146,7 +146,7 @@ The shared no-mistakes gate lifecycle boundary is summarized in [architecture.md
 | `fm-pr-lib.sh`           | Own canonical task and PR validation plus private atomic PR-poll publication, merge-notification identity, and retirement |
 | `fm-pr-poll.sh`          | Provide the byte-static watcher program for validated pull-request, merge-request, and Gerrit-change poll sidecars |
 | `fm-contributions.sh`    | Observe owned publications, retain exact-head judgments, measure required actors, and wake on maintainer and allowlisted review-bot signals |
-| `fm-pr-check.sh`         | Record validated task `pr=` and `pr_head=` values, report inline review-comment counts for recorded GitHub heads, then atomically arm a static merge poll; refuses GitHub drafts and persistent secondmate records (see [architecture.md](architecture.md)) |
+| `fm-pr-check.sh`         | Record validated task `pr=` and `pr_head=` values, report inline review-comment counts for recorded GitHub heads and unaddressed review-bot findings on any head, then atomically arm a static merge poll; refuses GitHub drafts and persistent secondmate records (see [architecture.md](architecture.md)) |
 | `fm-pr-merge.sh`         | Record PR metadata, merge a task's canonical full GitHub or GitLab URL, refuse a Gerrit change because firstmate never submits one, then refuse an outcome it cannot prove landed or queued |
 | `fm-pr-state.sh`         | Read-only: print one line per GitHub pull-request blocker it can see, reporting on checks that have reported rather than verdicting merge-readiness |
 | `fm-pr-reviewers.sh`     | Read-only: suggest reviewers from GitHub's own author mapping of recent commits on a pull request's changed files, never requesting one |
@@ -155,7 +155,8 @@ The shared no-mistakes gate lifecycle boundary is summarized in [architecture.md
 | `fm-merge-authority-lib.sh` | Resolve merge authority at the gate, persist it against the accepted canonical PR, identity-check its later poll consumption, and record an external merge's commit, parents, actor, and time |
 | `fm-parent-channel-lib.sh` | Resolve a secondmate home's parent channel and append a captain-facing outcome line to it at most once |
 | `fm-promote.sh`          | Promote a scout task in place to a protected ship task with an explicit delivery mode, write the ship instructions carrying that mode's definition of done, and supersede the task's brief so a later relaunch cannot revive stale scout delivery text |
-| `fm-teardown.sh`         | Fail-closed teardown: return landed ship worktrees, require completed scout deliverables, retire secondmate homes |
+| `fm-issue-readback.sh`   | Cleanup precondition: every issue a merged ship's brief names is closed or carries a comment written after the merge |
+| `fm-teardown.sh`         | Fail-closed teardown: return landed ship worktrees, require completed scout deliverables, retire secondmate homes; refuses a merged ship whose brief names an issue still open with no comment since the merge, unless `--no-readback <reason>` |
 | `fm-harness.sh`          | Detect the running harness, resolve crew or secondmate harness, model, and effort, validate the native-only `ultra` effort, and enforce the Sonnet and Haiku effort ceilings |
 | `fm-lock.sh`             | Per-home firstmate session lock                                                      |
 | `fm-x-lib.sh`            | Shared Relay config, relay, and reply-threading helpers                              |

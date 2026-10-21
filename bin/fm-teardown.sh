@@ -213,7 +213,9 @@
 # leased home releases its durable treehouse lease so the pool slot is freed,
 # never left leased forever. If the treehouse return fails, teardown leaves the
 # leased home and state in place instead of hiding a still-held lease.
-# Usage: fm-teardown.sh <task-id> [--force] [--legacy-record]
+# Usage: fm-teardown.sh <task-id> [--force] [--legacy-record] [--no-readback <reason>]
+#   --no-readback <reason> skips the issue readback (bin/fm-issue-readback.sh) for a ship task with a
+#   recorded PR and keeps the reason as data/<id>/readback-waiver.txt.
 #   --force skips ordinary-task dirty and landed-work checks, skips scout report
 #   checks, and discards secondmate child work for kind=secondmate. Only use it
 #   when the captain has explicitly said to discard the work.
@@ -431,11 +433,19 @@ ID=$1
 TEARDOWN_LOST_SLOT_EXIT=4
 FORCE=
 LEGACY_RECORD_GIVEN=0
+NO_READBACK_REASON=
 shift
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --force) FORCE=--force ;;
     --legacy-record) LEGACY_RECORD_GIVEN=1 ;;
+    --no-readback)
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        echo "error: invalid teardown request" >&2
+        exit 2
+      fi
+      NO_READBACK_REASON=$2
+      shift ;;
     *)
       echo "error: invalid teardown request" >&2
       exit 2
@@ -3676,6 +3686,29 @@ if teardown_owns_worktree && [ -d "$WT" ] && [ "$FORCE" != "--force" ]; then
     else
       exit 1
     fi
+  fi
+fi
+
+# Issue readback (bin/fm-issue-readback.sh owns the rule): a merged ship PR is
+# not cleaned up while an issue its brief names is open with no comment since
+# the merge, unless --no-readback names why, which is kept in data/<id>/ through
+# the same symlink-refusing archive helpers as the task's other records.
+if [ "$KIND" = ship ] && [ -n "$PR_URL" ] && [ "$FORCE" != "--force" ]; then
+  if [ -n "$NO_READBACK_REASON" ]; then
+    waiver_tmp=$(mktemp "${TMPDIR:-/tmp}/fm-readback-waiver.XXXXXX") || exit 1
+    printf '%s\n' "$NO_READBACK_REASON" > "$waiver_tmp"
+    if ! teardown_archive_dir "$DATA/$ID" \
+      || ! teardown_archive_record "$waiver_tmp" "$DATA/$ID/readback-waiver.txt"; then
+      rm -f -- "$waiver_tmp"
+      echo "error: teardown refused: the readback waiver for $ID could not be kept; nothing was removed" >&2
+      exit 1
+    fi
+    rm -f -- "$waiver_tmp"
+    echo "Issue readback waived: $NO_READBACK_REASON"
+  elif ! "$SCRIPT_DIR/fm-issue-readback.sh" "$DATA/$ID/brief.md" "$PR_URL"; then
+    echo "REFUSED: ship task $ID names issues that are still open with no comment since its PR merged." >&2
+    echo "Comment on each issue with what landed and what remains (or close it), or rerun with --no-readback <reason>." >&2
+    exit 1
   fi
 fi
 
