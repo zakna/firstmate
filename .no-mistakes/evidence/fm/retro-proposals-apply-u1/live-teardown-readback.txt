@@ -1,0 +1,36 @@
+--- state/task-r1.meta:
+window=firstmate:fm-task-r1
+endpoint_task_id=task-r1
+worktree=$LAB/wt-gone
+project=$LAB/wt-80
+kind=ship
+mode=no-mistakes
+spawn_gen=lab-r1
+pr=https://github.com/cli/cli/pull/14770
+--- data/task-r1/brief.md:
+# Task
+Fix the bug reported in https://github.com/cli/cli/issues/14733 and #12786.
+Also closes cli/cli#14780; see PR #14770 (this PR) and the merged PR cli/cli#14769.
+# Notes
+#14309 is mentioned only outside the Task section.
+
+$ FM_HOME=$LAB bin/fm-teardown.sh task-r1
+issue readback: https://github.com/cli/cli/issues/14733 is open with no comment since the merge at 2026-10-20T19:47:10Z
+issue readback: https://github.com/cli/cli/issues/12786 is open with no comment since the merge at 2026-10-20T19:47:10Z
+REFUSED: ship task task-r1 names issues that are still open with no comment since its PR merged.
+Comment on each issue with what landed and what remains (or close it), or rerun with --no-readback <reason>.
+rc=1
+state/task-r1.meta still present: yes
+
+$ FM_HOME=$LAB bin/fm-teardown.sh task-r1 --no-readback
+error: invalid teardown request
+rc=2
+
+$ FM_HOME=$LAB bin/fm-teardown.sh task-r1 --no-readback "issues 14733 and 12786 track follow-up work"
+Issue readback waived: issues 14733 and 12786 track follow-up work
+$LAB/wt-80: STUCK: on detached HEAD with unique commits, 2 commits behind origin/main - needs attention
+teardown task-r1 complete (window firstmate:fm-task-r1, worktree $LAB/wt-gone)
+Backlog: task-r1 just finished (this home keeps no markdown backlog at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.EmyhCu/data/backlog.md). Update /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.EmyhCu/data/backlog.md - move task-r1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+rc=0
+data/task-r1/readback-waiver.txt: issues 14733 and 12786 track follow-up work
+state/task-r1.meta still present: no

@@ -1,0 +1,18 @@
+$ FM_HOME=$LAB bin/fm-pr-check.sh task-p80 https://github.com/zakna/firstmate/pull/80   # worker copy at f863d4e
+review comments: 2 inline on head f863d4e964ce711a1de5b38871475a49b09615e8
+bot findings: 10 unaddressed
+armed: state/task-p80.check.sh
+rc=
+
+$ FM_HOME=$LAB bin/fm-pr-check.sh task-p82 https://github.com/zakna/firstmate/pull/82   # worker copy at 8f25278
+review comments: 2 inline on head 8f25278fce18714ac278215d04067f77e2bd448c
+bot findings: 2 unaddressed
+armed: state/task-p82.check.sh
+rc=
+
+$ FM_HOME=$LAB bin/fm-pr-check.sh task-p78 https://github.com/zakna/firstmate/pull/78   # worker copy at 92f3575
+review comments: 1 inline on head 92f35751c0708f48b6f361cc6fe537336eecb56b
+bot findings: 1 unaddressed
+armed: state/task-p78.check.sh
+rc=
+

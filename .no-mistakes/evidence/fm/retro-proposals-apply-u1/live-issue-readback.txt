@@ -1,0 +1,26 @@
+--- brief fail.md:
+# Task
+Fix the bug reported in https://github.com/cli/cli/issues/14733 and #12786.
+Also closes cli/cli#14780; see PR #14770 (this PR) and the merged PR cli/cli#14769.
+# Notes
+#14309 is mentioned only outside the Task section.
+$ bin/fm-issue-readback.sh fail.md https://github.com/cli/cli/pull/14770
+issue readback: https://github.com/cli/cli/issues/14733 is open with no comment since the merge at 2026-10-20T19:47:10Z
+issue readback: https://github.com/cli/cli/issues/12786 is open with no comment since the merge at 2026-10-20T19:47:10Z
+rc=1
+
+--- brief pass.md:
+# Task
+Follow up on #14309 (commented after merge) and cli/cli#14780 (closed).
+$ bin/fm-issue-readback.sh pass.md https://github.com/cli/cli/pull/14770
+rc=0
+
+--- brief none.md:
+# Task
+No issue references here; the #1 priority is speed.
+$ bin/fm-issue-readback.sh none.md https://github.com/cli/cli/pull/14770
+rc=0
+
+--- unmerged PR:
+$ bin/fm-issue-readback.sh fail.md https://github.com/cli/cli/pull/14782
+rc=0

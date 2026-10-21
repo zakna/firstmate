@@ -1,0 +1,8 @@
+--- data/task-r2/brief.md:
+# Task
+Follow up on #14309 (commented after merge) and cli/cli#14780 (closed).
+$ FM_HOME=$LAB bin/fm-teardown.sh task-r2
+$LAB/wt-80: STUCK: on detached HEAD with unique commits, 2 commits behind origin/main - needs attention
+teardown task-r2 complete (window firstmate:fm-task-r2, worktree $LAB/wt-gone2)
+rc=0
+waiver written: no

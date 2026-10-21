@@ -1,0 +1,6 @@
+ok - an open issue with no comment since the merge refuses, closed and commented ones pass
+ok - closed issues, issues commented after the merge, and pull request numbers pass
+ok - an unreadable issue refuses, and a brief naming no issue reads nothing
+ok - an unmerged PR has nothing to read back
+ok - teardown refuses a readback waiver that names no reason
+rc=0

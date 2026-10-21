@@ -1,0 +1,1 @@
+39:That includes a readback refusal for an issue the brief names: never comment on the issue or pass `--no-readback` yourself; hand it back to MAIN, which alone owns the readback, by reporting the refusal with verdict captain like any other teardown refusal MAIN must act on.
