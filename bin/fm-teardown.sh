@@ -3691,11 +3691,19 @@ fi
 
 # Issue readback (bin/fm-issue-readback.sh owns the rule): a merged ship PR is
 # not cleaned up while an issue its brief names is open with no comment since
-# the merge, unless --no-readback names why, which is kept in data/<id>/.
+# the merge, unless --no-readback names why, which is kept in data/<id>/ through
+# the same symlink-refusing archive helpers as the task's other records.
 if [ "$KIND" = ship ] && [ -n "$PR_URL" ] && [ "$FORCE" != "--force" ]; then
   if [ -n "$NO_READBACK_REASON" ]; then
-    mkdir -p "$DATA/$ID"
-    printf '%s\n' "$NO_READBACK_REASON" > "$DATA/$ID/readback-waiver.txt"
+    waiver_tmp=$(mktemp "${TMPDIR:-/tmp}/fm-readback-waiver.XXXXXX") || exit 1
+    printf '%s\n' "$NO_READBACK_REASON" > "$waiver_tmp"
+    if ! teardown_archive_dir "$DATA/$ID" \
+      || ! teardown_archive_record "$waiver_tmp" "$DATA/$ID/readback-waiver.txt"; then
+      rm -f -- "$waiver_tmp"
+      echo "error: teardown refused: the readback waiver for $ID could not be kept; nothing was removed" >&2
+      exit 1
+    fi
+    rm -f -- "$waiver_tmp"
     echo "Issue readback waived: $NO_READBACK_REASON"
   elif ! "$SCRIPT_DIR/fm-issue-readback.sh" "$DATA/$ID/brief.md" "$PR_URL"; then
     echo "REFUSED: ship task $ID names issues that are still open with no comment since its PR merged." >&2

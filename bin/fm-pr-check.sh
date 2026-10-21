@@ -29,7 +29,9 @@
 # line survives, so a finding fixed earlier reads as raised on the current head.
 # The resolved state and the PR author come from one GraphQL read of the PR's
 # review threads; when that read fails or the PR has more than 100 threads, the
-# count prints "unknown". It never refuses arming.
+# count prints "unknown". It never refuses arming, but in a secondmate home a
+# non-zero or unknown count holds the child's ready line back from the parent
+# channel and reports that as actionable.
 # The recorded pr= also frees the task's place in a declared project capacity
 # (bin/fm-project-capacity-lib.sh).
 # Usage: fm-pr-check.sh <task-id> <pr-url>
@@ -287,12 +289,26 @@ PR_MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)
 PR_YOLO=$(grep '^yolo=' "$META" | tail -1 | cut -d= -f2- || true)
 [ -z "$PR_MODE" ] || READY_LINE="$READY_LINE mode=$(fm_parent_channel_clean_note "$PR_MODE")"
 [ -z "$PR_YOLO" ] || READY_LINE="$READY_LINE yolo=$(fm_parent_channel_clean_note "$PR_YOLO")"
+# A GitHub PR with bot findings no one has answered, or whose count could not
+# be read, is not ready, so a secondmate home holds its ready line back; rerun
+# this registration once each finding is answered. The merge-time re-record
+# is exempt because the PR has already landed.
+READY_HELD=
+if [ "$PROVIDER" = github ] && [ "${FM_PR_CHECK_MERGE:-}" != 1 ] && [ "${BOT_FINDINGS:-unknown}" != 0 ]; then
+  READY_HELD=${BOT_FINDINGS:-unknown}
+fi
 READY_RC=0
-fm_parent_channel_report "$FM_HOME" "$STATE" "$READY_LINE" || READY_RC=$?
-case "$READY_RC" in
-  0|1) ;;
-  *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
-esac
+if [ -n "$READY_HELD" ]; then
+  fm_parent_channel_home_id "$FM_HOME" >/dev/null 2>&1 || READY_RC=$?
+  [ "$READY_RC" = 1 ] \
+    || printf 'actionable: PR %s is registered but its ready line was held back from the parent channel: bot findings: %s unaddressed\n' "$URL" "$READY_HELD" >&2
+else
+  fm_parent_channel_report "$FM_HOME" "$STATE" "$READY_LINE" || READY_RC=$?
+  case "$READY_RC" in
+    0|1) ;;
+    *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
+  esac
+fi
 if [ -n "$PR_HEAD" ]; then
   printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
   printf 'bot findings: %s unaddressed\n' "${BOT_FINDINGS:-unknown}"

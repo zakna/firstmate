@@ -284,6 +284,13 @@ case "\${1:-} \${2:-}" in
       *"headRefOid"*) printf '%s\n' '$head' ; exit 0 ;;
     esac
     ;;
+  "api graphql")
+    printf '%s\n' '{"data":{"repository":{"pullRequest":{"author":{"login":"author"},"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}'
+    exit 0 ;;
+esac
+case " \$* " in
+  *" api repos/"*"/pulls/"*"/comments?per_page=100 "*)
+    printf '%s\n' "\${FM_TEST_GH_INLINE:-[[]]}" ; exit 0 ;;
 esac
 echo "error: pull request not found" >&2
 exit 1
@@ -808,7 +815,31 @@ test_teardown_refuses_an_unread_brief_issue_unless_waived() {
     || fail "a waived readback still refused: $out"
   [ "$(cat "$case_dir/data/task-x1/readback-waiver.txt")" = "issue 12 tracks later work" ] \
     || fail "the waiver reason was not kept with the task's records"
-  pass "teardown refuses an unread brief issue until a reason waives the readback"
+
+  case_dir=$(make_case issue-readback-symlink)
+  write_meta "$case_dir" no-mistakes ship
+  printf '%s\n' 'pr=https://github.com/example/repo/pull/7' >> "$case_dir/state/task-x1.meta"
+  mkdir -p "$case_dir/data/task-x1"
+  printf 'outside\n' > "$case_dir/outside.txt"
+  ln -s "$case_dir/outside.txt" "$case_dir/data/task-x1/readback-waiver.txt"
+  set +e
+  out=$(run_teardown "$case_dir" --no-readback "issue 12 tracks later work" 2>&1); rc=$?
+  set -e
+  [ "$rc" = 1 ] || fail "teardown wrote a waiver through a symlink (rc=$rc): $out"
+  [ "$(cat "$case_dir/outside.txt")" = outside ] || fail "the waiver overwrote a file outside the task's records"
+  assert_present "$case_dir/state/task-x1.meta" "the waiver refusal removed the task record"
+
+  case_dir=$(make_case issue-readback-symlink-dir)
+  write_meta "$case_dir" no-mistakes ship
+  printf '%s\n' 'pr=https://github.com/example/repo/pull/7' >> "$case_dir/state/task-x1.meta"
+  mkdir -p "$case_dir/elsewhere"
+  ln -s "$case_dir/elsewhere" "$case_dir/data/task-x1"
+  set +e
+  out=$(run_teardown "$case_dir" --no-readback "issue 12 tracks later work" 2>&1); rc=$?
+  set -e
+  [ "$rc" = 1 ] || fail "teardown wrote a waiver into a symlinked task directory (rc=$rc): $out"
+  [ ! -e "$case_dir/elsewhere/readback-waiver.txt" ] || fail "the waiver landed outside the task's records"
+  pass "teardown refuses an unread brief issue until a reason waives the readback, and never writes the waiver through a symlink"
 }
 
 test_teardown_manual_backend_leaves_the_backlog_to_the_operator() {
@@ -2771,6 +2802,23 @@ test_secondmate_pr_registration_publishes_ready_line() {
     || fail "mate-pr-ready: re-registration failed"
   [ "$(grep -c 'child-pr-task-x1' "$channel")" -eq 1 ] \
     || fail "mate-pr-ready: re-registration duplicated the ready line"
+
+  case_dir=$(make_case mate-pr-held)
+  configure_secondmate_home "$case_dir" local "$case_dir/parent"
+  mkdir -p "$case_dir/parent/state"
+  channel="$case_dir/parent/state/mate-x.status"
+  write_meta "$case_dir" no-mistakes ship
+  wt_commit_file "$case_dir" feature.txt hello "add feature"
+  add_gh_pr_merged_for_head "$case_dir" "$(git -C "$case_dir/wt" rev-parse HEAD)"
+  FM_TEST_GH_INLINE='[[{"id":1,"in_reply_to_id":null,"user":{"type":"Bot","login":"codex"}}]]' \
+    FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_STATE_OVERRIDE="$case_dir/state" \
+    PATH="$case_dir/fakebin:$PATH" "$PR_CHECK" task-x1 "$url" > "$case_dir/pr-check.out" 2> "$case_dir/pr-check.err" \
+    || fail "mate-pr-held: fm-pr-check failed: $(cat "$case_dir/pr-check.err")"
+  grep -q '^armed:' "$case_dir/pr-check.out" || fail "mate-pr-held: poll was not armed"
+  ! grep -q 'child-pr-task-x1' "$channel" 2>/dev/null \
+    || fail "mate-pr-held: a PR with an unanswered bot finding was relayed upstream as ready"
+  grep -qF "ready line was held back from the parent channel: bot findings: 1 unaddressed" "$case_dir/pr-check.err" \
+    || fail "mate-pr-held: the held ready line was not reported: $(cat "$case_dir/pr-check.err")"
 
   case_dir=$(make_case main-pr-ready)
   write_meta "$case_dir" no-mistakes ship
