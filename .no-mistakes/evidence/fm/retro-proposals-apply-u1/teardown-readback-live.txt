@@ -1,0 +1,28 @@
+Lab home $LAB (fm-lab-home marked, private tmux socket). Task lab-t1: kind=ship, landed worktree (no unmerged commits), pr=https://github.com/cli/cli/pull/14770 (merged 2026-10-20T19:47:10Z, real gh).
+Brief '# Task' names #14511 (cli/cli, open, no comment since 2026-09-24). treehouse/no-mistakes stubbed as no-ops (not under test).
+
+$ fm-teardown.sh lab-t1
+fm-gate-refuse: gate agent lifecycle permitted only against lab home $LAB
+issue readback: https://github.com/cli/cli/issues/14511 is open with no comment since the merge at 2026-10-20T19:47:10Z
+REFUSED: ship task lab-t1 names issues that are still open with no comment since its PR merged.
+Comment on each issue with what landed and what remains (or close it), or rerun with --no-readback <reason>.
+exit=1
+task record still present: $LAB/state/lab-t1.meta; worktree present: $LAB/wt
+
+$ fm-teardown.sh lab-t1 --no-readback        # missing reason
+error: invalid teardown request
+exit=2
+
+$ fm-teardown.sh lab-t1 --no-readback ""     # empty reason
+error: invalid teardown request
+exit=2
+
+$ fm-teardown.sh lab-t1 --no-readback "issue 14511 tracks upstream follow-up"
+fm-gate-refuse: gate agent lifecycle permitted only against lab home $LAB
+Issue readback waived: issue 14511 tracks upstream follow-up
+demo: already current
+teardown lab-t1 complete (window firstmate:fm-lab-t1, worktree $LAB/wt)
+Backlog: lab-t1 just finished (this home keeps no markdown backlog at /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.N75dpB/data/backlog.md). Update /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.N75dpB/data/backlog.md - move lab-t1 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+exit=0
+data/lab-t1/readback-waiver.txt: issue 14511 tracks upstream follow-up
+task record after: ls: $LAB/state/lab-t1.meta: No such file or directory

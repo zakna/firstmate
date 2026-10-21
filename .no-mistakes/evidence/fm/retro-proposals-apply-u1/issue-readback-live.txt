@@ -1,0 +1,62 @@
+Live run against real GitHub (cli/cli PR #14770, merged 2026-10-20T19:47:10Z), read-only gh API
+
+$ bin/fm-issue-readback.sh <brief: open, no comment since merge (bare #n)> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| Fix the thing from #14511.
+    brief| 
+issue readback: https://github.com/cli/cli/issues/14511 is open with no comment since the merge at 2026-10-20T19:47:10Z
+exit=1
+
+$ bin/fm-issue-readback.sh <brief: open, no comment since merge (owner/repo#n + URL)> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| See cli/cli#14512 and https://github.com/cli/cli/issues/14511
+    brief| 
+issue readback: https://github.com/cli/cli/issues/14511 is open with no comment since the merge at 2026-10-20T19:47:10Z
+issue readback: https://github.com/cli/cli/issues/14512 is open with no comment since the merge at 2026-10-20T19:47:10Z
+exit=1
+
+$ bin/fm-issue-readback.sh <brief: open but commented after merge> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| Addresses #14309 and #14090.
+    brief| 
+exit=0
+
+$ bin/fm-issue-readback.sh <brief: closed issue> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| Closes #14780.
+    brief| 
+exit=0
+
+$ bin/fm-issue-readback.sh <brief: a PR number and the PR's own number are not issues> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| Follows #14768 and is #14770.
+    brief| 
+exit=0
+
+$ bin/fm-issue-readback.sh <brief: issue named only outside # Task section> https://github.com/cli/cli/pull/14770
+    brief| # Context
+    brief| Old note about #14511.
+    brief| 
+    brief| # Task
+    brief| Refactor docs.
+    brief| 
+exit=0
+
+$ bin/fm-issue-readback.sh <brief: mixed: one passes, one fails> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| #14309 and #14512
+    brief| 
+issue readback: https://github.com/cli/cli/issues/14512 is open with no comment since the merge at 2026-10-20T19:47:10Z
+exit=1
+
+$ bin/fm-issue-readback.sh <brief: unmerged PR -> nothing to read back> https://github.com/cli/cli/pull/14770
+    brief| # Task
+    brief| #14511
+    brief| 
+issue readback: https://github.com/cli/cli/issues/14511 is open with no comment since the merge at 2026-10-20T19:47:10Z
+exit=1
+
+
+(correction: the previous last case used the merged PR; rerun against an OPEN PR)
+$ bin/fm-issue-readback.sh <brief: #14511> https://github.com/cli/cli/pull/14781   # state=OPEN
+exit=0

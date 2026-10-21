@@ -1,0 +1,23 @@
+Lab home $LAB; real gh against zakna/firstmate PRs. Ground truth from GraphQL review threads:
+  #80: 11 Codex threads, none resolved; 1 has a PR-author reply 'Fixed in 56e1e301...' and that comment's commit_id was MOVED to head f863d4e9 (originalCommit fe608e55). Expect bot findings 10.
+  #71: 6 Codex threads, 4 with PR-author replies 'Not fixed in this PR: tracked in backlog...' (no SHA). Expect bot findings 6.
+  #77: 5 Codex threads, 1 with PR-author reply 'This is deliberate...' (no SHA), 2 moved to head. Expect bot findings 5.
+
+$ fm-pr-check.sh pr80 https://github.com/zakna/firstmate/pull/80
+review comments: 2 inline on head f863d4e964ce711a1de5b38871475a49b09615e8
+bot findings: 10 unaddressed
+armed: state/pr80.check.sh
+exit=0
+
+$ fm-pr-check.sh pr71 https://github.com/zakna/firstmate/pull/71
+review comments: 4 inline on head ff19563f07e604985f2b0e55d8da4cb236460e60
+bot findings: 6 unaddressed
+armed: state/pr71.check.sh
+exit=0
+
+$ fm-pr-check.sh pr77 https://github.com/zakna/firstmate/pull/77
+review comments: 3 inline on head a98dc5693c21dde8c28fdee69e214acc1b9face8
+bot findings: 5 unaddressed
+armed: state/pr77.check.sh
+exit=0
+
