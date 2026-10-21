@@ -788,6 +788,29 @@ SH
   pass "teardown closes a landed Gerrit task with its change URL as a note and a GitHub task with --pr"
 }
 
+test_teardown_refuses_an_unread_brief_issue_unless_waived() {
+  local case_dir out rc
+  case_dir=$(make_case issue-readback)
+  write_meta "$case_dir" no-mistakes ship
+  printf '%s\n' 'pr=https://github.com/example/repo/pull/7' >> "$case_dir/state/task-x1.meta"
+  mkdir -p "$case_dir/data/task-x1"
+  printf '# Task\n## Captain'"'"'s intent\nFix #12.\n' > "$case_dir/data/task-x1/brief.md"
+
+  set +e
+  out=$(run_teardown "$case_dir" 2>&1); rc=$?
+  set -e
+  [ "$rc" = 1 ] || fail "teardown cleaned up a task whose named issue could not be read back (rc=$rc): $out"
+  printf '%s\n' "$out" | grep -F -- '--no-readback <reason>' >/dev/null \
+    || fail "the readback refusal did not name its waiver: $out"
+  assert_present "$case_dir/state/task-x1.meta" "the readback refusal removed the task record"
+
+  out=$(run_teardown "$case_dir" --no-readback "issue 12 tracks later work" 2>&1) \
+    || fail "a waived readback still refused: $out"
+  [ "$(cat "$case_dir/data/task-x1/readback-waiver.txt")" = "issue 12 tracks later work" ] \
+    || fail "the waiver reason was not kept with the task's records"
+  pass "teardown refuses an unread brief issue until a reason waives the readback"
+}
+
 test_teardown_manual_backend_leaves_the_backlog_to_the_operator() {
   local case_dir out backlog_path
   case_dir=$(make_case tasks-axi-manual-optout)
@@ -5207,6 +5230,7 @@ test_local_only_fork_remote_allows
 test_teardown_closes_the_backlog_item_itself
 test_teardown_closes_a_gerrit_task_with_its_change_url_as_a_note
 test_teardown_manual_backend_leaves_the_backlog_to_the_operator
+test_teardown_refuses_an_unread_brief_issue_unless_waived
 test_teardown_keeps_the_task_records_in_its_data_directory
 test_teardown_refuses_before_removal_when_the_records_cannot_be_kept
 test_teardown_never_truncates_an_existing_copy_with_an_empty_source

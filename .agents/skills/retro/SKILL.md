@@ -224,6 +224,7 @@ Each proposal must pass all four gates, which exist to stop overfitting to one t
 4. Checkable and retirable: it names one metric from the block, the number of tickets after which it is judged, and the condition under which it is dropped.
 
 For each proposal, write: the routing class, the cue - the future situation from gate 2 - the evidence with its record, the owner file or configuration it would change, the drafted text or check, the four gate answers, its confidence, and its cost stated honestly.
+For a drafted check, list each failure symptom the evidence records and say whether the draft catches it; where it is cheap, run the draft against a reproduction of that symptom and cite the command.
 Confidence is high when independent tickets or the mechanism read in the artefact confirm the cause, and medium when one occurrence directly confirms the observed fact or has a named cause.
 A candidate that fails a gate goes in one line under "Considered and not proposed", with the gate it failed.
 A candidate whose evidence is mixed, confounded, or a single occurrence with neither a named cause nor direct confirmation, such as one run that might have passed by luck, is not proposed: record it there as `no entry` with what would settle it.
