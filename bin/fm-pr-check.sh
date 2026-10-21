@@ -162,7 +162,7 @@ BOT_FINDINGS=
 if [ -n "$REVIEW_COMMENTS" ]; then
   # shellcheck disable=SC2016
   THREADS_QUERY='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}'
-  if THREADS_JSON=$(gh api graphql -f query="$THREADS_QUERY" -F owner="${PROJECT_PATH%%/*}" -F name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
+  if THREADS_JSON=$(gh api graphql -f query="$THREADS_QUERY" -f owner="${PROJECT_PATH%%/*}" -f name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
     && RESOLVED=$(printf '%s' "$THREADS_JSON" | jq -ec \
       '.data.repository.pullRequest.reviewThreads | select(.pageInfo.hasNextPage == false) | [.nodes[] | select(.isResolved) | .comments.nodes[0].databaseId]' 2>/dev/null) \
     && BOT_FINDINGS=$(printf '%s' "$INLINE_JSON" | jq -er --argjson resolved "$RESOLVED" \
