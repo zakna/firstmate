@@ -184,10 +184,10 @@ Write each remaining item ready to file, with:
 
 Keep supervisor vocabulary, quoted instructions, and direct address out of the issue text; it is published in the project.
 Whoever files an item first saves its body to a file `B` and refuses to file when this check prints any line, because a body sliced past its item's end publishes the rest of the report.
-`P='^#{1,3} [0-9]+\.|captain|brief-include|/(Users|home)/[^/[:space:]]+/|[A-Z]:\\Users\\|(^|[^/[:alnum:]_.-])data/[a-z0-9-]+/(report|brief|launch-brief|landing-note|handoff)\.md'; [ "$FIRSTMATE_TARGET" = 1 ] || P="$P|firstmate"; grep -n -i -E "$P" "$B" || grep -n -F "${FM_HOME:?}" "$B"`
+`P='^#{1,3} [0-9]+\.|captain|brief-include|(^|[^/[:alnum:]_.-])data/[a-z0-9-]+/(report|brief|launch-brief|landing-note|handoff)\.md'; [ "$FIRSTMATE_TARGET" = 1 ] || P="$P|firstmate"; grep -n -i -E "$P" "$B" || grep -n -E '(^|[^[:alnum:]_./-]|file://)/(Users|home)/[^/[:space:]]+/|[A-Za-z]:\\Users\\' "$B" || grep -n -F "${FM_HOME:?}" "$B"`
 Set `FIRSTMATE_TARGET=1` only when the retro's target repository is the firstmate repository itself, so its own links and paths are not refused.
 It refuses a report heading such as `## 3. Debt inventory`, `captain`, `brief-include`, `/Users/ana/`, `/home/ana/`, `C:\Users\ana\`, `data/fix-login-a1/report.md`, and any path under this home.
-It passes project paths such as `tests/data/fixtures/`, `src/data/models/report.md`, and `docs/data/brief.md`.
+It passes project paths and routes such as `tests/data/fixtures/`, `src/data/models/report.md`, `docs/data/brief.md`, `src/users/models/user.py`, `app/users/views/`, `GET /api/users/42/orders`, and `frontend/home/components/Header.tsx`.
 
 ### 6. Steering-file growth
 
