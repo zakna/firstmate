@@ -30,6 +30,14 @@
 # The resolved state and the PR author come from one GraphQL read of the PR's
 # review threads; when that read fails or the PR has more than 100 threads, the
 # count prints "unknown". It never refuses arming.
+# It then prints "bot review on head: <yes|no|refused>" from one GraphQL read of
+# the PR's newest commit, reviews, and conversation comments by Bot-type
+# authors: "yes" when a bot review is on the exact head, or a bot comment names
+# a prefix of the head SHA, and neither says the review could not run;
+# "refused" when, instead, a bot review or comment dated at or after the head
+# commit says the review could not run (usage limit, quota, failed); "no"
+# otherwise. A failed read, or a newest commit that is not the recorded head,
+# prints "unknown". It never refuses arming.
 # The recorded pr= also frees the task's place in a declared project capacity
 # (bin/fm-project-capacity-lib.sh).
 # Usage: fm-pr-check.sh <task-id> <pr-url>
@@ -179,6 +187,29 @@ if [ -n "$REVIEW_COMMENTS" ]; then
   fi
 fi
 
+BOT_REVIEW=
+if [ -n "$PR_HEAD" ] && command -v jq >/dev/null 2>&1; then
+  # shellcheck disable=SC2016
+  BOT_REVIEW_QUERY='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){commits(last:1){nodes{commit{oid committedDate}}} reviews(last:100){nodes{author{__typename} commit{oid} body submittedAt}} comments(last:100){nodes{author{__typename} body createdAt}}}}}'
+  if BOT_REVIEW_JSON=$(gh api graphql -f query="$BOT_REVIEW_QUERY" -f owner="${PROJECT_PATH%%/*}" -f name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
+    && BOT_REVIEW=$(printf '%s' "$BOT_REVIEW_JSON" | jq -er --arg head "$PR_HEAD" '
+      def refusal: (.body // "") | test("usage limit|quota|rate limit|can(no|\u0027)t run|could( not|n\u0027t) (run|complete)|unable to (run|review|complete)|review (has )?failed|review: failed"; "i");
+      def names_head: [(.body // "") | scan("[0-9a-fA-F]{7,40}")] | any(ascii_downcase as $t | $head | startswith($t));
+      .data.repository.pullRequest as $p
+      | ($p.commits.nodes[0].commit) as $c
+      | if ($c.oid // "") != $head then error("newest commit is not the recorded head") else
+          [$p.reviews.nodes[] | select(.author.__typename == "Bot") | {body, at: .submittedAt, on_head: (.commit.oid == $head)}]
+          + [$p.comments.nodes[] | select(.author.__typename == "Bot") | {body, at: .createdAt, on_head: names_head}]
+          | if any(.[]; .on_head and (refusal | not)) then "yes"
+            elif any(.[]; (.at // "") >= $c.committedDate and refusal) then "refused"
+            else "no" end
+        end' 2>/dev/null); then
+    case "$BOT_REVIEW" in yes|no|refused) ;; *) BOT_REVIEW= ;; esac
+  else
+    BOT_REVIEW=
+  fi
+fi
+
 MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)
 PROJECT=$(grep '^project=' "$META" | tail -1 | cut -d= -f2- || true)
 # The gate is asked about the ready report this task's worker was told to give;
@@ -296,5 +327,6 @@ esac
 if [ -n "$PR_HEAD" ]; then
   printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
   printf 'bot findings: %s unaddressed\n' "${BOT_FINDINGS:-unknown}"
+  printf 'bot review on head: %s\n' "${BOT_REVIEW:-unknown}"
 fi
 printf 'armed: state/%s.check.sh\n' "$ID"
