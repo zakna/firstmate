@@ -110,6 +110,23 @@ test_commented_closed_and_pr_numbers_pass() {
   pass "closed issues, issues commented after the merge, and pull request numbers pass"
 }
 
+# Briefs often name issues in words, so "issue 21" and "issues 22, 23 and 24"
+# name issues of the PR's repository just as #21 does.
+test_issues_named_in_words_are_read_back() {
+  local dir out n
+  dir=$(make_case words "Fix issue 21, then Issues 22, 23 and 24; tissue 99 is not one.")
+  issue "$dir" acme_widgets_21 open
+  for n in 22 23 24; do issue "$dir" "acme_widgets_$n" closed; done
+  out=$(run_readback "$dir") && fail "an open issue named in words passed: $out"
+  printf '%s\n' "$out" | grep -qF "https://github.com/acme/widgets/issues/21 is open with no comment since the merge at $MERGED_AT" \
+    || fail "the refusal did not name the issue named in words: $out"
+  for n in 22 23 24; do
+    grep -qF "issues/$n" "$dir/gh/calls" || fail "issue $n in a word list was not read"
+  done
+  grep -qF 'issues/99' "$dir/gh/calls" && fail "a number after a word ending in 'issue' was read"
+  pass "issues named in words are read back"
+}
+
 test_unreadable_issue_refuses_and_no_issue_reads_nothing() {
   local dir out
   dir=$(make_case unreadable "Fix #12.")
@@ -146,6 +163,7 @@ test_teardown_rejects_an_empty_waiver() {
 
 test_open_issue_without_a_comment_since_merge_refuses
 test_commented_closed_and_pr_numbers_pass
+test_issues_named_in_words_are_read_back
 test_unreadable_issue_refuses_and_no_issue_reads_nothing
 test_unmerged_pr_is_not_read_back
 test_teardown_rejects_an_empty_waiver

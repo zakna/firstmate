@@ -149,6 +149,13 @@ case "${1:-} ${2:-}" in
         printf '%s\n' "$threads"
         exit 0
         ;;
+      *"reviews(last:100)"*)
+        [ "${FM_TEST_GH_BOT_REVIEW_FAIL:-0}" = 0 ] || exit 1
+        review=${FM_TEST_GH_BOT_REVIEW:-}
+        [ -n "$review" ] || review="{\"data\":{\"repository\":{\"pullRequest\":{\"commits\":{\"nodes\":[{\"commit\":{\"oid\":\"${FM_TEST_GH_HEAD:-0123456789abcdef0123456789abcdef01234567}\",\"committedDate\":\"2026-10-20T10:00:00Z\"}}]},\"reviews\":{\"nodes\":[]},\"comments\":{\"nodes\":[]}}}}}"
+        printf '%s\n' "$review"
+        exit 0
+        ;;
       *mergeCommit*)
         # The PR record read, answered in its --jq output shape.
         [ "${FM_TEST_GH_RECORD_FAIL:-0}" = 0 ] || exit 1
@@ -747,6 +754,57 @@ test_unaddressed_bot_findings_are_counted() {
   grep -qxF "bot findings: unknown unaddressed" "$dir/stdout" \
     || fail "a partial thread page was counted instead of disclosed as unknown: $(cat "$dir/stdout")"
   pass "registration counts unaddressed bot findings on every head"
+}
+
+# Registration says whether an allowlisted review bot has reviewed the exact
+# head: its review on the head or its comment naming the head SHA is "yes", its
+# reply after the head commit opening with a refusal is "refused", and anything
+# else - a review of an earlier head, a refusal older than the head, or another
+# bot naming the head - is "no". An unreadable answer is "unknown" and never stops arming.
+test_bot_review_on_head_is_reported() {
+  local dir head old
+  dir=$(make_case bot-review-on-head)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  head=0123456789abcdef0123456789abcdef01234567
+  old=89abcdef0123456789abcdef0123456789abcdef
+  bot_review_payload() {  # <reviews nodes> <comments nodes>
+    printf '{"data":{"repository":{"pullRequest":{"commits":{"nodes":[{"commit":{"oid":"%s","committedDate":"2026-10-20T10:00:00Z"}}]},"reviews":{"nodes":[%s]},"comments":{"nodes":[%s]}}}}}' "$head" "$1" "$2"
+  }
+  bot_review_case() {  # <expected> <message> <payload>
+    FM_TEST_GH_HEAD=$head FM_TEST_GH_BOT_REVIEW=$3 \
+      run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+      || fail "registration failed while $2: $(cat "$dir/stderr")"
+    grep -qxF "bot review on head: $1" "$dir/stdout" \
+      || fail "expected 'bot review on head: $1' when $2: $(cat "$dir/stdout")"
+    grep -q '^armed: ' "$dir/stdout" || fail "the bot review read stopped the merge poll from arming when $2"
+  }
+  bot_review_case yes "a bot review is on the head" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Looks fine.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a bot comment names the head SHA" \
+    "$(bot_review_payload "" "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"body\":\"Reviewed commit 0123456789a: no major issues.\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
+  bot_review_case no "only an earlier head was reviewed and a person names the head" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$old\"},\"body\":\"Looks fine.\",\"submittedAt\":\"2026-10-20T09:05:00Z\"}" "{\"author\":{\"login\":\"o\"},\"body\":\"Pushed 0123456.\",\"createdAt\":\"2026-10-20T10:01:00Z\"}")"
+  bot_review_case refused "a bot says its usage limit is reached after the head commit" \
+    "$(bot_review_payload "" "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"body\":\"You have reached your Codex usage limits.\",\"createdAt\":\"2026-10-20T10:02:00Z\"}")"
+  bot_review_case no "the only usage-limit reply predates the head commit" \
+    "$(bot_review_payload "" "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"body\":\"You have reached your Codex usage limits.\",\"createdAt\":\"2026-10-20T09:02:00Z\"}")"
+  bot_review_case no "only a deploy-preview bot names the head SHA" \
+    "$(bot_review_payload "" "{\"author\":{\"login\":\"vercel\"},\"body\":\"Latest commit: 0123456\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
+  bot_review_case refused "Copilot was not able to review the head" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a review on the head summarizes a rate limit change" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"This adds a rate limit to the login endpoint.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case unknown "the newest commit is not the recorded head" \
+    "$(bot_review_payload "" "" | sed "s/$head/$old/")"
+
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_BOT_REVIEW_FAIL=1 \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "an unreadable bot review state refused registration: $(cat "$dir/stderr")"
+  grep -qxF "bot review on head: unknown" "$dir/stdout" \
+    || fail "an unreadable bot review state was not disclosed as unknown: $(cat "$dir/stdout")"
+  grep -q '^armed: ' "$dir/stdout" || fail "an unreadable bot review state stopped the merge poll from arming"
+  pass "registration reports whether a bot reviewed the exact head"
 }
 
 # A draft cannot be merged, so arming a merge poll on one would wait for an event
@@ -3725,6 +3783,7 @@ test_direct_pr_unpushed_commit_refuses_registration
 test_valid_recording_and_merge_derivation
 test_review_comments_on_recorded_head_are_counted
 test_unaddressed_bot_findings_are_counted
+test_bot_review_on_head_is_reported
 test_rejected_metacharacter_bytes_are_inert
 test_static_poll_contract
 test_atomic_interruption_leaves_no_partial_artifact

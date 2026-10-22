@@ -6,9 +6,10 @@
 # them open with no record of what landed; this makes that readback a refusal
 # instead of a memory.
 # The issues are read from the brief's `# Task` section (the whole brief when it
-# has none), so the scaffold's generic text names nothing. Three forms count:
+# has none), so the scaffold's generic text names nothing. Four forms count:
 # a full https://github.com/<owner>/<repo>/issues/<n> URL, <owner>/<repo>#<n>,
-# and a bare #<n>, which resolves to the PR's own repository. A number that
+# a bare #<n>, and words such as "issue 213" or "issues 213, 214 and 215"; the
+# last two resolve to the PR's own repository. A number that
 # GitHub reports as a pull request, and the PR's own number, are not issues.
 # Exit 0 when every named issue passes, when the brief names none, when there
 # is no brief, when the PR is not a GitHub PR, or when the PR is not merged
@@ -63,6 +64,14 @@ ISSUES=$(printf '%s\n' "$TEXT" | awk -v repo="$PR_REPO" -v own="$PR_NUMBER" '
       split(ref, p, "#")
       add(p[1], p[2])
       line = substr(line, 1, RSTART - 1) " " substr(line, RSTART + RLENGTH)
+    }
+    words = line
+    while (match(words, /(^|[^A-Za-z0-9_])[Ii]ssues? [0-9]+((, | and |, and )[0-9]+)*/)) {
+      ref = substr(words, RSTART, RLENGTH)
+      words = substr(words, RSTART + RLENGTH)
+      sub(/^[^0-9]*/, "", ref)
+      k = split(ref, nums, /[^0-9]+/)
+      for (i = 1; i <= k; i++) if (nums[i] != "") add(repo, nums[i])
     }
     line = " " line
     while (match(line, /[^A-Za-z0-9_&\/]#[0-9]+/)) {
