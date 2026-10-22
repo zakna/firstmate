@@ -67,7 +67,8 @@ Open the pipeline database read-only.
   A task's `project=` record names its project clone by the absolute resolved path `bin/fm-spawn.sh` wrote, in `${FM_HOME:?}/state/<task-id>.meta` before cleanup and in `${FM_HOME:?}/data/<task-id>/meta.txt` after it.
   The query reads that path from the delivering task's own metadata, so a project name or a relative path never reaches the match; it stops with an error when that metadata names no project.
   `T='<delivering task-id>'; M="${FM_HOME:?}/state/$T.meta"; [ -f "$M" ] || M="${FM_HOME:?}/data/$T/meta.txt"; C=$(sed -n 's/^project=//p' "$M" 2>/dev/null | tail -n 1); if [ -z "$C" ]; then echo "no project= record for $T" >&2; elif [ -d "${FM_HOME:?}/data" ]; then for n in "${FM_HOME:?}"/data/*/landing-note.md; do [ -f "$n" ] || continue; id=$(basename "$(dirname "$n")"); m="${FM_HOME:?}/state/$id.meta"; [ -f "$m" ] || m="${FM_HOME:?}/data/$id/meta.txt"; [ -f "$m" ] && grep -qxF "project=$C" "$m" && printf '%s\n' "$n"; done; fi`
-  Keep a listed note only when its task's landing evidence shows it landed after the newest earlier retro report of this project found above, or at any time when there is none: the merge time of the pull request or change that `pr=` in that same metadata file names or, with no `pr=`, of the merged one whose head branch is `branch=`, or else, for a local-only task, the date of the entry `merge <branch=>: Fast-forward` in `git -C <project clone> reflog --date=iso <default branch>`; a task with no such evidence did not land, and its note is skipped.
+  Keep a listed note only when its task's landing evidence shows it landed after the delivery studied by the newest earlier retro of this project found above landed, read with the same evidence for the task its `# Retro:` line names, or at any time when there is none; always keep the note of the delivery under study, because retros finish in a different order than their tickets merge.
+  Landing evidence is the merge time of the pull request or change that `pr=` in that same metadata file names or, with no `pr=`, of the merged one whose head branch is `branch=`, or else, for a local-only task, the date of the entry `merge <branch=>: Fast-forward` in `git -C <project clone> reflog --date=iso <default branch>`; a task with no such evidence did not land, and its note is skipped.
   Each answer (c) names a fact the instructions or the project's `AGENTS.md` did not give the worker, and each answer (b) names the tidy that worker proposed.
 - This home's workflow follow-ups, `${FM_HOME:?}/data/retro-workflow-followups.md`: follow-ups about the instructions template, the review configuration, or the supervising practice, which belong to no single project.
   Every retro re-verifies them, whatever its project; when the file is absent, treat it as empty.
@@ -177,11 +178,12 @@ Write each remaining item ready to file, with:
 - where it is on the default branch, file and line;
 - the defect, quoting the code or text;
 - the consequence, in the terms of the person who uses the project;
-- a suggested direction, not a mandate;
+- a suggested direction, not a mandate; when it names a command or a pass condition, run it against a reproduction that carries the target's recorded environment facts and cite the command, or mark it `unrun:` and list each outcome the operator can see and what each outcome means;
 - the project's own required labels;
 - a link to the parent ticket and a statement that it is not a duplicate of it.
 
 Keep supervisor vocabulary, quoted instructions, and direct address out of the issue text; it is published in the project.
+Whoever files an item first pipes its body through `grep -n -i -E '^#{1,3} [0-9]+\.|captain|firstmate|brief-include|/Users/|data/[a-z0-9-]+/'` and refuses to file on any hit, because a body sliced past its item's end publishes the rest of the report.
 
 ### 6. Steering-file growth
 
