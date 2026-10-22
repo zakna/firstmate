@@ -67,6 +67,8 @@ review:
         code that returns a fixed value that only matches the test data;
         a mock or stub of the unit the test is meant to check;
         an expected value changed to fit new output when the change states no reason for it.
+        For every check, refusal, count, or validation this change adds, find each side effect it is meant to guard - a write, a removal, a message to another channel or home - and confirm the check completes first on every path that reaches that effect, including effects another script performs from the same record.
+        A write under data/ or state/ goes through the script's existing validated helpers, never a bare redirection placed before them.
     - path: ".claude/mods/**"
       instructions: |
         Flag every way this change could make a test pass without making the code right:
