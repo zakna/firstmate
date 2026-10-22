@@ -1,0 +1,10 @@
+$ brief: Fix issue 213, then issues 214, 215 and 216.
+issue readback: could not read https://github.com/zakna/firstmate/issues/213
+issue readback: could not read https://github.com/zakna/firstmate/issues/214
+issue readback: could not read https://github.com/zakna/firstmate/issues/215
+issue readback: could not read https://github.com/zakna/firstmate/issues/216
+exit=1
+$ brief: Tissue 213 and reissue 5 are not issue references.
+exit=0
+$ brief: Fix issues 81 and 82.
+exit=0
