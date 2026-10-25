@@ -1,0 +1,12 @@
+## quiet: real bin/fm-watch.sh, --seconds 2
+checkpoint: no actionable wake within 2s
+rc=124 elapsed=2s lockpid_left=no
+## signal: status file written at 1s, --seconds 8
+signal: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-ckpt-real.lY0pvL/s/state/demo.status
+rc=0 elapsed=4s
+## queued wake:
+1792964447	2	signal	demo.status	signal: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-ckpt-real.lY0pvL/s/state/demo.status
+WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 2 --recovery-generation 25313.1792964447.kzd4qP
+wake annotation: latest wake-EVENT observed at drain, not current state: demo.status: done: synthetic wake
+STATUS OUTCOME BACKSTOP (newest captain-facing task event has no covering branch outcome):
+demo done: synthetic wake
