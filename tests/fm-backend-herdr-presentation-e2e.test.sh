@@ -1047,10 +1047,10 @@ mkdir -p "$SECOND_HOME_A/data/a1" "$SECOND_HOME_A/data/a2" \
   "$HOME_DIR/data/p1" "$HOME_DIR/data/p2"
 write_ship_brief "$HOME_DIR" p1 'Primary multi-home fixture 1.'
 write_ship_brief "$HOME_DIR" p2 'Primary multi-home fixture 2.'
-write_ship_brief "$SECOND_HOME_A" a1 'Secondmate A fixture 1.'
-write_ship_brief "$SECOND_HOME_A" a2 'Secondmate A fixture 2.'
-write_ship_brief "$SECOND_HOME_B" b1 'Secondmate B fixture 1.'
-write_ship_brief "$SECOND_HOME_B" b2 'Secondmate B fixture 2.'
+write_ship_brief "$SECOND_HOME_A" a1 'Second home A fixture 1.'
+write_ship_brief "$SECOND_HOME_A" a2 'Second home A fixture 2.'
+write_ship_brief "$SECOND_HOME_B" b1 'Second home B fixture 1.'
+write_ship_brief "$SECOND_HOME_B" b2 'Second home B fixture 2.'
 
 MULTI_FOCUS_START=$(focus_audit_line_count)
 spawn_task p1 "$HOME_DIR" "$PROJECT_DIR" > "$TMP_ROOT/p1.out" 2> "$TMP_ROOT/p1.err" \
@@ -1313,7 +1313,7 @@ PRIMARY_WAVE_ID=resume-wave-primary
 BRAVO_WAVE_ID=resume-wave-bravo
 mkdir -p "$HOME_DIR/data/$PRIMARY_WAVE_ID" "$SECOND_HOME_B/data/$BRAVO_WAVE_ID"
 write_ship_brief "$HOME_DIR" "$PRIMARY_WAVE_ID" 'Concurrent primary recovery fixture.'
-write_ship_brief "$SECOND_HOME_B" "$BRAVO_WAVE_ID" 'Concurrent secondmate recovery fixture.'
+write_ship_brief "$SECOND_HOME_B" "$BRAVO_WAVE_ID" 'Concurrent second-home recovery fixture.'
 spawn_task "$PRIMARY_WAVE_ID" "$HOME_DIR" "$RECOVERY_PROJECT_DIR" > "$TMP_ROOT/primary-wave-first.out" 2> "$TMP_ROOT/primary-wave-first.err" \
   || fail "primary recovery-wave fixture failed: $(cat "$TMP_ROOT/primary-wave-first.err")"
 spawn_task "$BRAVO_WAVE_ID" "$SECOND_HOME_B" "$RECOVERY_PROJECT_DIR" > "$TMP_ROOT/bravo-wave-first.out" 2> "$TMP_ROOT/bravo-wave-first.err" \

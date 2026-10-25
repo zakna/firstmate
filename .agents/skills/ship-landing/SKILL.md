@@ -32,6 +32,17 @@ The landing note is on trial: when ten landed tickets have notes, retire it if f
 The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of that planned next feature, and record it as an ordinary backlog dependency of that next feature.
 Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
 
+For zakna/ha, a merged PR that changes `config/` outside `config/docs/` and `config/CLAUDE.md` is deployed through that repository's deploy procedure in `config/CLAUDE.md` before cleanup, or held with a reason.
+Before that deploy, run this read-only drift check in the ha clone after `git fetch ha-deploy master`; it exits 1 when a deploy is owed and 2 when no deployed main commit can be found:
+
+```sh
+last=$(git log --first-parent --format=%s ha-deploy/master | sed -n -E 's/^deploy: (main )?([0-9a-f]{7,40})( .*)?$/\2/p' | head -1)
+[ -n "$last" ] || { echo "no deployed main sha"; exit 2; }
+git diff --stat "$last" origin/main -- config ':!config/docs' ':!config/CLAUDE.md' | grep -q . && { echo "DEPLOY OWED since $last"; exit 1; }
+```
+
+When the owed changes include another PR's, name each carried PR in the deploy commit message and in the issue comments.
+
 Tear down a ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
 A teardown refusal for an issue the brief names that is still open with no comment since the merge means the readback is owed; on main only, comment on the issue with what landed and what remains, or rerun with `--no-readback <reason>` when no readback is due.

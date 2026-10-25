@@ -93,7 +93,7 @@ A metric that cannot be extracted is reported as such with the reason, never est
 | # | Metric | Source | Kind |
 |---|---|---|---|
 | M1 | Elapsed time, dispatch to merge | task records and the forge | number |
-| M2 | Active pipeline time, excluding the `ci` step | pipeline database | number |
+| M2 | Active pipeline time, excluding the `ci` step | pipeline database, and the forge's check runs for time to checks ready | number |
 | M3 | Review rounds | pipeline database | number |
 | M4 | Findings, total and the per-round sequence | pipeline database | number and sequence |
 | M5 | Time parked on human gates, and its share of the run excluding the `ci` step | pipeline database | number |
@@ -106,7 +106,9 @@ A metric that cannot be extracted is reported as such with the reason, never est
 Two conventions keep the numbers honest.
 
 - Never read the `ci` step's duration as pipeline cost; it is mostly a wait for a merge.
-  Report time to checks ready (`ci_ready_at` minus the run's start) and the merge wait after it separately.
+  Report time to checks ready as the latest `completed_at` of the pull request head's check runs (`gh api repos/<owner>/<repo>/commits/<head>/check-runs --jq '.check_runs[]|[.name,.conclusion,.completed_at]|@tsv'`) minus the run's start.
+  Report `ci_ready_at` beside it only when the two differ; it is re-set when the base branch advances.
+  Report the merge wait after it separately.
 - Use the database's round numbering and say so; rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
 
 For M10, "found none" never means "none exist"; state how much of the merged change you read.
