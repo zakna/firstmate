@@ -33,7 +33,8 @@ The tidy slot: when a landing note or a retro debt item names a concrete structu
 Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
 
 The guard slot: when a landing note or a retro names a bad pattern in a project, file the guard that makes the pattern fail (a test, lint rule, or script check) as its own small ticket, queued ahead of any cleanup tidy for that pattern.
-The guard lands even while the cleanup waits, and it needs no planned next feature.
+The guard fails on new occurrences only: it baselines or allowlists the existing ones, so it lands even while the cleanup waits, and the cleanup removes them from that list.
+The guard needs no planned next feature.
 
 Tear down a ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
