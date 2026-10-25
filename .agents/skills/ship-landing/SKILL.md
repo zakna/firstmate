@@ -32,6 +32,9 @@ The landing note is on trial: when ten landed tickets have notes, retire it if f
 The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of that planned next feature, and record it as an ordinary backlog dependency of that next feature.
 Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
 
+The guard slot: when a landing note or a retro names a bad pattern in a project, file the guard that makes the pattern fail (a test, lint rule, or script check) as its own small ticket, queued ahead of any cleanup tidy for that pattern.
+The guard lands even while the cleanup waits, and it needs no planned next feature.
+
 Tear down a ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
 A teardown refusal for an issue the brief names that is still open with no comment since the merge means the readback is owed; on main only, comment on the issue with what landed and what remains, or rerun with `--no-readback <reason>` when no readback is due.

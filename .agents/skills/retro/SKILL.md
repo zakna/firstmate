@@ -211,6 +211,8 @@ A proposal changes the environment of the next ticket.
 Order candidates by the cost they would have removed and keep at most five; point at an existing open row instead of repeating it.
 
 Apply one routing test to every proposal and name the class in the report.
+Ask first of every proposal: could a check (test, lint, type, or script) have caught this?
+When the answer is yes, propose that check as an automated check, in preference to any new rule or prose text.
 
 | Class | When | Where it goes |
 |---|---|---|
