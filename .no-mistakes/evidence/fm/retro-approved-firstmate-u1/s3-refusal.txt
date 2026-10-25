@@ -1,0 +1,24 @@
+$ cat brief.md
+You are a crewmate.
+
+# Task
+## Captain's intent
+Add the healthcheck; the owner answered "yes".
+
+## Firstmate spec
+Keep it narrow.
+
+# Definition of done
+Delivery contract: mode=no-mistakes
+
+$ FM_HOME=$LAB bin/fm-spawn.sh scrub-demo $LAB/proj claude --mode no-mistakes --yolo off
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe/data/scrub-demo/brief.md ## Captain's intent would be refused by the no-mistakes intent scrub; reword it in brief.md as a plain goal before spawn:
+intent-scrub: line 1: quote: Add the healthcheck; the owner answered "yes".
+intent-scrub: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe/data/scrub-demo/brief.md
+exit=1
+$ ls data/scrub-demo state
+/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe/data/scrub-demo:
+brief.md
+
+/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe/state:

@@ -1,0 +1,15 @@
+$ one edit: drop the quoted answer from the intent line in brief.md
+## Captain's intent
+Add the healthcheck.
+
+## Firstmate spec
+$ FM_HOME=$LAB bin/fm-spawn.sh scrub-demo ... (tmux on PATH is a failing shim so no real worker launches)
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.7QbREe/data/scrub-demo/launch-brief.md records no ship branch; defaulting to legacy branch fm/scrub-demo
+exit=
+$ ls data/scrub-demo
+brief.md
+launch-brief.md
+$ authorized intent section in launch-brief.md
+## Captain intent authorized for --intent
+Add the healthcheck.

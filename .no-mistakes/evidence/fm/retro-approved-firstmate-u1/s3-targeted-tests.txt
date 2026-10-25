@@ -1,0 +1,2 @@
+ok - fm-spawn/fm-promote: authorized intent preserves exact words and refuses operator-address lines
+ok - fm-spawn: refuses a no-mistakes intent the scrub would refuse before the launch brief exists

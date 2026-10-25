@@ -1,0 +1,4 @@
+$ same quoted intent, but --mode direct-PR (no no-mistakes scrub applies)
+scrub-refusal lines: 0
+brief.md
+launch-brief.md

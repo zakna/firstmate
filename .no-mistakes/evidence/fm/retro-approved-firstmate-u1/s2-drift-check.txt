@@ -1,0 +1,27 @@
+== Case A: nothing merged since deploy b8a88ec
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+no deploy owed
+exit=0
+
+== Case B: only config/docs and config/CLAUDE.md changed (#2, #3)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+no deploy owed
+exit=0
+
+== Case C: two config PRs (#4, #5) merged since deploy; ha clone's origin/main is stale until fetched
+-- origin/main before fetch: sop tweak (#3)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+DEPLOY OWED since b8a88ec
+94e1442 new script (#5)
+01a9e40 cooling automation (#4)
+exit=1
+
+== Case D: ha-deploy master has no deploy: <sha> commit
+no deployed main sha
+exit=2
+
+== Case E (adversarial): deployed sha not present in the clone
+fatal: bad revision 'deadbeefcafe'
+DEPLOY OWED since deadbeefcafe
+fatal: bad revision 'deadbeefcafe..origin/main'
+exit=1

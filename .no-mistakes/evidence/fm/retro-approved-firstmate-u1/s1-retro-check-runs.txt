@@ -1,0 +1,21 @@
+$ gh api --paginate "repos/zakna/firstmate/commits/763ac1a96d99c27e6f9db0c37d458851dc76304a/check-runs?per_page=100" --jq '.check_runs[]|[.name,.conclusion,.completed_at]|@tsv'
+Behavior portable serial 9		
+Behavior portable serial 7		
+Behavior portable serial 2		
+Behavior portable serial 4		
+Behavior portable serial 6		
+Behavior portable serial 1		
+PR must be raised via no-mistakes	success	2026-10-25T17:14:09Z
+Behavior portable serial 5		
+Behavior portable serial 3		
+Behavior portable parallel 1		
+Repo invariants	success	2026-10-25T17:14:11Z
+Stock macOS Bash snapshot compatibility	success	2026-10-25T17:19:33Z
+Behavior tests (Herdr)	success	2026-10-25T17:26:00Z
+Test coverage guard	success	2026-10-25T17:14:31Z
+Lint 1		
+Behavior portable serial 8		
+Lint 2	success	2026-10-25T17:25:47Z
+Pi latest (warning only)	success	2026-10-25T17:16:56Z
+Behavior portable parallel 2		
+-- latest completed_at (time to checks ready = this minus the run start): 2026-10-25T17:26:00Z
