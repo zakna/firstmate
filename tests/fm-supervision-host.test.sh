@@ -316,14 +316,20 @@ home_processes() {  # <home>...
 }
 no_home_processes() { [ -z "$(home_processes "$@")" ]; }
 
-# Run one case, then require every process its homes started to be gone. A
-# case's watcher, arms, host, and fake session poll for as long as they live, so
-# any left behind slow every later case on a small runner.
+# Run one case, stop whatever its homes left running, and require every process
+# they started to be gone. A case's watcher, arms, host, and fake session poll
+# for as long as they live, so any left behind slow every later case on a small
+# runner. The stopped homes leave the suite's list, so its exit cleanup never
+# signals their recorded pids after those pids may have been reused.
 run_case() {  # <case function>
-  local first homes
+  local first homes home
   first=$(( $(cat "$HOMES_FILE" 2>/dev/null | wc -l) + 1 ))
   "$1"
   homes=$(tail -n +"$first" "$HOMES_FILE" 2>/dev/null | tr '\n' ' ')
+  for home in $homes; do
+    stop_home_processes "$home"
+  done
+  head -n $((first - 1)) "$HOMES_FILE" > "$HOMES_FILE.tmp" 2>/dev/null && mv -f "$HOMES_FILE.tmp" "$HOMES_FILE"
   # shellcheck disable=SC2086 # homes is a space-separated list of fixture paths
   wait_until 100 no_home_processes $homes \
     || fail "$1 left its processes running: $(home_processes $homes)"
