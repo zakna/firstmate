@@ -1,0 +1,35 @@
+--- D: HA master has never received a deploy commit (expect exit 2)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+no deployed main sha
+exit=2
+[deployed main 9988f0c7e046cbedd7027f22840a687f6ebd6050]
+--- A: just deployed, nothing new (expect exit 0)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+no deploy owed
+exit=0
+--- C: merged PRs touch only config/docs, config/CLAUDE.md, and files outside config (expect exit 0)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+no deploy owed
+exit=0
+--- B: PR #5 (carried) and #7 (just merged) change config, #6 docs only (expect exit 1, list #7 and #5, not #6)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+DEPLOY OWED since 9988f0c7e046cbedd7027f22840a687f6ebd6050
+fee1d8e change config/automations.yaml (#7)
+6b041cc change config/scripts.yaml (#5)
+exit=1
+--- F: stale origin/main without fetching origin
+$ git fetch ha-deploy master && sh drift.sh   (origin NOT fetched)
+no deploy owed
+exit=0  <- stale origin/main misses PR #9
+--- F (cont.): with the documented 'git fetch origin main' (expect exit 1 naming #9)
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+DEPLOY OWED since 198f831a46e83b86f440171c6168d79c1e973d6f
+66598dd change config/automations.yaml (#9)
+exit=1
+--- E: deploy subject names a sha missing from the clone (expect non-zero with an error, not 'no deploy owed')
+--- E
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh
+fatal: bad revision 'deadbeefdeadbeef'
+DEPLOY OWED since deadbeefdeadbeef
+fatal: bad revision 'deadbeefdeadbeef..origin/main'
+exit=1

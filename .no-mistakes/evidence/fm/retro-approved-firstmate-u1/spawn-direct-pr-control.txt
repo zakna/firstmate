@@ -1,0 +1,12 @@
+### Control: direct-PR spawn, same quoted intent
+
+## Firstmate spec
+fm-gate-refuse: gate agent lifecycle permitted only against lab home <lab>
+notice: scrub-dpr ships mode=direct-PR while the standing posture for demo is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+lab-shim: tmux blocked display-message -p #S
+RC=1
+data/scrub-dpr contents:
+brief.md
+launch-brief.md
+
+Note: the two brief lines shown above are lines 6-7 of the direct-PR scaffold; its intent line reads: Add a healthcheck endpoint; the owner answered "yes" when asked.

@@ -1,0 +1,24 @@
+PR #85 head 763ac1a96d99c27e6f9db0c37d458851dc76304a (PR opened 2026-10-25T15:44:50Z, merged 2026-10-25T17:52:58Z)
+$ gh api --paginate "repos/zakna/firstmate/commits/763ac1a96d99c27e6f9db0c37d458851dc76304a/check-runs?per_page=100" --jq '.check_runs[]|[.name,.conclusion,.completed_at]|@tsv'
+Behavior timing aggregate	success	2026-10-25T17:48:42Z
+Behavior portable serial 9	success	2026-10-25T17:34:59Z
+Behavior portable serial 7	success	2026-10-25T17:32:30Z
+Behavior portable serial 2	success	2026-10-25T17:34:58Z
+Behavior portable serial 4	success	2026-10-25T17:39:10Z
+Behavior portable serial 6	success	2026-10-25T17:36:06Z
+Behavior portable serial 1	success	2026-10-25T17:48:34Z
+PR must be raised via no-mistakes	success	2026-10-25T17:14:09Z
+Behavior portable serial 5	success	2026-10-25T17:42:10Z
+Behavior portable serial 3	success	2026-10-25T17:35:59Z
+Behavior portable parallel 1	success	2026-10-25T17:28:16Z
+Repo invariants	success	2026-10-25T17:14:11Z
+Stock macOS Bash snapshot compatibility	success	2026-10-25T17:19:33Z
+Behavior tests (Herdr)	success	2026-10-25T17:26:00Z
+Test coverage guard	success	2026-10-25T17:14:31Z
+Lint 1	success	2026-10-25T17:35:00Z
+Behavior portable serial 8	success	2026-10-25T17:33:29Z
+Lint 2	success	2026-10-25T17:25:47Z
+Pi latest (warning only)	success	2026-10-25T17:16:56Z
+Behavior portable parallel 2	success	2026-10-25T17:28:56Z
+check runs: 20
+latest completed_at: 2026-10-25T17:48:42Z

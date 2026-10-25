@@ -1,0 +1,26 @@
+### Run 1: brief.md intent contains a quote
+## Captain's intent
+Add a healthcheck endpoint; the owner answered "yes" when asked.
+$ bin/fm-spawn.sh scrub-live <lab>/projects/demo --mode no-mistakes --yolo off --harness claude
+fm-gate-refuse: gate agent lifecycle permitted only against lab home <lab>
+error: <lab>/data/scrub-live/brief.md ## Captain's intent would be refused by the no-mistakes intent scrub; reword it in brief.md as a plain goal before spawn:
+intent-scrub: line 1: quote: Add a healthcheck endpoint; the owner answered "yes" when asked.
+intent-scrub: authorized intent read from <lab>/data/scrub-live/brief.md
+RC=1
+data/scrub-live contents: brief.md   (no launch-brief.md; state/ empty)
+
+### Run 2: after one edit to brief.md
+## Captain's intent
+Add a healthcheck endpoint.
+$ PATH=<lab>/shim:$PATH bin/fm-spawn.sh scrub-live ... (tmux shim blocks backend creation after the brief is rendered)
+fm-gate-refuse: gate agent lifecycle permitted only against lab home <lab>
+lab-shim: tmux blocked display-message -p #S
+RC=1
+data/scrub-live contents:
+brief.md
+launch-brief.md
+Use everything under `## Captain intent authorized for --intent` through the end of this brief, including any nested subheadings but excluding that heading, plus any later words the captain actually supplied as `--intent`; never include Firstmate specification or other mixed Task content.
+The string you pass must pass the Definition of done's intent check unchanged: never drop or reword a sentence it refuses, but ask firstmate to reword the authorized intent in the source file the refusal names and in `brief.md`'s `## Captain's intent`, then rerun the check, or stop.
+--
+## Captain intent authorized for --intent
+Add a healthcheck endpoint.
