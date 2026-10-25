@@ -1,0 +1,24 @@
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh   # A: deployed sha == main
+no deploy owed
+exit=0
+
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh   # B: only config/docs and config/CLAUDE.md changed since deploy
+no deploy owed
+exit=0
+
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh   # C: two config PRs (#3 carried, #5 this PR) since deploy
+DEPLOY OWED since 2929650af19525907caef44bd95a22044fdc044e
+799ff83 this PR (#5)
+5908c68 carried change (#3)
+exit=1
+
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh   # D: ha-deploy/master has no 'deploy: <sha>' commit
+no deployed main sha
+exit=2
+
+$ git fetch origin main && git fetch ha-deploy master && sh drift.sh   # E: deployed sha missing from local clone (adversarial)
+fatal: bad revision 'deadbeefcafe'
+DEPLOY OWED since deadbeefcafe
+fatal: bad revision 'deadbeefcafe..origin/main'
+exit=1
+

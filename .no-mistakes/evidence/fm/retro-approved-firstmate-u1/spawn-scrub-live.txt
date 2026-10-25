@@ -1,0 +1,61 @@
+## brief.md intent (refused case)
+# Task
+## Captain's intent
+Add the healthcheck; the owner answered "yes".
+
+## Firstmate spec
+Keep it narrow.
+
+# Definition of done
+Delivery contract: mode=no-mistakes
+
+## $ bin/fm-spawn.sh scrub-live $LAB/proj --mode no-mistakes --yolo off --harness claude
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT/data/scrub-live/brief.md ## Captain's intent would be refused by the no-mistakes intent scrub; reword it in brief.md as a plain goal before spawn:
+intent-scrub: line 1: quote: Add the healthcheck; the owner answered "yes".
+intent-scrub: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT/data/scrub-live/brief.md
+exit=1
+## files in task data dir after refusal
+total 8
+drwxr-xr-x@ 3 olivier  staff   96 Oct 25 23:59 .
+drwxr-xr-x@ 3 olivier  staff   96 Oct 25 23:59 ..
+-rw-r--r--@ 1 olivier  staff  167 Oct 25 23:59 brief.md
+
+## one edit to brief.md: line 3 is now:
+Add the healthcheck for the owner.
+## re-run of the same spawn (inside lab tmux socket)
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT/data/scrub-live/launch-brief.md records no ship branch; defaulting to legacy branch fm/scrub-live
+spawned scrub-live harness=claude kind=ship mode=no-mistakes yolo=off window=primary:fm-scrub-live worktree=/Users/olivier/.treehouse/proj-917caf/1/proj
+exit=0
+## launch-brief.md authorized intent section
+## Captain intent authorized for --intent
+Add the healthcheck for the owner.
+## lab tmux windows
+1: zsh#* (1 panes) [80x24] [layout {"V":2,"L":{"t":"p","w":80,"h":24,"x":0,"y":0,"a":true,"i":1,"I":"%5"}}] @4 (active)
+2: fm-scrub-live# (1 panes) [80x24] [layout {"V":2,"L":{"t":"p","w":80,"h":24,"x":0,"y":0,"a":true,"i":1,"I":"%6"}}] @5
+## worker pane (first 25 lines)
+ ▐▛███▛█   Claude Code v2.1.310
+▝▜██████▀  Opus 5.5 (1M context) with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.treehouse/proj-917caf/1/proj
+
+
+❯ : Firstmate operational input waiting: read
+  '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.bVavJT/state
+  /operational-inbox/1792969182-4e3780beef831ed2.msg' and handle its contents
+  as Firstmate operational input.
+
+  Running ls -la /var/folders/hk/lxr6ppq904ng8dxkxskjs51800…
+  ⎿  $ ls -la /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.bVavJT/st
+     ate/scrub-live.inbox /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn
+     /T/fm-lab.bVavJT/data/scrub-live 2>&1; cd
+     /Users/olivier/.treehouse/proj-917caf/1/proj && git status && git log
+     --oneline -5 && ls -la && cat AGENTS.…
+
+✻ Tempering… (14s · ↓ 439 tokens · thought for 3s)
+
+────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ➜  proj-917caf/1/proj ctx 30854/1000000  Opus medium | 5h [░░░░░░] 1% →04:4…
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
