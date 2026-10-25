@@ -106,8 +106,9 @@ A metric that cannot be extracted is reported as such with the reason, never est
 Two conventions keep the numbers honest.
 
 - Never read the `ci` step's duration as pipeline cost; it is mostly a wait for a merge.
-  Report time to checks ready as the latest `completed_at` of the pull request head's check runs (`gh api repos/<owner>/<repo>/commits/<head>/check-runs --jq '.check_runs[]|[.name,.conclusion,.completed_at]|@tsv'`) minus the run's start.
+  Report time to checks ready as the latest `completed_at` of the pull request head's check runs (`gh api --paginate "repos/<owner>/<repo>/commits/<head>/check-runs?per_page=100" --jq '.check_runs[]|[.name,.conclusion,.completed_at]|@tsv'`) minus the run's start.
   Report `ci_ready_at` beside it only when the two differ; it is re-set when the base branch advances.
+  On Gerrit, which has no check runs, report `ci_ready_at` instead and say so.
   Report the merge wait after it separately.
 - Use the database's round numbering and say so; rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
 
