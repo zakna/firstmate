@@ -70,47 +70,20 @@ ERR=$(mktemp "${TMPDIR:-/tmp}/fm-watch-checkpoint.err.XXXXXX") || {
 }
 trap 'rm -f "$OUT" "$ERR"' EXIT
 
-run_with_perl_timeout() {  # <seconds> <command...>
-  perl -e '
-    my $seconds = shift;
-    my $pid = fork;
-    die "fork failed\n" unless defined $pid;
-    if (!$pid) {
-      setpgrp(0, 0);
-      exec @ARGV;
-      die "exec failed: $!\n";
-    }
-    local $SIG{ALRM} = sub {
-      kill "TERM", -$pid;
-      my $grace = $ENV{FM_SIGNAL_GRACE} || 5;
-      local $SIG{ALRM} = sub {
-        kill "KILL", -$pid;
-        waitpid $pid, 0;
-        exit 124;
-      };
-      alarm $grace;
-      waitpid $pid, 0;
-      exit 124;
-    };
-    alarm $seconds;
-    waitpid $pid, 0;
-    alarm 0;
-    exit($? >> 8);
-  ' "$@"
-}
-
-run_bounded() {  # <seconds> <command...>
-  if command -v timeout >/dev/null 2>&1; then
-    timeout "$@"
-  elif command -v gtimeout >/dev/null 2>&1; then
-    gtimeout "$@"
-  else
-    run_with_perl_timeout "$@"
-  fi
-}
-
 positive_or() {  # <value> <default>
   case "$1" in ''|0*|*[!0-9]*) printf '%s\n' "$2" ;; *) printf '%s\n' "$1" ;; esac
+}
+
+# shellcheck source=bin/fm-timeout-lib.sh
+. "$SCRIPT_DIR/fm-timeout-lib.sh"
+# TERM the command's process group at the bound and KILL it FM_SIGNAL_GRACE
+# seconds (default 5) later, so a watcher that does not exit on TERM - one
+# wedged inside a command substitution - cannot hold the checkpoint forever.
+# Status 124 or 137 means the bound was hit (fm_timed_out).
+run_bounded() {  # <seconds> <command...>
+  local seconds=$1
+  shift
+  ( fm_exec_timed "$seconds" "$(positive_or "${FM_SIGNAL_GRACE:-}" 5)" "$@" )
 }
 
 # shellcheck source=bin/fm-supervision-engine-lib.sh
@@ -144,7 +117,7 @@ if fm_supervision_host_enabled "$CONFIG" codex; then
   fi
   [ ! -s "$OUT" ] || cat "$OUT"
   [ ! -s "$ERR" ] || cat "$ERR" >&2
-  if [ "$RC" -eq 124 ]; then
+  if fm_timed_out "$RC"; then
     echo "checkpoint: the supervision host outlived its own bound of ${BOUND}s" >&2
     exit 1
   fi
@@ -170,7 +143,7 @@ if grep -E '^watcher: already running' "$OUT" "$ERR" >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ "$RC" -eq 124 ]; then
+if fm_timed_out "$RC"; then
   printf 'checkpoint: no actionable wake within %ss\n' "$SECONDS_ARG"
   exit 124
 fi
