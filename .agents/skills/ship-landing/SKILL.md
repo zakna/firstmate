@@ -39,7 +39,9 @@ Before that deploy, run this read-only drift check in the ha clone after `git fe
 last=$(git log --first-parent --format=%s ha-deploy/master | sed -n -E 's/^deploy: (main )?([0-9a-f]{7,40})( .*)?$/\2/p' | head -1)
 [ -n "$last" ] || { echo "no deployed main sha"; exit 2; }
 if git diff --quiet "$last" origin/main -- config ':!config/docs' ':!config/CLAUDE.md'; then echo "no deploy owed"; exit 0; fi
-echo "DEPLOY OWED since $last"; exit 1
+echo "DEPLOY OWED since $last"
+git log --first-parent --oneline "$last"..origin/main -- config ':!config/docs' ':!config/CLAUDE.md'
+exit 1
 ```
 
 When the owed changes include another PR's, name each carried PR in the deploy commit message and in the issue comments.
