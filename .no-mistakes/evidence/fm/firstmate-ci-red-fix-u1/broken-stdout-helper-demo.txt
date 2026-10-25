@@ -1,0 +1,15 @@
+--- old fixture: closed stdout (>&-), direct (macOS/bash env):
+wake line
+writer: stdout write FAILED
+rc=3
+--- old fixture: closed stdout (>&-) via uutils-like env (the 26.04 CI failure):
+writer: stdout write SUCCEEDED
+rc=0
+--- new fixture: fm_test_run_with_broken_stdout via uutils-like env:
+wake line
+writer: stdout write FAILED
+rc=3
+--- new fixture: fm_test_run_with_broken_stdout direct:
+wake line
+writer: stdout write FAILED
+rc=3

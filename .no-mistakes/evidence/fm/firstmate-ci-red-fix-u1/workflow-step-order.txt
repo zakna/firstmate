@@ -1,0 +1,3 @@
+tests-portable-parallel-1 (ubuntu-latest): tsc step #5, gate-skip step(s) #6
+tests-portable-serial (ubuntu-latest): tsc step #6, gate-skip step(s) #7
+pi-latest (ubuntu-latest): tsc step #2, gate-skip step(s) #3

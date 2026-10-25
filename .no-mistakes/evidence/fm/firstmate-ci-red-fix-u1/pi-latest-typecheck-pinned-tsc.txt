@@ -1,0 +1,3 @@
+Version 7.0.2
+ok - tracked Pi extensions pass strict no-emit typecheck against Pi 1.4.0
+rc=0
