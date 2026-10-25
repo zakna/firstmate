@@ -34,6 +34,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
    The supervisor also adds each new defect class the report proposes to the register, keeping the earliest meaning on a letter and never reusing one.
    A debt item that names a concrete structure-only tidy in a code area gets the tidy slot that `ship-landing` owns.
+   An automated-check proposal that passed the four gates and that the captain approves gets the guard slot that `ship-landing` owns; a candidate under "Considered and not proposed" never does.
    The supervisor records each open workflow-level follow-up and each approved Process change in `${FM_HOME:?}/data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure
@@ -152,6 +153,8 @@ So reconcile every row, selected or not, against the merged tree before counting
 
 ### 4. What cost time
 
+Ask first of each cost item: could a check (test, lint, type, or script) have caught this?
+A yes makes it an automated-check candidate for step 7, which still has to pass the four gates there.
 List at most ten cost items, ordered by cost, each with its cause: supervisor, instructions, pipeline, review configuration, or worker.
 Label each cost item with its class from the register when one fits.
 When a defect fits no class, describe it plainly and propose a new class, with its one-line definition and the retros it appears in, for the supervisor to add; you do not edit the register yourself.
@@ -171,6 +174,7 @@ Also state what went well and what was not a cost, so a later reader does not re
 ### 5. Debt inventory
 
 This part is uncapped.
+Ask the same check question first of each debt item, with the same consequence for a yes.
 List every finding or review comment the delivery left unfixed, declined, or deferred, verified against the default branch after the merge.
 An item already fixed gets one line and no issue.
 Write each remaining item ready to file, with:
@@ -211,6 +215,7 @@ A proposal changes the environment of the next ticket.
 Order candidates by the cost they would have removed and keep at most five; point at an existing open row instead of repeating it.
 
 Apply one routing test to every proposal and name the class in the report.
+When a check could have caught it, propose that check as an automated check, in preference to any new rule or prose text.
 
 | Class | When | Where it goes |
 |---|---|---|
