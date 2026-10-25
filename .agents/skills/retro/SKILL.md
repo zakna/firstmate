@@ -34,7 +34,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
    Filing the debt items, recording the proposals for the captain, and any approved change all stay with the supervisor; the report authorizes none of them.
    The supervisor also adds each new defect class the report proposes to the register, keeping the earliest meaning on a letter and never reusing one.
    A debt item that names a concrete structure-only tidy in a code area gets the tidy slot that `ship-landing` owns.
-   An automated-check proposal the captain approves gets the guard slot that `ship-landing` owns; a candidate under "Considered and not proposed" never does.
+   An automated-check proposal that passed the four gates and that the captain approves gets the guard slot that `ship-landing` owns; a candidate under "Considered and not proposed" never does.
    The supervisor records each open workflow-level follow-up and each approved Process change in `${FM_HOME:?}/data/retro-workflow-followups.md`, and removes an entry once a retro verifies it done.
 
 ## Worker procedure

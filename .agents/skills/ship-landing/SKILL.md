@@ -32,10 +32,11 @@ The landing note is on trial: when ten landed tickets have notes, retire it if f
 The tidy slot: when a landing note or a retro debt item names a concrete structure-only tidy in a code area where a next feature is planned, queue that tidy as one small ship in the delivery mode of that planned next feature, and record it as an ordinary backlog dependency of that next feature.
 Queue at most one tidy per feature, never one that changes behaviour, and none when no next feature is planned in that area.
 
-The guard slot: when the captain approves a retro's automated-check proposal, or a landing note names a bad pattern that passes the retro's four gates, file the guard that makes the pattern fail (a test, lint rule, or script check) as its own small ticket, queued ahead of any cleanup tidy for that pattern.
+The guard slot: when the captain approves a retro's automated-check proposal that passed the retro's four gates, file the guard it proposes, the test, lint rule, or script check that makes its pattern fail, as its own small ticket, queued ahead of any cleanup tidy for that pattern.
 The guard fails on new occurrences only: it baselines or allowlists the existing ones, so it lands even while the cleanup waits, and the cleanup removes them from that list.
 The guard needs no planned next feature.
 Guard first sets order, not authority: it never bypasses the retro gates or captain approval, and a candidate under "Considered and not proposed" is never queued.
+A landing note never triggers the guard slot itself; it reaches it only as a source of the retro, which applies the gates.
 
 Tear down a ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
