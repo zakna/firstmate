@@ -1,0 +1,28 @@
+run:
+  id: 40208401390
+  title: "ci: restore green CI on Ubuntu 26.04 runners"
+  status: completed
+  conclusion: failure
+  workflow: CI
+  branch: fm/firstmate-ci-red-fix-u1
+  created: 57m ago
+jobs[19]{id,name,status,conclusion}:
+  121214196019,Test coverage guard,completed,success
+  121214196113,Stock macOS Bash snapshot compatibility,completed,success
+  121214196151,Behavior portable parallel 1,completed,success
+  121214196154,Behavior portable parallel 2,completed,success
+  121214196157,Lint 2,completed,success
+  121214196188,Behavior portable serial 5,completed,failure
+  121214196194,Behavior portable serial 3,completed,success
+  121214196209,Lint 1,completed,success
+  121214196211,Behavior portable serial 2,completed,success
+  121214196226,Behavior tests (Herdr),completed,success
+  121214196236,Pi latest (warning only),completed,success
+  121214196240,Behavior portable serial 1,completed,success
+  121214196253,Behavior portable serial 7,completed,success
+  121214196283,Behavior portable serial 4,completed,success
+  121214196284,Behavior portable serial 6,completed,success
+  121214196369,Behavior portable serial 9,completed,success
+  121214196401,Repo invariants,completed,success
+  121214196513,Behavior portable serial 8,completed,success
+  121221982700,Behavior timing aggregate,completed,success

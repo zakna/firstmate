@@ -1,0 +1,9 @@
+ok - a rejection wake survives a poll that could not write its line
+ok - a public loop bound to a remote secondmate home delivers and retires
+rc=0
+ok - a rejection wake survives a poll that could not write its line
+ok - a public loop bound to a remote secondmate home delivers and retires
+ok - a rejection wake survives a poll that could not write its line
+ok - a public loop bound to a remote secondmate home delivers and retires
+ok - a rejection wake survives a poll that could not write its line
+not ok - retire must be able to close a delivered remote-home loop

@@ -1,0 +1,9 @@
+## helper: stdout write via #!/usr/bin/env bash script
+/tmp/fm-bs-probe.sh: line 2: printf: write error: Broken pipe
+write FAILED (EPIPE)
+exit=0
+## old >&- closed stdout (macOS env does not reopen)
+/tmp/fm-bs-probe.sh: line 2: printf: write error: Bad file descriptor
+write FAILED (EPIPE)
+## simulated uutils behaviour: closed stdout reopened to /dev/null
+write OK
