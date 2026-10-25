@@ -982,8 +982,8 @@ spawn_concurrent=$!
 spawn_inherit_wait=0
 # Earlier inherited files traverse the worker before captain-shared.md, so give
 # a loaded portable runner two minutes to reach this deliberately blocked write:
-# on Ubuntu 26.04 runners, whose Rust coreutils cost several times more per
-# exec, the spawn alone spends more than 30 seconds getting here.
+# an unloaded machine already spends about 20 seconds getting here, and Ubuntu
+# 26.04 runners, whose Rust coreutils cost more per exec, push it past 30.
 while [ ! -f "$TMP_ROOT/inherit.entered" ]; do
   kill -0 "$spawn_concurrent" 2>/dev/null || fail "remote spawn exited before its blocked inheritance write"
   spawn_inherit_wait=$((spawn_inherit_wait + 1))
@@ -1096,8 +1096,8 @@ inherit_wait=0
 while [ ! -f "$TMP_ROOT/inherit.entered" ]; do
   kill -0 "$config_first" 2>/dev/null || fail "first inheritance transaction exited before its blocked write"
   inherit_wait=$((inherit_wait + 1))
-  # Match the earlier spawn/inheritance wait: a loaded portable runner can
-  # spend several seconds in the remote entrypoint before reaching this write.
+  # Match the earlier spawn/inheritance wait: give a loaded portable runner two
+  # minutes in the remote entrypoint to reach this deliberately blocked write.
   [ "$inherit_wait" -le 6000 ] || fail "first inheritance transaction never reached its blocked write"
   sleep 0.02
 done
