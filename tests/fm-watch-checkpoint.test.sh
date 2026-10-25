@@ -81,6 +81,43 @@ test_existing_singleton_watcher_is_not_success() {
   pass "checkpoint rejects an existing watcher singleton as unowned"
 }
 
+# A watcher that never exits on the bound's TERM, as one wedged in a command
+# substitution does, must still be stopped: the checkpoint is a bound, so it
+# ends shortly after its seconds pass and leaves nothing of the watcher alive.
+test_watcher_that_outlives_term_cannot_hold_the_checkpoint() {
+  local home pid i status stub
+  home=$(make_home wedged)
+  mkdir -p "$home/root/bin"
+  cp "$CHECKPOINT" "$ROOT/bin/fm-supervision-engine-lib.sh" "$ROOT/bin/fm-timeout-lib.sh" "$home/root/bin/"
+  cat > "$home/root/bin/fm-watch.sh" <<'SH'
+#!/usr/bin/env bash
+trap '' TERM
+printf '%s\n' "$$" > "$FM_HOME/stub-pid"
+while :; do sleep 0.2; done
+SH
+  chmod +x "$home/root/bin/fm-watch-checkpoint.sh" "$home/root/bin/fm-watch.sh"
+  FM_HOME="$home" FM_SIGNAL_GRACE=1 "$home/root/bin/fm-watch-checkpoint.sh" --seconds 1 \
+    >"$home/out.txt" 2>"$home/err.txt" &
+  pid=$!
+  i=0
+  while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 150 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  stub=$(cat "$home/stub-pid" 2>/dev/null || true)
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -KILL "$pid" 2>/dev/null
+    [ -z "$stub" ] || kill -KILL "$stub" 2>/dev/null
+    fail "a watcher that ignored TERM held a 1s checkpoint for more than 15s"
+  fi
+  status=0
+  wait "$pid" || status=$?
+  expect_code 124 "$status" "a checkpoint that had to stop its watcher reaches its bound"
+  [ -n "$stub" ] || fail "fixture: the watcher stand-in never started"
+  ! kill -0 "$stub" 2>/dev/null || fail "the checkpoint left the watcher that ignored TERM running"
+  pass "checkpoint: a watcher that does not exit on TERM is killed shortly after the bound"
+}
+
 # A home opted into the supervision host whose checkpoint runs a stub host in
 # a fixture code root: the stub records the bound it was given, then closes
 # the way $FM_HOME/host-kind says.
@@ -90,6 +127,7 @@ make_host_home() {  # <name>
   mkdir -p "$home/root/bin"
   cp "$CHECKPOINT" "$home/root/bin/fm-watch-checkpoint.sh"
   cp "$ROOT/bin/fm-supervision-engine-lib.sh" "$home/root/bin/fm-supervision-engine-lib.sh"
+  cp "$ROOT/bin/fm-timeout-lib.sh" "$home/root/bin/fm-timeout-lib.sh"
   cat > "$home/root/bin/fm-supervision-host.sh" <<'SH'
 #!/usr/bin/env bash
 printf 'args=%s\nprimary=%s\npark=%s\nlimit=%s\n' "$*" "${FM_SUPERVISION_HOST_PRIMARY:-}" \
@@ -200,6 +238,7 @@ test_quiet_checkpoint_exits_124_cleanly
 test_signal_passes_through_and_exits_zero
 test_registered_check_uses_preserved_watcher_environment
 test_existing_singleton_watcher_is_not_success
+test_watcher_that_outlives_term_cannot_hold_the_checkpoint
 test_host_checkpoint_bounds_the_park_by_posture
 test_host_checkpoint_passes_a_handback_and_reports_a_stand_down
 test_host_checkpoint_needs_the_file_and_honors_off
