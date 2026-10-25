@@ -870,6 +870,28 @@ assert_present() {
   [ -e "$1" ] || fail "$2"
 }
 
+# fm_test_run_with_broken_stdout <command...>: runs <command> with a stdout
+# that refuses every write, and returns its exit status. The stdout is a FIFO
+# whose only reader is already closed, with SIGPIPE ignored, so each write
+# fails with EPIPE. A closed stdout (>&-) is not a portable stand-in: a Rust
+# /usr/bin/env, such as the uutils coreutils Ubuntu 26.04 ships, reopens a
+# closed stdout to /dev/null before it executes a `#!/usr/bin/env bash`
+# script, so every write of that script would succeed.
+fm_test_run_with_broken_stdout() {
+  local dir rc=0
+  dir=$(fm_test_tmproot fm-broken-stdout) || return 1
+  mkfifo "$dir/out" || return 1
+  (
+    trap '' PIPE
+    # The read end exists only so the write end opens without blocking, and
+    # closing it leaves the FIFO with no reader.
+    # shellcheck disable=SC2094
+    exec 3<>"$dir/out" 4>"$dir/out" 3<&-
+    exec "$@" >&4 4>&-
+  ) || rc=$?
+  return "$rc"
+}
+
 # fm_test_base_path_sans <base_path> <tool...>: returns the path to a single
 # curated directory that resolves every tool <base_path> would have resolved,
 # except the named ones. Some hosts have real system binaries (node, orca,
