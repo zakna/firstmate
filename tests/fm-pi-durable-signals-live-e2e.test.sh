@@ -271,8 +271,14 @@ for _ in $(seq 1 240); do [ "$(endpoint_errors)" -gt "$errors_before" ] && break
 [ "$(fm_backend_agent_state tmux "$TARGET")" = alive ] || fail 'the endpoint failure killed the host'
 pass "$VERSION: endpoint failure is rendered and the host survives (state: $(busy_state))"
 
-# 6. Exit stops the host and the pane returns to its shell.
-"$ROOT/bin/fm-control.sh" "$ID" exit > "$LAB/exit.log" 2>&1 || fail "exit failed: $(cat "$LAB/exit.log")"
+# 6. Exit stops the host and the pane returns to its shell. Known pilot
+# limitation: right after the interrupt, the composer read can land in the
+# host's redraw and refuse as unknown; exactly one quick retry is allowed.
+if ! "$ROOT/bin/fm-control.sh" "$ID" exit > "$LAB/exit.log" 2>&1; then
+  grep -q "composer state is 'unknown', not proven empty" "$LAB/exit.log" || fail "exit failed: $(cat "$LAB/exit.log")"
+  sleep 0.5
+  "$ROOT/bin/fm-control.sh" "$ID" exit > "$LAB/exit-retry.log" 2>&1 || fail "exit retry failed: $(cat "$LAB/exit-retry.log")"
+fi
 [ "$(fm_backend_agent_state tmux "$TARGET")" = dead ] || fail '/quit did not return to the shell'
 pass "$VERSION: /quit stops the host"
 

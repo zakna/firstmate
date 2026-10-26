@@ -11,7 +11,7 @@ The router owns the crewmate/scout-only boundary; primary and secondmate integra
 |---|---|
 | Install | Per home: `../../../../../bin/fm-pi-durable.sh install` puts the exact tree pinned by `bin/pi-durable/package-lock.json` under `state/pi-durable-runtime/`; the spawn refuses until `fm-pi-durable.sh check` passes. Node must be at least the package floor the script enforces. |
 | Busy state | The host's own event stream: `run_start` opens and `run_end` closes through the generation-bound writer under source `pi-durable-host`; a reopened store with nothing left to run and no newly admitted input settles idle at once. `turn_end` touches the turn-end notification. |
-| Exit command | `/quit`; Ctrl-D on an empty row also exits. |
+| Exit command | `/quit`; Ctrl-D on an empty row also exits. Known pilot limitation: the first `fm-control.sh <id> exit` right after an interrupt, such as while the worker retries a dead endpoint, can be refused with composer state `unknown` while the host redraws its output; nothing is typed or lost, and a retry succeeds. |
 | Interrupt | Single Escape; it aborts the current run, kills its running tool, and withdraws queued inputs. The host renders `interrupted` and settles idle. |
 | Skill invocation | None; the host has no slash commands other than `/quit`, so use natural language. |
 | Resume | No resume flag: the task's store is `state/<id>.pi-durable/`, and every launch, including `fm-control.sh relaunch`, reopens it and continues any unfinished run. |
