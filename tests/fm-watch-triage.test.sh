@@ -344,6 +344,21 @@ test_stale_reason_carries_the_resolved_task() {
   pass "stale_reason_with_task: a resolved endpoint carries task=<id>, an unresolved one is unchanged"
 }
 
+test_every_queued_stale_row_carries_the_resolved_task() {
+  local dir state payloads
+  dir=$(make_case stale-queue-task-tag); state="$dir/state"
+  fm_write_meta "$state/herdr-task.meta" "window=default:wTS:p2" "backend=herdr"
+  append_wake "$state" stale default:wTS:p2 \
+    "stale: default:wTS:p2 (idle 245s, possible wedge, escalation 1)" || fail "stale append failed"
+  append_wake "$state" stale default:wNO:p9 "stale: default:wNO:p9 (idle 245s)" || fail "stale append failed"
+  append_wake "$state" check default:wTS:p2 "check: default:wTS:p2" || fail "check append failed"
+  payloads=$(cut -f5 "$state/.wake-queue")
+  [ "$payloads" = "stale: default:wTS:p2 task=herdr-task (idle 245s, possible wedge, escalation 1)
+stale: default:wNO:p9 (idle 245s)
+check: default:wTS:p2" ] || fail "queued wake rows did not carry the resolved task exactly on stale rows: $payloads"
+  pass "every queued stale row, decorated or bare, carries the task its endpoint resolves to"
+}
+
 test_stale_is_terminal_classifier() {
   local dir state
   dir=$(make_case classify-stale); state="$dir/state"
@@ -6853,6 +6868,7 @@ test_status_span_respects_decision_closure
 test_status_span_closure_from_an_offset
 test_malformed_seen_signature_reads_the_whole_log
 test_stale_reason_carries_the_resolved_task
+test_every_queued_stale_row_carries_the_resolved_task
 test_stale_is_terminal_classifier
 test_classifier_primitives
 test_unrecognized_status_prefix_is_visible

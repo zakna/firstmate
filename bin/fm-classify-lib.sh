@@ -2162,11 +2162,12 @@ window_to_task() {
 }
 
 # stale_reason_with_task <reason> [state]: a "stale: <endpoint> ..." wake reason
-# with " task=<id>" inserted right after the endpoint when a task record's
-# window= or terminal= names that endpoint (window_to_task's own match, so the
-# supervision host's scope check and this annotation agree). The guessed
-# fallback window_to_task prints when no record matches is not a resolution:
-# with no record, or any other reason, the text is returned unchanged.
+# with " task=<id>" inserted right after the endpoint, where <id> is the task
+# window_to_task resolves the endpoint to (so the supervision host's scope check
+# and this annotation agree) and $state/<id>.meta exists. That includes
+# window_to_task's name-derived fallback when no record's window= or terminal=
+# names the endpoint but a record with that name exists. When no such record
+# exists, or for any other reason, the text is returned unchanged.
 stale_reason_with_task() {
   local reason=$1 state=${2:-${STATE:-${FM_STATE_OVERRIDE:-}}} rest endpoint tail task
   case "$reason" in

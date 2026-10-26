@@ -2217,6 +2217,10 @@ fm_wake_append_locked() {
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_append: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
   esac
+  if [ "$kind" = stale ]; then
+    _fm_wake_require_classify
+    payload=$(stale_reason_with_task "$payload")
+  fi
 
   clean_key=$(printf '%s' "$key" | fm_wake_clean_field)
   clean_payload=$(printf '%s' "$payload" | fm_wake_clean_field)
