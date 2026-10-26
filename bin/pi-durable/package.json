@@ -1,0 +1,16 @@
+{
+  "name": "firstmate-pi-durable-host",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Opt-in pilot worker runtime that hosts one Firstmate task on @earendil-works/pi-durable.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "@earendil-works/chord": "1.4.0",
+    "@earendil-works/pi-ai": "1.4.0",
+    "@earendil-works/pi-durable": "1.4.0"
+  }
+}

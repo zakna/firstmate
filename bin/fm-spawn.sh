@@ -210,7 +210,7 @@
 #   profile consultation. A --secondmate spawn is exempt and resolves the SECONDMATE
 #   harness (config/secondmate-harness -> config/crew-harness -> own), so the
 #   secondmate-vs-crewmate split is DURABLE across every respawn (recovery,
-#   /updatefirstmate, restart). A bare adapter name (claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|agy|devin)
+#   /updatefirstmate, restart). A bare adapter name (claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|agy|devin|pi-durable)
 #   overrides it for this spawn (either kind). A non-flag string containing
 #   whitespace is treated as a RAW launch command - the escape hatch for verifying
 #   new adapters. For pi and pi-signed, fm-spawn resolves the selected executable
@@ -232,6 +232,14 @@
 #   config/claude-permission-mode is not mapped: Devin auto approves read-only
 #   tools, unlike Claude auto. Effort is part of Devin model ids, so the
 #   independent --effort axis is recorded but omitted from argv.
+#   pi-durable is the opt-in, worker-only pilot runtime hosted by
+#   bin/fm-pi-durable.sh; it is never a Pi CLI variant and never selected
+#   implicitly. It refuses unless this home's pinned install passes
+#   `fm-pi-durable.sh check` and --model is an explicit <provider>/<id> that the
+#   host resolves from ${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/models.json. The
+#   effort axis is recorded but omitted from argv because the host translates no
+#   thinking levels. Its conversation store is state/<id>.pi-durable/, owner-only;
+#   a relaunch reopens the same store, which is the task's one recovery authority.
 #   For omp (Oh My Pi), fm-spawn resolves the `omp` executable from PATH once and
 #   refuses when it is absent. Every omp launch clears the foreign harness
 #   markers (omp publishes none of its own), sets the Firstmate-owned
@@ -429,6 +437,9 @@
 #     __DEVINBIN__ resolved Devin executable
 #     __DEVINCONFIG__ private per-task Devin config with lifecycle hooks
 #     __AGYBIN__    resolved, agy-verified executable for an agy launch
+#     __PIDURABLELAUNCH__ bin/fm-pi-durable.sh launch prefix bound to this home's state dir
+#     __PIDURABLESTORE__ the task's owner-only pi-durable conversation store directory
+#     __PIDURABLEBUSY__ the host's busy-event wiring arguments (empty for a raw launch)
 # Verified per-harness turn-end hooks are installed automatically where enabled; some live outside the worktree.
 # A --secondmate launch arms the same semantic busy contract (bin/fm-busy-lib.sh) in THIS
 # parent home for claude, opencode, pi, pi-signed, and omp, so the parent's active-turn
@@ -436,7 +447,7 @@
 # a mate's completed turns stay in its own home. Codex stays unknown until a semantic
 # source exists. Grok keeps its rendered-tail fallback and is not given a parent
 # turn-end hook. Cursor's transcript binding is written for a secondmate the same way
-# as for a crewmate. Muse, gemini, agy, devin, and rovo are refused as secondmates.
+# as for a crewmate. Muse, gemini, agy, devin, pi-durable, and rovo are refused as secondmates.
 # A raw launch command for a claude, pi, pi-signed, or omp secondmate is not armed
 # and retires any arm an earlier launch of that mate left, so its verdict is unknown:
 # the raw command carries no --settings or -e flag to load the wiring.
@@ -458,7 +469,7 @@
 # plus a gitignored .fm-grok-turnend worktree pointer and a state token.
 # muse installs no hook at all - its plugin engine is off in the default build - so
 # it writes state/<id>.muse-session to bind the pane to muse's own session event
-# log; muse, gemini, agy, and devin are crewmate/scout only and are refused for --secondmate.
+# log; muse, gemini, agy, devin, and pi-durable are crewmate/scout only and are refused for --secondmate.
 # rovo installs no hook either - its eventHooks fire at tool granularity only,
 # never turn-end - so it carries no busy-source wiring at all and no turn-end
 # hook. A positional brief is dead-on-arrival (rovo loads, never works, and drops
@@ -1969,7 +1980,7 @@ if [ "$RELAUNCH" -eq 1 ]; then
   }
 elif [ "$KIND" = secondmate ]; then
   case "${POS[1]:-}" in
-  '' | claude | codex | opencode | pi | pi-signed | grok | kimi | cursor | gemini | muse | rovo | omp | agy | devin)
+  '' | claude | codex | opencode | pi | pi-signed | grok | kimi | cursor | gemini | muse | rovo | omp | agy | devin | pi-durable)
     ARG3=${POS[1]:-}
     ;;
   *' '*)
@@ -2297,6 +2308,11 @@ launch_template() {
   # appends native worker lifecycle hooks. Clear NO_COLOR so the shared
   # composer guard can distinguish the dim placeholder from a real draft.
   devin) printf '%s' 'env -u CLAUDECODE -u PI_CODING_AGENT -u GROK_AGENT -u FM_PI_HARNESS -u FM_OMP_HARNESS -u ATLASSIAN_AGENT_TYPE -u ROVODEV_CLI -u NO_COLOR __DEVINBIN__ --permission-mode dangerous --respect-workspace-trust false --config __DEVINCONFIG__ __MODELFLAG__-- "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
+  # pi-durable (opt-in pilot, bin/fm-pi-durable.sh): the host admits the typed
+  # launch envelope once per distinct brief, so a relaunch that reopens the
+  # same store never starts the same brief twice. The models file is the
+  # operator's Pi custom-provider declaration, read where the pane runs.
+  pi-durable) printf '%s' 'env -u CLAUDECODE -u PI_CODING_AGENT -u GROK_AGENT -u FM_PI_HARNESS -u FM_OMP_HARNESS -u ATLASSIAN_AGENT_TYPE -u ROVODEV_CLI __PIDURABLELAUNCH__ --store __PIDURABLESTORE__ --cwd __WORKTREE__ __MODELFLAG__--models-json "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/models.json" __PIDURABLEBUSY__--brief "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
   # Kimi Code rejects a positional prompt, so it launches bare and receives
   # only an absolute brief pointer after the TUI readiness gate below.
   # Its turn-end signal is a globally configured Stop hook plus a guarded
@@ -2421,7 +2437,8 @@ esac
 # docs/supervision-protocols/ carries no agy wake protocol (agy 1.2.0).
 # devin has none either: only its worker lifecycle hooks are verified, and
 # docs/supervision-protocols/ carries no devin wake protocol (devin 3000.11.1).
-if [ "$KIND" = secondmate ] && { [ "$HARNESS" = muse ] || [ "$HARNESS" = gemini ] || [ "$HARNESS" = agy ] || [ "$HARNESS" = devin ]; }; then
+# pi-durable is a one-worker pilot host with no supervision surface at all.
+if [ "$KIND" = secondmate ] && { [ "$HARNESS" = muse ] || [ "$HARNESS" = gemini ] || [ "$HARNESS" = agy ] || [ "$HARNESS" = devin ] || [ "$HARNESS" = pi-durable ]; }; then
   echo "error: $HARNESS is a verified crewmate/scout adapter only and cannot run a secondmate; it has no primary supervision protocol. Select a harness verified for secondmates." >&2
   exit 1
 fi
@@ -2443,6 +2460,12 @@ if [ "$KIND" != secondmate ]; then
 fi
 
 case "$HARNESS" in
+pi-durable)
+  "$SCRIPT_DIR/fm-pi-durable.sh" check --state "$STATE" >/dev/null || {
+    echo "error: the pi-durable pilot runtime is not installed for this home; run bin/fm-pi-durable.sh install, or select a different verified harness" >&2
+    exit 1
+  }
+  ;;
 devin)
   DEVIN_BIN=$(command -v devin) || {
     echo "error: devin executable not found on PATH" >&2
@@ -2546,6 +2569,18 @@ if [ "$HARNESS" = omp ]; then
 fi
 if [ "$HARNESS" = agy ]; then
   agy_model_validate "$AGY_BIN" "$MODEL" || exit 1
+fi
+# The pilot host has no default model and no fallback: refuse here, before any
+# endpoint exists, rather than launching a pane that exits on its first line.
+if [ "$HARNESS" = pi-durable ]; then
+  case "$MODEL" in
+  */*) [ "${MODEL%%/*}" != "" ] && [ "${MODEL#*/}" != "" ] || MODEL_SHAPE_BAD=1 ;;
+  *) MODEL_SHAPE_BAD=1 ;;
+  esac
+  if [ "${MODEL_SHAPE_BAD:-0}" = 1 ]; then
+    echo "error: pi-durable needs --model <provider>/<id> naming an openai-completions provider declared in the Pi models.json; got '${MODEL:-none}'" >&2
+    exit 1
+  fi
 fi
 # Worker account pin (header above): resolved before any endpoint, worktree, or
 # record exists. An absent pin selects nothing and leaves every later launch
@@ -2729,7 +2764,7 @@ model_flag_for_harness() {
   local harness=$1 model=$2
   [ -n "$model" ] && [ "$model" != default ] || return 0
   case "$harness" in
-  claude | codex | opencode | pi | pi-signed | grok | kimi | cursor | gemini | muse | rovo | omp | agy | devin)
+  claude | codex | opencode | pi | pi-signed | grok | kimi | cursor | gemini | muse | rovo | omp | agy | devin | pi-durable)
     printf -- '--model %s ' "$(shell_quote "$model")"
     ;;
   esac
@@ -4791,7 +4826,7 @@ BUSY_GEN=
     }
     [ "$RELAUNCH" -ne 1 ] || RELAUNCH_REPLACEMENT_BUSY_GEN=$BUSY_GEN
     ;;
-  gemini | devin)
+  gemini | devin | pi-durable)
     if [ "$RAW_LAUNCH" -eq 0 ]; then
       BUSY_GEN=$("$FM_ROOT/bin/fm-busy-event.sh" arm "$STATE_REAL" "$ID") || {
         echo "error: failed to arm the busy-state contract for $ID" >&2
@@ -5588,6 +5623,23 @@ devin)
   LAUNCH=${LAUNCH//__DEVINCONFIG__/"$(shell_quote "$STATE_REAL/$ID.devin-config.json")"}
   ;;
 agy) LAUNCH=${LAUNCH//__AGYBIN__/"$(shell_quote "$AGY_BIN")"} ;;
+pi-durable)
+  # The store holds prompts, tool arguments, and results, so it is created
+  # owner-only here; the host refuses a store that is not.
+  PI_DURABLE_STORE="$STATE_REAL/$ID.pi-durable"
+  if ! (umask 077 && mkdir -p "$PI_DURABLE_STORE" && chmod 700 "$PI_DURABLE_STORE"); then
+    echo "error: could not create the pi-durable store $PI_DURABLE_STORE" >&2
+    exit 1
+  fi
+  LAUNCH=${LAUNCH//__PIDURABLELAUNCH__/"$(shell_quote "$FM_ROOT/bin/fm-pi-durable.sh") launch --state $(shell_quote "$STATE_REAL") --"}
+  LAUNCH=${LAUNCH//__PIDURABLESTORE__/"$(shell_quote "$PI_DURABLE_STORE")"}
+  PI_DURABLE_BUSY=
+  if [ -n "$BUSY_GEN" ]; then
+    PI_DURABLE_BUSY="--busy-cmd $(shell_quote "$FM_ROOT/bin/fm-busy-event.sh") --busy-state $(shell_quote "$STATE_REAL") --busy-id $(shell_quote "$ID") --busy-gen $(shell_quote "$BUSY_GEN") "
+    [ "$busy_notify_turnend" != true ] || PI_DURABLE_BUSY="$PI_DURABLE_BUSY--turnend $sq_turnend "
+  fi
+  LAUNCH=${LAUNCH//__PIDURABLEBUSY__/$PI_DURABLE_BUSY}
+  ;;
 esac
 LAUNCH=${LAUNCH//__WORKTREE__/$sq_worktree}
 # A record-backed launch brief is published into the state dir of the pane
@@ -5615,7 +5667,7 @@ case "$LAUNCH" in
   ;;
 esac
 case "$HARNESS" in
-claude | codex | opencode | pi | pi-signed | grok | kimi | gemini | muse | rovo | agy | devin)
+claude | codex | opencode | pi | pi-signed | grok | kimi | gemini | muse | rovo | agy | devin | pi-durable)
   LAUNCH="env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI $LAUNCH"
   ;;
 esac

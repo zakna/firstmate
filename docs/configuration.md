@@ -782,6 +782,14 @@ devin is verified for crewmate and scout launches only; a secondmate is refused 
 
 Its private worker config disables Claude Code imports (including the captain's hooks) and, unless the home sets `config/keep-ai-trailers` (see "Commit attribution"), Devin commit attribution without editing user or project config; [`fm-devin-config.sh`](../bin/fm-devin-config.sh) owns these enforced settings and [Devin verification](verification/devin.md) owns the live evidence and observed model availability.
 
+### pi-durable pilot runtime
+
+`pi-durable` is an opt-in, one-worker pilot runtime for crewmate and scout launches only; it is a Firstmate-owned host on the experimental `@earendil-works/pi-durable` library, separate from the `pi` and `pi-signed` adapters, which stay unchanged.
+Nothing migrates to it: a home selects it only through `config/crew-harness`, a dispatch profile, or a per-spawn `--harness pi-durable`, always with an explicit `--model <provider>/<id>` naming an `openai-completions` provider in the Pi `models.json`.
+Each home needs its own pinned install before the first spawn, created with `bin/fm-pi-durable.sh install` under `state/pi-durable-runtime/`; [`fm-pi-durable.sh`](../bin/fm-pi-durable.sh) owns the install, check, and Node floor.
+Each task's conversation store is `state/<id>.pi-durable/`, owner-only, kept across relaunches including a rollback to `pi`, and removed by teardown with the task's other state.
+Rolling back is a relaunch onto the ordinary adapter, for example `fm-control.sh <id> relaunch --harness pi`; [its adapter reference](../.agents/skills/harness-adapters/references/harness/pi-durable.md) owns the lifecycle, recovery, and provider limits.
+
 ### Verification and primary supervision
 
 New harnesses get verified through a supervised trial task before joining the set.
@@ -1178,7 +1186,7 @@ Typed resolution additively recognizes `gemini` because AGENTS.md section 4 veri
 | Harness | Provider declaration on the opted-in resolver path |
 | --- | --- |
 | `claude`, `codex`, `grok`, `kimi`, `cursor`, `agy`, `muse` | The resolver has an authoritative single-provider mapping. |
-| Every other verified harness | Must declare `provider` explicitly; this includes multi-provider `pi`, `pi-signed`, `omp`, and `opencode`, and unmapped `gemini`, `rovo`, and `devin`; omission is an actionable configuration error before any request. |
+| Every other verified harness | Must declare `provider` explicitly; this includes multi-provider `pi`, `pi-signed`, `omp`, and `opencode`, and unmapped `gemini`, `rovo`, `devin`, and `pi-durable`; omission is an actionable configuration error before any request. |
 
 This single-provider table is separate from the frozen legacy mapping used by `fm-quota-choose.sh`, so additions cannot alter no-key routing.
 

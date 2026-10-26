@@ -2636,6 +2636,32 @@ A throwaway scout was spawned through `bin/fm-spawn.sh --scout --harness omp --m
 
 `FM_OMP_LIVE_E2E=1 tests/fm-omp-primary-live-e2e.test.sh` refreshes the primary evidence; the worker path above is refreshed by repeating the scout dispatch after any omp upgrade.
 
+## pi-durable pilot
+
+The evidence below was produced on 2026-10-26 against `@earendil-works/pi-durable` 1.4.0 with `pi-ai` 1.4.0 and `chord` 1.4.0, as pinned by `bin/pi-durable/package-lock.json`, on Node v26.12.1 on macOS 26 arm64 through the tmux backend.
+The model was local Ollama `qwen-fast` behind an `openai-completions` provider in a Pi-format `models.json`, reached through a recording proxy so the request bodies could be inspected.
+`FM_PI_DURABLE_SIGNALS_LIVE=1 tests/fm-pi-durable-signals-live-e2e.test.sh` produced every row and refreshes it; `tests/fm-pi-durable-harness.test.sh` pins the portable identity, control, composer, busy-trust, runtime-refusal, and launch-shape facts.
+
+| Pilot check | Observed |
+| --- | --- |
+| Start, stream, complete | `bin/fm-spawn.sh --scout --harness pi-durable --model ollama/qwen-fast --effort high` launched the host through `bin/fm-pi-durable.sh launch`; the brief ran the replay-safe `read` tool and two `bash` calls, `bin/fm-harness.sh` run from the tool reported `pi-durable`, and the final reply was rendered in the pane |
+| Effort axis | `effort=high` was recorded in the task record and neither `--effort` nor `--thinking` reached the host argv |
+| Busy transitions | `busy source=pi-durable-host event=run-start` on the brief and on each steer, `idle event=run-end` at each natural end and after an interrupt, `open-settled` on a reopened store with nothing left to run, and the turn-end notification touched |
+| Safe tool and forced interruption | `bin/fm-control.sh <id> interrupt` delivered one Escape during `sleep 90; echo late`, the host printed `interrupted`, settled idle, stayed alive, and the command's side effect never ran |
+| Unsafe tool across a crash | the host was killed with SIGKILL during `echo start >> side.txt; sleep 15`; `bin/fm-control.sh <id> relaunch` reopened the same store, the conversation grew from 23 to 43 entries, `side.txt` held `start` once, and the model received the interrupted result instead of a re-execution |
+| Steer while busy | an `bin/fm-send.sh` message sent during a running `sleep 20` was admitted after the tool round, ran once, and was acknowledged by the host; restoring the record into the inbox and re-ringing the doorbell admitted nothing new, the store held one `fm-inbox:002.msg:` submission, and no doorbell line entered the conversation |
+| Endpoint error | with the model endpoint stopped, a steer rendered the failure in the pane and the host stayed alive |
+| Exit | `bin/fm-control.sh <id> exit` delivered Escape then `/quit`, and the pane's agent stopped |
+| Compat flags | none of the recorded chat-completions request bodies carried a `developer` role or `reasoning_effort`, matching the provider's `supportsDeveloperRole:false` and `supportsReasoningEffort:false` |
+| Store | `state/<id>.pi-durable/` was mode 0700 with 0600 files; a launch naming `openai-codex` or `github-copilot`, an undeclared model, or `--thinking` was refused before any store existed; teardown removes the store and does not archive it, as `tests/fm-teardown.test.sh` pins |
+| Rollback | `bin/fm-control.sh <id> relaunch --harness pi` moved the task to the ordinary Pi adapter and left the pilot store and the task worktree in place |
+
+Two host behaviours came from this run.
+`qwen-fast` sometimes returns its whole closing reply in the reasoning field, so the host renders a final message that has only reasoning content.
+Node's readline joined fm-control's Escape with the `/` of the following `/quit` into a Meta chord until the host shortened its escape timeout.
+
+Not yet verified: the OAuth providers `openai-codex` and `github-copilot`, which the pilot refuses because it has no credential bridge, a hosted model, a second host such as Linux, where only argv[0] names the process, and a Herdr, cmux, Zellij, or Orca endpoint.
+
 ## Busy inbox escalation
 
 Verified at `2026-10-03T19:20:07Z` on commit `23b0232908a5adc7fbf7339ef48c34a091a7a799` with Claude Code `2.1.288 (Claude Code)` on Herdr `0.9.1`, protocol `22`, in a named isolated lab session through `bin/fm-herdr-lab.sh`.
