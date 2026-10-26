@@ -1,0 +1,17 @@
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: OAuth providers, undeclared models, and thinking levels are refused before any store exists
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: spawn brief, safe read tool, bash tool, identity, streamed answer, busy then idle
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: no developer role and no reasoning_effort in 3 requests
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: store is owner-only
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: fm-send while busy admitted and acknowledged by the host, once despite a replayed record and re-ring, ran once
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: Escape aborts the running tool and the host stays alive
+not ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: timed out waiting for crash.txt: • bash {"command":"find '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/pd.V5VGjB/home/state/pd-live.inbox' -name '*.msg' -type f
+2>/dev/null | sort"}
+• bash {"command":"ls -la '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/pd.V5VGjB/home/state/pd-live.inbox/handled/'"}
+• bash {"command":"echo start >> '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/pd.V5VGjB/wt/side.txt'; sleep 15","timeout":20}
+DONE
+⟫
+
+real	5m27.940s
+user	0m6.404s
+sys	0m9.694s
+exit=1
