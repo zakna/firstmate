@@ -207,6 +207,17 @@ test_classification_commits_its_captured_endpoint() {
   pass "the daemon commits exactly the endpoint captured by classification"
 }
 
+test_stale_wake_with_task_tag_resolves_its_endpoint() {
+  local dir state out
+  dir=$(make_supercase stale-task-tag); state="$dir/state"
+  fm_write_meta "$state/tagged-r2.meta" "window=default:wTS:p2" "backend=herdr"
+  printf 'blocked: release host unavailable\nworking: retrying upload\n' > "$state/tagged-r2.status"
+  FM_ESCALATE_BATCH_SECS=999 handle_wake "stale: default:wTS:p2 task=tagged-r2" "$state"
+  out=$(cat "$state/.subsuper-escalations" 2>/dev/null || true)
+  case "$out" in *"blocked: release host unavailable"*) ;; *) fail "a task-tagged stale wake did not resolve its endpoint to the task record: $out" ;; esac
+  pass "a stale wake carrying task=<id> still resolves through its endpoint"
+}
+
 test_stale_masked_event_escalates_at_captured_endpoint() {
   local dir state key out
   dir=$(make_supercase stale-masked); state="$dir/state"
@@ -3359,6 +3370,7 @@ test_classify_signal_dedup_against_scan
 test_classify_signal_skips_turn_end_markers
 test_classify_signal_survives_a_later_routine_append
 test_classification_commits_its_captured_endpoint
+test_stale_wake_with_task_tag_resolves_its_endpoint
 test_stale_masked_event_escalates_at_captured_endpoint
 test_stale_read_failure_surfaces_without_advancing_seen
 test_recreated_status_rejects_captured_identity

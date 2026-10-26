@@ -2161,6 +2161,34 @@ window_to_task() {
   t="${w##*:}"; t="${t#fm-}"; printf '%s' "$t"
 }
 
+# stale_reason_with_task <reason> [state]: a "stale: <endpoint> ..." wake reason
+# with " task=<id>" inserted right after the endpoint, where <id> is the task
+# window_to_task resolves the endpoint to (so the supervision host's scope check
+# and this annotation agree) and $state/<id>.meta exists. That includes
+# window_to_task's name-derived fallback when no record's window= or terminal=
+# names the endpoint but a record with that name exists. When no such record
+# exists, or for any other reason, the text is returned unchanged.
+stale_reason_with_task() {
+  local reason=$1 state=${2:-${STATE:-${FM_STATE_OVERRIDE:-}}} rest endpoint tail task
+  case "$reason" in
+    "stale: "*) ;;
+    *) printf '%s' "$reason"; return 0 ;;
+  esac
+  rest=${reason#stale: }
+  endpoint=${rest%% *}
+  tail=${rest#"$endpoint"}
+  task=
+  if [ -n "$state" ] && [ -n "$endpoint" ]; then
+    task=$(window_to_task "$endpoint" "$state")
+    [ -n "$task" ] && [ -e "$state/$task.meta" ] || task=
+  fi
+  if [ -z "$task" ]; then
+    printf '%s' "$reason"
+  else
+    printf 'stale: %s task=%s%s' "$endpoint" "$task" "$tail"
+  fi
+}
+
 # --- home-owned status-append ledger ----------------------------------------
 #
 # This home's bookkeeping closes (fm_wake_status_append_self_announced) record

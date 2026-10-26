@@ -322,6 +322,43 @@ test_malformed_seen_signature_reads_the_whole_log() {
   pass "a malformed seen signature causes the whole status log to be classified"
 }
 
+test_stale_reason_carries_the_resolved_task() {
+  local dir state out
+  dir=$(make_case stale-task-tag); state="$dir/state"
+  fm_write_meta "$state/herdr-task.meta" "window=default:wTS:p2" "backend=herdr"
+  out=$(stale_reason_with_task "stale: default:wTS:p2 (idle 245s, possible wedge, escalation 1)" "$state")
+  [ "$out" = "stale: default:wTS:p2 task=herdr-task (idle 245s, possible wedge, escalation 1)" ] \
+    || fail "a stale reason did not carry the task its endpoint resolves to: $out"
+  out=$(stale_reason_with_task "stale: default:wTS:p2" "$state")
+  [ "$out" = "stale: default:wTS:p2 task=herdr-task" ] \
+    || fail "a bare stale reason did not carry the resolved task: $out"
+  out=$(stale_reason_with_task "stale: default:wNO:p9 (idle 245s)" "$state")
+  [ "$out" = "stale: default:wNO:p9 (idle 245s)" ] \
+    || fail "an endpoint with no task record changed the stale reason: $out"
+  out=$(stale_reason_with_task "stale: sess:fm-guess (idle 245s)" "$state")
+  [ "$out" = "stale: sess:fm-guess (idle 245s)" ] \
+    || fail "a guessed task with no record was added to the stale reason: $out"
+  out=$(stale_reason_with_task "check: default:wTS:p2 (idle 245s)" "$state")
+  [ "$out" = "check: default:wTS:p2 (idle 245s)" ] \
+    || fail "a non-stale wake was annotated: $out"
+  pass "stale_reason_with_task: a resolved endpoint carries task=<id>, an unresolved one is unchanged"
+}
+
+test_every_queued_stale_row_carries_the_resolved_task() {
+  local dir state payloads
+  dir=$(make_case stale-queue-task-tag); state="$dir/state"
+  fm_write_meta "$state/herdr-task.meta" "window=default:wTS:p2" "backend=herdr"
+  append_wake "$state" stale default:wTS:p2 \
+    "stale: default:wTS:p2 (idle 245s, possible wedge, escalation 1)" || fail "stale append failed"
+  append_wake "$state" stale default:wNO:p9 "stale: default:wNO:p9 (idle 245s)" || fail "stale append failed"
+  append_wake "$state" check default:wTS:p2 "check: default:wTS:p2" || fail "check append failed"
+  payloads=$(cut -f5 "$state/.wake-queue")
+  [ "$payloads" = "stale: default:wTS:p2 task=herdr-task (idle 245s, possible wedge, escalation 1)
+stale: default:wNO:p9 (idle 245s)
+check: default:wTS:p2" ] || fail "queued wake rows did not carry the resolved task exactly on stale rows: $payloads"
+  pass "every queued stale row, decorated or bare, carries the task its endpoint resolves to"
+}
+
 test_stale_is_terminal_classifier() {
   local dir state
   dir=$(make_case classify-stale); state="$dir/state"
@@ -1035,7 +1072,7 @@ test_turn_ended_churn_resets_prior_stale_classification() {
   printf 'idle prompt from an earlier turn' > "$capture_file"
   wait_for_exit "$pid" 100 \
     || { reap "$pid"; fail "a stopped pane matching an earlier stale render waited for the wedge timeout"; }
-  grep -Fx "stale: $window" "$out" >/dev/null \
+  grep -Fx "stale: $window task=codexreturned" "$out" >/dev/null \
     || fail "the returned stale render did not surface through ordinary staleness"
   grep -F "possible wedge" "$out" >/dev/null \
     && fail "the returned stale render inherited the earlier quiet interval's wedge classification"
@@ -2285,7 +2322,7 @@ test_terminal_stale_surfaced() {
     FM_STATE_OVERRIDE="$state" FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
   pid=$!
   wait_for_exit "$pid" 100 || fail "watcher did not exit for a stale pane on a terminal status"
-  grep -Fx "stale: $window" "$out" >/dev/null || fail "watcher did not print the terminal stale wake"
+  grep -Fx "stale: $window task=done" "$out" >/dev/null || fail "watcher did not print the terminal stale wake"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" 2>/dev/null || fail "drain after the terminal stale failed"
   grep "$(printf '\tstale\t')" "$drain_out" | grep -F "$window" >/dev/null || fail "terminal stale was not queued"
   pass "a stale pane sitting on a terminal status is surfaced (queue + exit)"
@@ -2436,7 +2473,7 @@ test_nonterminal_stale_not_working_surfaced() {
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
   pid=$!
   wait_for_exit "$pid" 100 || fail "watcher did not surface a not-provably-working non-terminal stale at once"
-  grep -Fx "stale: $window" "$out" >/dev/null || fail "watcher did not print the immediate stale wake"
+  grep -Fx "stale: $window task=stopped" "$out" >/dev/null || fail "watcher did not print the immediate stale wake"
   grep -F "possible wedge" "$out" >/dev/null && fail "an immediate stopped-crew stale was mislabeled a wedge"
   [ "$(cat "$state/.stale-$key" 2>/dev/null || true)" = "$pane_hash" ] || fail "stale suppressor was not advanced on surface"
   [ ! -e "$state/.stale-since-$key" ] || fail "stale-since timer should not be set when surfacing immediately"
@@ -2540,7 +2577,7 @@ test_own_work_wait_keeps_first_alert_then_long_cadence() {
       watch_bg "$state" "$fakebin" "$out" env FM_PAUSE_RESURFACE_SECS=999
     pid=$!
     wait_for_exit "$pid" 100 || { reap "$pid"; fail "$wait_kind lost its first-sight alert"; }
-    grep -Fx "stale: $window" "$out" >/dev/null || fail "$wait_kind did not surface as a plain stale"
+    grep -Fx "stale: $window task=own-work" "$out" >/dev/null || fail "$wait_kind did not surface as a plain stale"
     ack_stopped_cycle "$state" || fail "could not acknowledge $wait_kind first alert"
 
     # Cross the ordinary wedge threshold twice without aging the declaration
@@ -2589,7 +2626,7 @@ test_own_work_wait_keeps_first_alert_then_long_cadence() {
     watch_bg "$state" "$fakebin" "$out" env FM_STALE_ESCALATE_SECS=999
   pid=$!
   wait_for_exit "$pid" 100 || { reap "$pid"; fail "undeclared idle worker no longer alarms"; }
-  grep -Fx "stale: $window" "$out" >/dev/null || fail "undeclared idle worker did not surface"
+  grep -Fx "stale: $window task=own-work" "$out" >/dev/null || fail "undeclared idle worker did not surface"
   grep -F "stale: $window" "$state/.wake-queue" >/dev/null || fail "undeclared idle worker's wake was not queued"
   pass "own-work waits keep one first alert, then bounded rechecks without wedges; undeclared idle still alarms"
 }
@@ -2643,7 +2680,7 @@ test_exited_declared_pause_is_bounded_but_live_gate_surfaces() {
   # the grep below names. No queue means no wakes, per the drain-count read at
   # the end of this file.
   wakes=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
-  bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
+  bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w " task=held" { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
   [ "$wakes" -le 1 ] || fail "dead-agent declared pause flooded $wakes stale wakes across six unchanged polls"
   [ "$bare" -eq 0 ] || fail "dead-agent declared pause surfaced as $bare bare stopped-crew wakes"
   grep -F "awaiting external" "$state/.wake-queue" >/dev/null \
@@ -2714,7 +2751,7 @@ test_exited_declared_pause_is_bounded_but_live_gate_surfaces() {
   [ ! -e "$state/.stale-since-$key" ] || { reap "$pid"; fail "live external-decision gate retained the wedge timer"; }
   reap "$pid"
   wakes=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
-  bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
+  bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w " task=held" { n++ } END { print n + 0 }' "$state/.wake-queue" 2>/dev/null || echo 0)
   [ "$wakes" -eq 0 ] || fail "acknowledged external-decision surface replayed $wakes wakes"
   [ "$bare" -eq 0 ] || fail "acknowledged external-decision bare stale remained queued"
   pass "exited declared-pause and captain-held panes use bounded pause cadence while a live decision gate still surfaces once"
@@ -2888,7 +2925,7 @@ test_live_declared_wait_churn_honors_the_resurface_throttle() {
       || fail "[$name] a replacement declared wait inherited the previous wait's re-surface throttle"
     wakes=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w { n++ } END { print n + 0 }' \
       "$state/.wake-queue" 2>/dev/null || echo 0)
-    bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w { n++ } END { print n + 0 }' \
+    bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w " task=parked" { n++ } END { print n + 0 }' \
       "$state/.wake-queue" 2>/dev/null || echo 0)
     [ "$wakes" -eq 1 ] || fail "[$name] replacement declared wait produced $wakes first wakes instead of one"
     [ "$bare" -eq 1 ] || fail "[$name] replacement declared wait changed the wake identity: $(cat "$state/.wake-queue")"
@@ -2909,7 +2946,7 @@ test_live_declared_wait_churn_honors_the_resurface_throttle() {
       || fail "[$name] a parked worker did not re-surface once its re-surface window elapsed"
     wakes=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w { n++ } END { print n + 0 }' \
       "$state/.wake-queue" 2>/dev/null || echo 0)
-    bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w { n++ } END { print n + 0 }' \
+    bare=$(awk -F '\t' -v w="$window" '$3 == "stale" && $4 == w && $5 == "stale: " w " task=parked" { n++ } END { print n + 0 }' \
       "$state/.wake-queue" 2>/dev/null || echo 0)
     [ "$wakes" -eq 1 ] || fail "[$name] elapsed re-surface window produced $wakes wakes instead of one"
     [ "$bare" -eq 1 ] || fail "[$name] elapsed re-surface changed the wake identity: $(cat "$state/.wake-queue")"
@@ -4401,7 +4438,7 @@ test_declared_wait_on_a_parked_run_decides_exited_from_the_endpoint() {
           || fail "the classifier did not record its exited choice for a parked run: $(cat "$state/.watch-triage.log")"
         ;;
       live)
-        grep -Fx 'stale: test:fm-held-merge' "$out" >/dev/null \
+        grep -Fx 'stale: test:fm-held-merge task=held-merge' "$out" >/dev/null \
           || fail "a live agent at a parked gate did not surface on first sight: $(cat "$out")"
         grep -F 'counted as exited' "$state/.watch-triage.log" >/dev/null 2>&1 \
           && fail "a live agent at a parked gate was counted as exited"
@@ -5362,7 +5399,7 @@ test_afk_busy_declared_pause_hands_off_plain_stale() {
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
   pid=$!
   wait_for_exit "$pid" 150 || { reap "$pid"; fail "the away-mode busy-turn bound never handed the declared pause to the daemon"; }
-  grep -Fx "stale: $window" "$out" >/dev/null \
+  grep -Fx "stale: $window task=afk-review-scout" "$out" >/dev/null \
     || fail "the away-mode busy-turn bound did not hand off the plain window identity: $(cat "$out")"
   grep -F "possible wedge" "$out" >/dev/null \
     && fail "away mode decorated a declared pause as a possible wedge: $(cat "$out")"
@@ -5472,7 +5509,7 @@ SH
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
   pid=$!
   wait_for_exit "$pid" 150 || { reap "$pid"; fail "the away-mode busy-turn bound never handed a ticking declared pause to the daemon"; }
-  grep -Fx "stale: $window" "$out" >/dev/null \
+  grep -Fx "stale: $window task=afk-ticking-scout" "$out" >/dev/null \
     || fail "the away-mode busy-turn bound did not hand off the plain window identity for a ticking pane: $(cat "$out")"
   grep -F "possible wedge" "$out" >/dev/null \
     && fail "away mode decorated a ticking declared pause as a possible wedge: $(cat "$out")"
@@ -6522,7 +6559,7 @@ test_afk_paused_changed_pane_hands_off_plain_stale() {
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
   pid=$!
   wait_for_exit "$pid" 100 || fail "AFK paused changed pane did not hand off a stale wake"
-  grep -Fx "stale: $window" "$out" >/dev/null || fail "AFK paused stale did not preserve its plain window identity: $(cat "$out")"
+  grep -Fx "stale: $window task=afk-held" "$out" >/dev/null || fail "AFK paused stale did not preserve its plain window identity: $(cat "$out")"
   grep -F "awaiting external" "$out" >/dev/null && fail "AFK watcher decorated a stale identity instead of handing it to the daemon"
   [ ! -e "$state/.paused-$key" ] || fail "AFK watcher recorded normal-mode pause tracking instead of handing off"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" 2>/dev/null || fail "drain after AFK paused stale failed"
@@ -6830,6 +6867,8 @@ test_status_span_survives_a_later_routine_append
 test_status_span_respects_decision_closure
 test_status_span_closure_from_an_offset
 test_malformed_seen_signature_reads_the_whole_log
+test_stale_reason_carries_the_resolved_task
+test_every_queued_stale_row_carries_the_resolved_task
 test_stale_is_terminal_classifier
 test_classifier_primitives
 test_unrecognized_status_prefix_is_visible

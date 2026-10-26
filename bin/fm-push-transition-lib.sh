@@ -91,6 +91,7 @@ triage_log() {
 # Exit after reporting one actionable wake. Tests override this callback.
 wake() {
   local output_status=0
+  set -- "$(stale_reason_with_task "$1")"
   case "$1" in
     heartbeat*) echo $(( $(cat "$STATE/.heartbeat-streak" 2>/dev/null || echo 0) + 1 )) > "$STATE/.heartbeat-streak" ;;
     *) echo 0 > "$STATE/.heartbeat-streak" ;;
