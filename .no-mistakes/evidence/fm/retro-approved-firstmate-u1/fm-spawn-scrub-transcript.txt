@@ -1,0 +1,22 @@
+$ cat brief.md (intent section)
+## Captain's intent
+Add the healthcheck; the owner answered "yes".
+$ fm-spawn.sh scrub-demo <proj> claude --mode no-mistakes --yolo off
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dM60Q5
+error: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dM60Q5/data/scrub-demo/brief.md ## Captain's intent would be refused by the no-mistakes intent scrub; reword it in brief.md as a plain goal before spawn:
+intent-scrub: line 1: quote: Add the healthcheck; the owner answered "yes".
+intent-scrub: authorized intent read from /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dM60Q5/data/scrub-demo/brief.md
+exit=1
+launch-brief.md exists? no
+state/scrub-demo.meta exists? no
+
+# one edit: drop the quote from the intent in brief.md
+## Captain's intent
+Add the healthcheck and confirm with the owner.
+$ fm-spawn.sh scrub-demo <proj> claude --mode no-mistakes --yolo off
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dM60Q5
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dM60Q5/data/scrub-demo/launch-brief.md records no ship branch; defaulting to legacy branch fm/scrub-demo
+exit=1
+launch-brief.md exists? yes
+## Captain intent authorized for --intent
+Add the healthcheck and confirm with the owner.

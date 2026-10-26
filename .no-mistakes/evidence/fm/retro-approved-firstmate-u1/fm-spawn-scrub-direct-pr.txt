@@ -1,0 +1,6 @@
+$ fm-spawn.sh scrub-direct <proj> claude --mode direct-PR --yolo off   (same quoted intent)
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wN2uEn
+warning: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wN2uEn/data/scrub-direct/launch-brief.md records no ship branch; defaulting to legacy branch fm/scrub-direct
+notice: scrub-direct ships mode=direct-PR while the standing posture for proj is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+exit=1
+launch-brief.md exists? yes

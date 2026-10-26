@@ -1,0 +1,17 @@
+## Case A: only config/docs and config/CLAUDE.md changed since deployed main
+no deploy owed
+exit=0
+
+## Case B: two PRs change config/ outside docs (carried + just merged)
+DEPLOY OWED since ccff2b151c18
+3eca22a new automation (#4)
+543c148 automation tweak (#3)
+exit=1
+
+## Case C: deployed sha not present in this clone
+deployed main sha deadbeefcafe1234 is not in this clone
+exit=2
+
+## Case D: ha-deploy/master has no deploy: commit
+no deployed main sha
+exit=2
