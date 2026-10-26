@@ -28,8 +28,10 @@
 #   it also carries the current `--intent` contract and the extracted captain
 #   intent. A legacy mixed Task is accepted there only under bin/fm-dod-lib.sh's
 #   provenance-marking rules; unmarked legacy Tasks stop for migration rather
-#   than becoming intent. That library owns the parsing and intent rules. When
-#   the explicit mode carries less rigor than the project's standing posture, a
+#   than becoming intent. bin/fm-dod-lib.sh owns the parsing and intent rules.
+#   A no-mistakes ship also stops, before `launch-brief.md` exists, when
+#   `fm-intent-check.sh scrub` run from the project would refuse that intent.
+#   When the explicit mode carries less rigor than the project's standing posture, a
 #   loud one-line deviation notice is printed and the spawn continues.
 #   no-mistakes-prod-only is a registry policy rather than a task mode and is
 #   refused as a flag value.
@@ -3243,6 +3245,14 @@ if [ "$KIND" = ship ] || [ "$KIND" = scout ]; then
         echo "error: legacy mixed # Task brief has no provenance-marked captain words for no-mistakes --intent; add [captain] lines or migrate to ## Captain's intent and ## Firstmate spec" >&2
         exit 1
       fi
+    fi
+    # The worker's intent scrub reads the launch brief's copy of these words, so
+    # a refusal found there needs the same edit in every copy; run it from the
+    # project, whose own vocabulary it judges, while only brief.md exists.
+    if ! SCRUB_ERR=$(cd "$PROJ_ABS" && "$FM_ROOT/bin/fm-intent-check.sh" scrub "$BRIEF" 2>&1 >/dev/null); then
+      echo "error: $BRIEF ## Captain's intent would be refused by the no-mistakes intent scrub; reword it in brief.md as a plain goal before spawn:" >&2
+      printf '%s\n' "$SCRUB_ERR" >&2
+      exit 1
     fi
   fi
   # A relaunch adds a one-time predecessor recap, read before the replacement

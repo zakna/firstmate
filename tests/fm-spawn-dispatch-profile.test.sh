@@ -68,7 +68,7 @@ make_spawn_case() {
   fm_test_spawn_home "$home" "$harness"
   fm_git_worktree "$proj" "$wt" "wt-$name"
   for id in "$@"; do
-    fm_test_spawn_brief "$home" "$id"
+    fm_test_spawn_brief "$home" "$id" "brief for the spawn case under test"
   done
   printf '%s\n' "$case_dir|$home|$proj|$wt|$fakebin|$launchlog"
 }
@@ -1938,7 +1938,7 @@ test_worker_launch_delivers_role_scope() {
     rec=$(make_spawn_case "$id" codex)
     read_case_record "$rec"
     if [ "$brief_kind" != scaffold ]; then
-      fm_test_spawn_brief "$HOME_DIR" "$id"
+      fm_test_spawn_brief "$HOME_DIR" "$id" "brief for the $brief_kind role launch"
       if [ "$brief_kind" = heading ]; then
         printf '\n# Worker role\nFollow the project instructions.\n' >> "$HOME_DIR/data/$id/brief.md"
       fi
@@ -1950,7 +1950,7 @@ test_worker_launch_delivers_role_scope() {
       fi
       brief="$HOME_DIR/data/$id/brief.md"
       content=$(cat "$brief")
-      content=${content//'{TASK}'/brief for $id}
+      content=${content//'{TASK}'/brief for the $brief_kind role launch}
       content=${content//'{FIRSTMATE_SPEC}'/Exercise the spawn behavior under test.}
       printf '%s\n' "$content" > "$brief"
     fi

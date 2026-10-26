@@ -959,6 +959,15 @@ EOF
   printf '# Task\n## Captain'"'"'s intent\n%s\n\n## Firstmate spec\nDo not paraphrase.\n\n# Definition of done\nDelivery contract: mode=no-mistakes\n' "$words" > "$home/data/intent-literal/brief.md"
   out=$(run_spawn "$home" "$fakebin" intent-literal "$proj" claude --mode no-mistakes --yolo off)
   assert_not_contains "$out" "operator-address line" "labels mentioned mid-line were refused as address"
+  # The intent scrub still refuses the bare labels, so spawn stops before
+  # serializing them; written as inline code they pass unchanged.
+  assert_contains "$out" "would be refused by the no-mistakes intent scrub" "bare labels the scrub refuses reached the worker"
+  assert_absent "$home/data/intent-literal/launch-brief.md" "bare labels the scrub refuses were serialized"
+  words=$(printf '%s\n' "Keep the literal example \`Captain, hello\` in the documentation." \
+    "Stop composing \`Captain:\`, \`Captain's words:\`, \`Captain's ask:\`, and \`Captain's intent:\` into PR bodies.")
+  printf '# Task\n## Captain'"'"'s intent\n%s\n\n## Firstmate spec\nDo not paraphrase.\n\n# Definition of done\nDelivery contract: mode=no-mistakes\n' "$words" > "$home/data/intent-literal/brief.md"
+  out=$(run_spawn "$home" "$fakebin" intent-literal "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "operator-address line" "labels quoted as code were refused as address"
   authorized=$(awk '$0 == "## Captain intent authorized for --intent" { emit=1; next } emit { print }' "$home/data/intent-literal/launch-brief.md")
   [ "$authorized" = "$words" ] || fail "literal words in the request were scrubbed"
 
@@ -1008,6 +1017,37 @@ EOF
     [ "$authorized" = "$words" ] || fail "$marker: legacy intent changed words or included provenance/build prose"
   done
   pass "fm-spawn/fm-promote: authorized intent preserves exact words and refuses operator-address lines"
+}
+
+# The worker's intent scrub reads the launch brief's copy of the intent, so a
+# refusal found there needs one edit per copy; spawn runs the same scrub first,
+# while brief.md is the only copy.
+test_spawn_refuses_an_intent_the_scrub_would_refuse() {
+  local rec home proj fakebin id out status
+  rec=$(make_home intent-scrub)
+  IFS='|' read -r home proj fakebin <<EOF
+$rec
+EOF
+  id='intent-scrub-quote'
+  write_brief "$home" "$id" no-mistakes
+  printf '# Task\n## Captain'"'"'s intent\nAdd the healthcheck; the owner answered "yes".\n\n## Firstmate spec\nKeep it narrow.\n\n# Definition of done\nDelivery contract: mode=no-mistakes\n' \
+    > "$home/data/$id/brief.md"
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  status=$?
+  [ "$status" -ne 0 ] || fail "an intent the scrub refuses should stop the spawn"
+  assert_contains "$out" "would be refused by the no-mistakes intent scrub" "refusal did not name the scrub"
+  assert_contains "$out" 'line 1: quote:' "refusal did not name the refused line"
+  assert_absent "$home/data/$id/launch-brief.md" "a refused intent was serialized into the launch brief"
+  assert_absent "$home/state/$id.meta" "a refused intent spawn wrote task metadata"
+
+  id='intent-scrub-plain'
+  write_brief "$home" "$id" no-mistakes
+  printf '# Task\n## Captain'"'"'s intent\nAdd the healthcheck.\n\n## Firstmate spec\nKeep it narrow.\n\n# Definition of done\nDelivery contract: mode=no-mistakes\n' \
+    > "$home/data/$id/brief.md"
+  out=$(run_spawn "$home" "$fakebin" "$id" "$proj" claude --mode no-mistakes --yolo off)
+  assert_not_contains "$out" "intent scrub" "a plain intent was refused by the scrub"
+  assert_present "$home/data/$id/launch-brief.md" "a plain intent was not serialized"
+  pass "fm-spawn: refuses a no-mistakes intent the scrub would refuse before the launch brief exists"
 }
 
 # A Firstmate spec that hands the worker its own gate responses would silently
@@ -1684,6 +1724,7 @@ test_forge_gerrit_direct_pr_publishes_one_change() {
 }
 
 test_authorized_intent_keeps_words_without_composed_address
+test_spawn_refuses_an_intent_the_scrub_would_refuse
 test_spawn_refreshes_legacy_worker_roles
 
 # --branch-prefix never touches the default "<mode> <yolo>" output (order- and

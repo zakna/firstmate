@@ -111,7 +111,7 @@ git -C "$SM_HOME" init -q -b main
 cat > "$SM_HOME/data/cm2/brief.md" <<'EOF'
 # Task
 ## Captain's intent
-Exercise secondmate-owned Herdr placement.
+Exercise second-home Herdr placement.
 
 ## Firstmate spec
 Verify the crewmate uses its secondmate home's workspace.
