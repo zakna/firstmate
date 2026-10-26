@@ -1,0 +1,1 @@
+under a first line `round=<database round number> head=<reviewed head sha>`, reading the round with `sqlite3 -readonly "${NM_HOME:-$HOME/.no-mistakes}/state.sqlite" "SELECT max(rd.round) FROM step_rounds rd JOIN step_results sr ON sr.id = rd.step_result_id WHERE sr.run_id='<run>' AND sr.step_name='<step>'"` and writing `round=unknown` when that read fails or returns nothing

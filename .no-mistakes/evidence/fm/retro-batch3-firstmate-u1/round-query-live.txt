@@ -1,0 +1,13 @@
+$ sqlite3 -readonly "${NM_HOME:-$HOME/.no-mistakes}/state.sqlite" "SELECT max(rd.round) FROM step_rounds rd JOIN step_results sr ON sr.id = rd.step_result_id WHERE sr.run_id='01M5WCG106Q3BCYEE9SKSNPH3D' AND sr.step_name='review'"
+rc=0 out='3'
+$ sqlite3 -readonly "${NM_HOME:-$HOME/.no-mistakes}/state.sqlite" "SELECT max(rd.round) FROM step_rounds rd JOIN step_results sr ON sr.id = rd.step_result_id WHERE sr.run_id='01M5WCG106Q3BCYEE9SKSNPH3D' AND sr.step_name='test'"
+rc=0 out=''
+$ sqlite3 -readonly "${NM_HOME:-$HOME/.no-mistakes}/state.sqlite" "SELECT max(rd.round) FROM step_rounds rd JOIN step_results sr ON sr.id = rd.step_result_id WHERE sr.run_id='NOSUCHRUN' AND sr.step_name='review'"
+rc=0 out=''
+$ (NM_HOME=/nonexistent)
+Error: unable to open database "/nonexistent/state.sqlite": unable to open database file
+rc=1
+--- all review rounds of this run (round|trigger|reviewed_head_sha) ---
+1|initial|f76cb2a1f3c47c2f120aec5a5f545366307011e0
+2|auto_fix|0182a3dfc979be5b7fa30ffb163463cd622db303
+3|auto_fix|0f3ea4606f7d21425503168acf1ddaac0d96f11a
