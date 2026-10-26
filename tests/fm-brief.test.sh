@@ -528,6 +528,8 @@ test_ask_user_escalation_format() {
     "ship rule 6 must require the same shape for a single finding"
   assert_grep "write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority)" "$brief" \
     "ship rule 6 must limit the verbatim axi slice to ask-user findings"
+  assert_grep "round=<database round number> head=<reviewed head sha>" "$brief" \
+    "ship rule 6 must put the review round and reviewed head in the findings file"
   # shellcheck disable=SC2016  # single quotes are deliberate: backticks and the key/findings/file tokens must stay literal
   assert_grep 'needs-decision [at=<epoch>] [key=nm-<run>-<step>]: ask-user findings=<id1>,<id2>,... file='"$home/data/$id/nm-<run>-findings.txt" "$brief" \
     "ship rule 6 must render the exact needs-decision ask-user status line"

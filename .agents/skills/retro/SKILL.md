@@ -111,7 +111,10 @@ Two conventions keep the numbers honest.
   Report `ci_ready_at` beside it only when the two differ; it is re-set when the base branch advances.
   On GitLab and Gerrit, which have no GitHub check runs, report `ci_ready_at` instead and say so.
   Report the merge wait after it separately.
-- Use the database's round numbering and say so; rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
+- Use the database's round numbering and say so.
+  A gate escalation's findings file starts with its `round=` and `head=` line, so match files to rounds by it.
+  A file without that first line, or with an empty or `unknown` round, predates it or could not read the round: match it by its run id and the round's head in `step_rounds`, and say so in the report.
+  Rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
 
 For M10, "found none" never means "none exist"; state how much of the merged change you read.
 A ticket delivered without the pipeline has no run; report M2 to M6 as not applicable, not as zero effort.
@@ -172,6 +175,7 @@ Look in particular for these shapes when the register is absent or does not cove
 - An expensive or repeated tool call.
 - A fact the worker needed and could not reach.
 
+A merge made outside the fleet's merge command is never a finding or a cost item: record only the merge method and the resulting commit from the task's external-merge note, reading the method from its parent count (two parents is a merge commit, one is a squash or rebase merge, `unknown` stays unknown).
 Also state what went well and what was not a cost, so a later reader does not reopen a settled point.
 
 ### 5. Debt inventory
@@ -217,10 +221,10 @@ Also look for lines that no longer change behaviour, and propose their removal.
 A proposal changes the environment of the next ticket.
 Order candidates by the cost they would have removed and keep at most five; point at an existing open row instead of repeating it.
 
-Apply one routing test to every proposal and name the class in the report.
+Apply one routing test to every proposal and name the routing class in the report; it is a different axis from the defect classes of the register.
 When a check could have caught it, propose that check as an automated check, in preference to any new rule or prose text.
 
-| Class | When | Where it goes |
+| Routing class | When | Where it goes |
 |---|---|---|
 | Automated check | The violation is mechanical: a fixed pattern, a banned call, a file-location rule, a missing declaration | A deterministic check in the project's own lint, test, hook, or CI, whichever is cheapest there; read what the project already runs first, because a check that exists and is unwired is the finding |
 | Reviewer path rule | The violation is a judgement no check can make | A review rule scoped to the affected paths in the project's `.no-mistakes.yaml` |

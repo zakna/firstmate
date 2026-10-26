@@ -618,7 +618,7 @@ fm_intent_scrub() {  # <source-file>
 fm_ask_user_escalation_block() {  # <data-dir> <task-id>
   local data=$1 id=$2
   cat <<EOF
-   For a no-mistakes ask-user gate specifically, escalate all ask-user findings as one event plus one snapshot file, using that same shape even when the gate holds only a single ask-user finding: write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority), to \`$data/$id/nm-<run>-findings.txt\`, then report the gate with
+   For a no-mistakes ask-user gate specifically, escalate all ask-user findings as one event plus one snapshot file, using that same shape even when the gate holds only a single ask-user finding: write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority), to \`$data/$id/nm-<run>-findings.txt\` under a first line \`round=<database round number> head=<reviewed head sha>\`, reading the round with \`sqlite3 -readonly "\${NM_HOME:-\$HOME/.no-mistakes}/state.sqlite" "SELECT max(rd.round) FROM step_rounds rd JOIN step_results sr ON sr.id = rd.step_result_id WHERE sr.run_id='<run>' AND sr.step_name='<step>'"\` and writing \`round=unknown\` when that read fails or returns nothing, never a count of your own, then report the gate with
    \`needs-decision [at=<epoch>] [key=nm-<run>-<step>]: ask-user findings=<id1>,<id2>,... file=$data/$id/nm-<run>-findings.txt\`
    naming every ask-user finding id from that gate. The status line only points at the file; it never restates or summarizes a finding's content.
 EOF
