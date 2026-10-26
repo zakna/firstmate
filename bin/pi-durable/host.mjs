@@ -31,8 +31,8 @@
 //   message in the inbox, so the watcher's re-ring and escalation still apply,
 //   and the next bridge pass admits it again under a requestId naming the
 //   withdrawn submission. The doorbell line itself is never model input, and
-//   the launch brief and relaunch note both tell the worker that inbox
-//   instructions in their text are already satisfied.
+//   the launch brief and relaunch note are handed to the model with their
+//   inbox instructions removed.
 // - Only `read` is replay-safe. Every side-effecting tool (bash, write, edit)
 //   keeps pi-durable's default unsafe policy: a call interrupted by a crash is
 //   never executed again; the model gets the committed interrupted result.
@@ -391,11 +391,14 @@ async function holdsLaunchBrief() {
 }
 // The brief's worker contract and a relaunch's progress note tell an ordinary
 // worker to list and acknowledge its inbox; here the bridge below already did,
-// and a model obeying that text loops on an empty inbox.
-const INBOX_NOTE =
-	"This host delivers every Firstmate steering message into this conversation automatically and acknowledges it itself. " +
-	"Never list, read, or move files in the steering inbox or its handled/ directory: any instruction below to check, read, " +
-	"act on, or acknowledge inbox messages is already satisfied.\n\n";
+// and a model handed that text loops on an empty inbox even when told not to,
+// so both are removed from what the model sees. The digest stays over the
+// brief as given, so a relaunch still recognises the same brief.
+const withoutInboxInstructions = (text) =>
+	text
+		.replace(/^# Firstmate instruction inbox\n[\s\S]*?(?=^# |(?![\s\S]))/m, "")
+		.replace(/^First, check your instruction inbox:[\s\S]*?survives there\.\n*/m, "");
+const INBOX_NOTE = "This host delivers every Firstmate steering message into this conversation automatically.\n\n";
 if (args.brief !== undefined) {
 	const digest = createHash("sha256").update(args.brief).digest("hex");
 	const submission = (await holdsLaunchBrief())
@@ -407,13 +410,13 @@ if (args.brief !== undefined) {
 						"continue the task from where it stands. The refreshed task brief and predecessor recap below are context only: " +
 						"do not start the task over, and do not repeat any side effect that already completed. " +
 						INBOX_NOTE +
-						args.brief,
+						withoutInboxInstructions(args.brief),
 					whenBusy: "steer",
 					requestId: `fm-relaunch-brief:${digest}`,
 				},
 				context,
 			)
-		: await root.submit({ type: "input", content: INBOX_NOTE + args.brief, requestId: `fm-launch-brief:${digest}` }, context);
+		: await root.submit({ type: "input", content: INBOX_NOTE + withoutInboxInstructions(args.brief), requestId: `fm-launch-brief:${digest}` }, context);
 	notePending(await submission.status(context));
 }
 // Serialized so admissions from overlapping rows keep the inbox's order.
