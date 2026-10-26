@@ -45,6 +45,7 @@ Before submitting any row, and once at every open, the host bridges the `../../.
 The host moves a message into `handled/` only once its submission is placed into the conversation, not at admission, and a placed message stays acknowledged even when its run later ends it unanswered.
 Each bridge pass re-checks the messages still in the inbox, so a placement the event stream missed is acknowledged then.
 Only a submission withdrawn before placement, such as a queued message an interrupt withdraws, is re-admitted: it stays in the inbox, so the watcher's re-ring and escalation still apply, and the next bridge pass admits it again under a request id naming the withdrawn submission.
+Because the host owns delivery and acknowledgement, it frames the launch brief and every relaunch note to tell the worker never to list, read, or move inbox files, since a model obeying the brief's or the relaunch progress note's inbox instructions loops on an empty inbox.
 The doorbell line itself only triggers that bridge and never reaches the model; the host also erases its echo from the pane, so a relaunch's scrollback recap cannot hand it on, and a message is never delivered twice: a re-rung doorbell, a relaunch, or a crash before the move never re-admits a placed message.
 The host renders no busy footer, so delivery relies on the composer verdict, not a rendered busy signal.
 
