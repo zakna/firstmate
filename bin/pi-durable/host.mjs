@@ -281,6 +281,9 @@ const root = await harness.root(context, { agent: { model: { provider: providerI
 await root.configure({ model: { provider: providerId, modelId }, cwd }, context);
 
 let running = false;
+// Set when this host aborts the run (Escape or SIGINT): the inputs that abort
+// withdraws are then expected, not reported. The next run clears it.
+let selfAborted = false;
 async function setRunning(next, event) {
 	if (running === next) return;
 	running = next;
@@ -312,6 +315,7 @@ stream.start(async (events) => {
 				await setRunning(event.run !== undefined, "snapshot");
 				break;
 			case "run_start":
+				selfAborted = false;
 				await setRunning(true, "run-start");
 				break;
 			case "run_end":
@@ -356,7 +360,7 @@ stream.start(async (events) => {
 				break;
 			case "submission":
 				settleInbox(event.record);
-				if (event.record.status === "unanswered") log(`input not answered: ${short(event.record.reason ?? event.record)}`);
+				if (event.record.status === "unanswered" && !(selfAborted && event.record.reason === "aborted")) log(`input not answered: ${short(event.record.reason ?? event.record)}`);
 				break;
 			case "auto_retry_start":
 				log(`retrying (${event.attempt}): ${short(event.errorMessage)}`);
@@ -473,11 +477,19 @@ harness.closed.then((end) => {
 });
 
 readline.emitKeypressEvents(process.stdin, rl);
-process.stdin.on("keypress", (_text, key) => {
-	if (key?.name === "escape" && running) {
+// The interrupt lines and the prompt redraw go out as one write, so
+// fm-control's composer read after Escape never lands mid-redraw.
+function interrupt() {
+	selfAborted = true;
+	void root.abort(context).then(() => {
+		process.stdout.cork();
 		log("interrupting…");
-		void root.abort(context).then(() => log("interrupted"));
-	}
+		log("interrupted");
+		process.stdout.uncork();
+	});
+}
+process.stdin.on("keypress", (_text, key) => {
+	if (key?.name === "escape" && running) interrupt();
 });
 rl.on("line", (line) => {
 	const text = line.trim();
@@ -501,7 +513,7 @@ rl.on("line", (line) => {
 });
 rl.on("close", () => void shutdown(0));
 rl.on("SIGINT", () => {
-	if (running) void root.abort(context).then(() => log("interrupted"));
+	if (running) interrupt();
 	else rl.prompt();
 });
 log(`pi-durable ${args.model} · store ${store}`);

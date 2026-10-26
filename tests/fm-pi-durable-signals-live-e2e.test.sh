@@ -127,8 +127,10 @@ mkdir -p "$LAB/bin" && mv "$LAB/bin-tmux" "$LAB/bin/tmux" && chmod +x "$LAB/bin/
 export PATH="$LAB/bin:$PATH" FM_HOME="$H"
 unset FM_ROOT_OVERRIDE FM_STATE_OVERRIDE FM_DATA_OVERRIDE FM_CONFIG_OVERRIDE FM_PROJECTS_OVERRIDE
 TARGET="firstmate:fm-$ID"
-"$REAL_TMUX" -S "$SOCKET" new-session -d -s firstmate -n "fm-$ID" -x 140 -y 45 -c "$WT" \
-  "HOME='$H/user-home' /bin/sh '$LAB/launch.sh'; exec /bin/bash --noprofile --norc" || fail 'could not start pane'
+# The pane's own HOME, not just the first launch's, so a relaunch typed into
+# its shell also reads the lab models.json and talks through the proxy.
+"$REAL_TMUX" -S "$SOCKET" new-session -d -s firstmate -n "fm-$ID" -x 140 -y 45 -c "$WT" -e "HOME=$H/user-home" \
+  "/bin/sh '$LAB/launch.sh'; exec /bin/bash --noprofile --norc" || fail 'could not start pane'
 capture() { "$REAL_TMUX" -S "$SOCKET" capture-pane -p -e -t "$TARGET"; }
 screen_text() { "$REAL_TMUX" -S "$SOCKET" capture-pane -p -S -200 -t "$TARGET"; }
 busy_state() { fm_busy_classify tmux "$TARGET" pi-durable "$ID" "$H/state"; }
@@ -261,9 +263,11 @@ pass "$VERSION: crash mid-tool is not replayed; relaunch reopens the same store 
 kill "$PROXY_PID" 2>/dev/null
 wait "$PROXY_PID" 2>/dev/null
 PROXY_PID=
+endpoint_errors() { screen_text | grep -c 'input not answered\|retrying'; }
+errors_before=$(endpoint_errors)
 "$ROOT/bin/fm-send.sh" "$ID" 'Say OK.' > "$LAB/send5.log" 2>&1 || fail 'could not steer error probe'
-for _ in $(seq 1 240); do screen_text | grep -q 'input not answered\|retrying' && break; sleep 0.5; done
-screen_text | grep -q 'input not answered\|retrying' || fail "the endpoint failure was not rendered: $(screen_text | tail -8)"
+for _ in $(seq 1 240); do [ "$(endpoint_errors)" -gt "$errors_before" ] && break; sleep 0.5; done
+[ "$(endpoint_errors)" -gt "$errors_before" ] || fail "the endpoint failure was not rendered: $(screen_text | tail -8)"
 [ "$(fm_backend_agent_state tmux "$TARGET")" = alive ] || fail 'the endpoint failure killed the host'
 pass "$VERSION: endpoint failure is rendered and the host survives (state: $(busy_state))"
 
