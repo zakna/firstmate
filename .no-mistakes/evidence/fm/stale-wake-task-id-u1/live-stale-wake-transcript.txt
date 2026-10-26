@@ -1,0 +1,13 @@
+# Live lab: real tmux pane lab:worker2 (window name != task id), meta for task unraid-wizarr-onboarding-s1
+$ FM_HOME=$LAB FM_POLL=2 bin/fm-watch.sh
+stale: lab:worker2 task=unraid-wizarr-onboarding-s1
+
+$ bin/fm-wake-drain.sh
+1793025486	1	stale	lab:worker2	stale: lab:worker2 task=unraid-wizarr-onboarding-s1
+STATUS OUTCOME BACKSTOP (newest captain-facing task event has no covering branch outcome):
+unraid-wizarr-onboarding-s1 done: ready in branch fm/x
+
+# fm_wake_append stale for an endpoint with no task record (lab:ghost) and for lab:worker2 with idle detail; then drain
+1793025486	1	stale	lab:worker2	stale: lab:worker2 task=unraid-wizarr-onboarding-s1
+1793025494	2	stale	stale:lab:ghost	stale: lab:ghost (idle 245s)
+1793025494	3	stale	stale:x	stale: lab:worker2 task=unraid-wizarr-onboarding-s1 (idle 245s, pane unchanged)
