@@ -287,6 +287,22 @@ async function setRunning(next, event) {
 	await busy(() => (next ? "busy" : "idle"), event);
 }
 
+// Inbox messages admitted but not yet placed, by requestId.
+const awaitingPlacement = new Map();
+const withdrawnUnplaced = (record) => record?.status === "unanswered" && record.entry === undefined;
+function settleInbox(record) {
+	const pending = awaitingPlacement.get(record.requestId);
+	if (pending === undefined || record.status === "queued") return;
+	awaitingPlacement.delete(record.requestId);
+	if (withdrawnUnplaced(record)) return;
+	try {
+		mkdirSync(join(pending.dir, "handled"), { recursive: true });
+		renameSync(join(pending.dir, pending.name), join(pending.dir, "handled", pending.name));
+	} catch (error) {
+		log(`inbox ${pending.name} placed but not acknowledged: ${error.message}`);
+	}
+}
+
 const stream = await durable.watchEvents(harness, root.id, context);
 running = stream.snapshot.run !== undefined;
 stream.start(async (events) => {
@@ -385,21 +401,6 @@ if (args.brief !== undefined) {
 			)
 		: await root.submit({ type: "input", content: args.brief, requestId: `fm-launch-brief:${digest}` }, context);
 	notePending(await submission.status(context));
-}
-// Inbox messages admitted but not yet placed, by requestId.
-const awaitingPlacement = new Map();
-const withdrawnUnplaced = (record) => record?.status === "unanswered" && record.entry === undefined;
-function settleInbox(record) {
-	const pending = awaitingPlacement.get(record.requestId);
-	if (pending === undefined || record.status === "queued") return;
-	awaitingPlacement.delete(record.requestId);
-	if (withdrawnUnplaced(record)) return;
-	try {
-		mkdirSync(join(pending.dir, "handled"), { recursive: true });
-		renameSync(join(pending.dir, pending.name), join(pending.dir, "handled", pending.name));
-	} catch (error) {
-		log(`inbox ${pending.name} placed but not acknowledged: ${error.message}`);
-	}
 }
 // Serialized so admissions from overlapping rows keep the inbox's order.
 let inboxChain = Promise.resolve();
