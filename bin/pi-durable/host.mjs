@@ -168,15 +168,27 @@ mkdirSync(store, { recursive: true, mode: 0o700 });
 chmodSync(store, 0o700);
 if ((statSync(store).mode & 0o077) !== 0) fail(`store ${store} is not owner-only`);
 
-const busy = (state, event) =>
-	new Promise((done) => {
-		if (!args["busy-cmd"]) return done();
-		execFile(
-			args["busy-cmd"],
-			["apply", args["busy-state"], args["busy-id"], state, "--gen", args["busy-gen"], "--source", "pi-durable-host", "--event", event],
-			() => done(),
-		);
-	});
+// Each apply is its own process and the record keeps the last lock holder, so
+// writes run one at a time in the order the host decided them.
+let busyChain = Promise.resolve();
+const busy = (decide, event) => {
+	busyChain = busyChain.then(
+		() =>
+			new Promise((done) => {
+				const state = decide();
+				if (!args["busy-cmd"] || state === undefined) return done();
+				execFile(
+					args["busy-cmd"],
+					["apply", args["busy-state"], args["busy-id"], state, "--gen", args["busy-gen"], "--source", "pi-durable-host", "--event", event],
+					(error) => {
+						if (error) log(`busy ${state} (${event}) not recorded: ${error.message}`);
+						done();
+					},
+				);
+			}),
+	);
+	return busyChain;
+};
 const touchTurnEnd = () => {
 	if (!args.turnend) return;
 	try {
@@ -263,7 +275,7 @@ let running = false;
 async function setRunning(next, event) {
 	if (running === next) return;
 	running = next;
-	await busy(next ? "busy" : "idle", event);
+	await busy(() => (next ? "busy" : "idle"), event);
 }
 
 const stream = await durable.watchEvents(harness, root.id, context);
@@ -382,7 +394,7 @@ await admitInbox();
 harness.resume();
 // A reopened store with nothing left to run settles idle at once; a live run
 // reports busy through its own run_start or snapshot.
-if (!running) await busy("idle", "open-settled");
+await busy(() => (running ? undefined : "idle"), "open-settled");
 
 let closing = false;
 async function shutdown(code) {
