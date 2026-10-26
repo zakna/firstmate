@@ -178,10 +178,14 @@ pass "$VERSION: spawn brief, safe read tool, bash tool, identity, streamed answe
 ! grep -q '"reasoning_effort"' "$LAB/requests.jsonl" || fail 'reasoning_effort reached the server'
 pass "$VERSION: no developer role and no reasoning_effort in $(wc -l < "$LAB/requests.jsonl" | tr -d ' ') requests"
 
-# 9. Store permissions.
-[ "$(stat -f '%Lp' "$STORE" 2>/dev/null || stat -c '%a' "$STORE")" = 700 ] || fail 'store directory is not 0700'
+# 9. Store permissions. GNU `stat -f` succeeds with filesystem status, so pick
+# the dialect by kernel rather than falling back on failure.
+file_mode() {
+  if [ "$(uname)" = Darwin ]; then /usr/bin/stat -f '%Lp' "$1"; else stat -c '%a' "$1"; fi
+}
+[ "$(file_mode "$STORE")" = 700 ] || fail 'store directory is not 0700'
 for f in "$STORE"/*; do
-  mode=$(stat -f '%Lp' "$f" 2>/dev/null || stat -c '%a' "$f")
+  mode=$(file_mode "$f")
   [ "$mode" = 600 ] || fail "store file ${f##*/} is mode $mode, not 0600"
 done
 pass "$VERSION: store is owner-only"

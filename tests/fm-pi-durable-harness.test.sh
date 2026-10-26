@@ -16,6 +16,11 @@ set -u
 . "$ROOT/bin/fm-agent-process-lib.sh"
 TMP_ROOT=$(fm_test_tmproot fm-pi-durable-harness)
 HARNESS="$ROOT/bin/fm-harness.sh"
+# GNU `stat -f` succeeds with filesystem status, so pick the dialect by kernel
+# rather than falling back on failure.
+file_mode() {
+  if [ "$(uname)" = Darwin ]; then /usr/bin/stat -f '%Lp' "$1"; else stat -c '%a' "$1"; fi
+}
 unset CLAUDECODE PI_CODING_AGENT GROK_AGENT CURSOR_AGENT CURSOR_INVOKED_AS GEMINI_CLI FM_OMP_HARNESS FM_PI_HARNESS ATLASSIAN_AGENT_TYPE ROVODEV_CLI
 
 # Identity: a real process named pi-durable is the adapter, by its own name
@@ -128,7 +133,7 @@ assert_contains "$launch" 'encode launch-brief' 'typed launch envelope lost'
 case "$launch" in *--effort*|*--thinking*) fail 'the effort axis reached the host argv' ;; esac
 assert_grep 'effort=high' "$home/state/pd-worker.meta" 'effort not recorded'
 assert_grep 'harness=pi-durable' "$home/state/pd-worker.meta" 'harness not recorded exactly'
-mode=$(stat -f '%Lp' "$home/state/pd-worker.pi-durable" 2>/dev/null || stat -c '%a' "$home/state/pd-worker.pi-durable")
+mode=$(file_mode "$home/state/pd-worker.pi-durable")
 [ "$mode" = 700 ] || fail "store directory mode is $mode, not 700"
 [ "$(fm_busy_classify tmux fake:w pi-durable pd-worker "$home/state")" = 'busy fm-spawn' ] || fail 'launch not armed'
 if out=$(fm_test_run_spawn "$home" "$wt" "$fakebin" pd-sm "$proj" --secondmate --harness pi-durable 2>&1)
