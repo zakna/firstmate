@@ -39,14 +39,16 @@ Guard first sets order, not authority: it never bypasses the retro gates or capt
 A landing note never triggers the guard slot itself; it reaches it only as a source of the retro, which applies the gates.
 
 For zakna/ha, a merged PR that changes `config/` outside `config/docs/` and `config/CLAUDE.md` is deployed through that repository's deploy procedure in `config/CLAUDE.md` before cleanup, or held with a reason.
-Before that deploy, run this read-only drift check in the ha clone after `git fetch origin main` and `git fetch ha-deploy master`; it exits 0 when no deploy is owed, 1 when a deploy is owed, and 2 when no deployed main commit can be found:
+Before that deploy, run this read-only drift check in the ha clone after `git fetch origin main` and `git fetch ha-deploy master`; it exits 0 when no deploy is owed, 1 when a deploy is owed, and 2 when the deployed main commit cannot be found or compared:
 
 ```sh
 last=$(git log --first-parent --format=%s ha-deploy/master | sed -n -E 's/^deploy: (main )?([0-9a-f]{7,40})( .*)?$/\2/p' | head -1)
 [ -n "$last" ] || { echo "no deployed main sha"; exit 2; }
-if git diff --quiet "$last" origin/main -- config ':!config/docs' ':!config/CLAUDE.md'; then echo "no deploy owed"; exit 0; fi
+git rev-parse --verify --quiet "$last^{commit}" >/dev/null || { echo "deployed main sha $last is not in this clone"; exit 2; }
+git diff --quiet "$last" origin/main -- config ':!config/docs' ':!config/CLAUDE.md'
+case $? in 0) echo "no deploy owed"; exit 0 ;; 1) ;; *) echo "cannot compare $last with origin/main"; exit 2 ;; esac
 echo "DEPLOY OWED since $last"
-git log --first-parent --oneline "$last"..origin/main -- config ':!config/docs' ':!config/CLAUDE.md'
+git log --first-parent --oneline "$last"..origin/main -- config ':!config/docs' ':!config/CLAUDE.md' || exit 2
 exit 1
 ```
 
