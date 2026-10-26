@@ -21,7 +21,10 @@
 #   signal: <file>...      status/turn-end signals, surfaced when a listed status
 #                          span has a captain-relevant event OR a no-verb signal lacks
 #                          positive execution evidence, unless afk is active
-#   stale: <window>        a provably-working stale is ALWAYS absorbed (with a wedge
+#   stale: <window> [task=<id>]
+#                          the task= field names the task whose record's window= is
+#                          <window> (stale_reason_with_task), absent when none does.
+#                          A provably-working stale is ALWAYS absorbed (with a wedge
 #                          timer) regardless of what the status log says - an active
 #                          run-step or busy pane outranks even a captain-relevant log
 #                          line, since the crew's own log gets no new entry once
@@ -1732,7 +1735,7 @@ busy_turn_bound_check() {  # <window> <task> <hash> <since-file> <escalation-fil
         return 0
       fi
       if [ "$(cat "$STATE/.stale-$key" 2>/dev/null || true)" != "$declared" ]; then
-        fm_wake_append stale "$win" "stale: $win" || exit 1
+        fm_wake_append stale "$win" "$(stale_reason_with_task "stale: $win")" || exit 1
         printf '%s' "$declared" > "$STATE/.stale-$key"
         wake "stale: $win"
       fi
@@ -2018,7 +2021,7 @@ surface_nonterminal_stale() {  # <window> <hash>
     bounded=0
   fi
   if [ "$throttled" -ne 0 ]; then
-    fm_wake_append stale "$win" "stale: $win" || exit 1
+    fm_wake_append stale "$win" "$(stale_reason_with_task "stale: $win")" || exit 1
     stale_wait_record "$key"
   fi
   printf '%s' "$h" > "$STATE/.stale-$key"
@@ -3186,7 +3189,7 @@ EOF
             printf '%s' "$h" > "$sf"
             triage_log "absorbed stale (captain-held, never rechecked while the away-posture record exists): $w"
           elif [ "$(cat "$sf" 2>/dev/null || true)" != "$h" ]; then
-            fm_wake_append stale "$w" "stale: $w" || exit 1
+            fm_wake_append stale "$w" "$(stale_reason_with_task "stale: $w")" || exit 1
             printf '%s' "$h" > "$sf"
             wake "stale: $w"
           fi
@@ -3224,7 +3227,7 @@ EOF
               clear_write_tracking "$key"
               triage_log "absorbed stale (open captain call already surfaced for this status): $w"
             else
-              fm_wake_append stale "$w" "stale: $w" || exit 1
+              fm_wake_append stale "$w" "$(stale_reason_with_task "stale: $w")" || exit 1
               stale_wait_record "$key"
               printf '%s' "$h" > "$sf"
               rm -f "$ssf"
