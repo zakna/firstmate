@@ -484,8 +484,11 @@ rl.on("line", (line) => {
 	if (text === "") return rl.prompt();
 	if (text === "/quit") return void shutdown(0);
 	// The steering doorbell only says the inbox changed; the bridge delivers
-	// the messages themselves, so the line is never model input.
+	// the messages themselves, so the line is never model input. Its echo is
+	// erased too: a relaunch's recap reads the pane, and would hand it on.
 	if (text.startsWith(DOORBELL)) {
+		const rows = Math.max(1, Math.ceil((PROMPT.length + line.length) / (process.stdout.columns || 80)));
+		process.stdout.write(`\x1b[${rows}A\r\x1b[J`);
 		void admitInbox();
 		return rl.prompt();
 	}

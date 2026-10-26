@@ -242,6 +242,14 @@ for _ in $(seq 1 40); do [ "$(fm_backend_agent_state tmux "$TARGET")" = dead ] &
 [ "$(fm_backend_agent_state tmux "$TARGET")" = dead ] || fail 'killed host still classified alive'
 "$ROOT/bin/fm-control.sh" "$ID" relaunch --note "The host was killed mid-command; the reopened store continues the run." > "$LAB/relaunch.log" 2>&1 || fail "relaunch failed: $(cat "$LAB/relaunch.log")"
 TARGET=$(sed -n 's/^window=//p' "$H/state/$ID.meta")
+# The relaunch note carries a recap of the killed pane; the doorbell lines rung
+# into that pane must not reach the model through it.
+for _ in $(seq 1 120); do
+  [ "$(sqlite3 "file:$STORE/conversation.sqlite?mode=ro" "select count(*) from entries where record like '%Firstmate relaunched this worker%'")" = 1 ] && break
+  sleep 0.5
+done
+bells=$(sqlite3 "file:$STORE/conversation.sqlite?mode=ro" "select count(*) from entries where record like '%Firstmate instruction waiting%'")
+[ "$bells" = 0 ] || fail 'the relaunch recap handed doorbell lines to the model'
 wait_file "$WT/crash.txt"
 wait_idle
 [ "$(grep -c start "$WT/side.txt")" = 1 ] || fail "the interrupted side-effecting call ran $(grep -c start "$WT/side.txt") times"
