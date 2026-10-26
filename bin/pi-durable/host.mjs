@@ -21,13 +21,16 @@
 // - The steering inbox ($FM_TASK_INBOX, bin/fm-task-inbox-lib.sh) is bridged
 //   into durable input: on every submitted terminal row, and once at open,
 //   each unhandled NNN.msg is admitted in numeric order with a requestId
-//   derived from its name and bytes, so a re-rung doorbell or a relaunch never
-//   delivers one message twice. The host acknowledges a message (the move into
-//   handled/) only once its submission is placed into the conversation. A
-//   submission withdrawn before placement (an interrupt) leaves the message in
-//   the inbox, so the watcher's re-ring and escalation still apply, and the
-//   next bridge pass admits it again under a requestId naming the withdrawn
-//   submission. The doorbell line itself is never model input.
+//   derived from its name and bytes. A message is never delivered twice: a
+//   placed message is never re-admitted; only one withdrawn before placement
+//   is admitted again. The host acknowledges a message (the move into
+//   handled/) once its submission is placed into the conversation, even if that
+//   run later ends it unanswered, and every bridge pass re-checks the messages
+//   still in the inbox, so a placement the event stream missed is acknowledged
+//   then. A submission withdrawn before placement (an interrupt) leaves the
+//   message in the inbox, so the watcher's re-ring and escalation still apply,
+//   and the next bridge pass admits it again under a requestId naming the
+//   withdrawn submission. The doorbell line itself is never model input.
 // - Only `read` is replay-safe. Every side-effecting tool (bash, write, edit)
 //   keeps pi-durable's default unsafe policy: a call interrupted by a crash is
 //   never executed again; the model gets the committed interrupted result.
@@ -385,11 +388,12 @@ if (args.brief !== undefined) {
 }
 // Inbox messages admitted but not yet placed, by requestId.
 const awaitingPlacement = new Map();
+const withdrawnUnplaced = (record) => record?.status === "unanswered" && record.entry === undefined;
 function settleInbox(record) {
 	const pending = awaitingPlacement.get(record.requestId);
 	if (pending === undefined || record.status === "queued") return;
 	awaitingPlacement.delete(record.requestId);
-	if (record.status === "unanswered") return;
+	if (withdrawnUnplaced(record)) return;
 	try {
 		mkdirSync(join(pending.dir, "handled"), { recursive: true });
 		renameSync(join(pending.dir, pending.name), join(pending.dir, "handled", pending.name));
@@ -428,7 +432,7 @@ function admitInbox() {
 				// A withdrawn submission keeps its requestId, so the message comes back
 				// under one that names it; a crash before the move re-admits under the
 				// same id, which the store answers with the existing submission.
-				for (let prior; (prior = await storage.submissionByRequest(root.id, requestId, context))?.status === "unanswered"; ) {
+				for (let prior; withdrawnUnplaced((prior = await storage.submissionByRequest(root.id, requestId, context))); ) {
 					requestId = `fm-inbox:${name}:${digest}:${prior.id}`;
 				}
 				awaitingPlacement.set(requestId, { dir, name });
