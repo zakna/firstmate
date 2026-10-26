@@ -113,6 +113,7 @@ Two conventions keep the numbers honest.
   Report the merge wait after it separately.
 - Use the database's round numbering and say so.
   A gate escalation's findings file starts with its `round=` and `head=` line, so match files to rounds by it.
+  A file without that first line, or with `round=unknown`, predates it or could not read the round: match it by its run id and the round's head in `step_rounds`, and say so in the report.
   Rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
 
 For M10, "found none" never means "none exist"; state how much of the merged change you read.
