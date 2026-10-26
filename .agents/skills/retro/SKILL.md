@@ -113,7 +113,7 @@ Two conventions keep the numbers honest.
   Report the merge wait after it separately.
 - Use the database's round numbering and say so.
   A gate escalation's findings file starts with its `round=` and `head=` line, so match files to rounds by it.
-  A file without that first line, or with `round=unknown`, predates it or could not read the round: match it by its run id and the round's head in `step_rounds`, and say so in the report.
+  A file without that first line, or with an empty or `unknown` round, predates it or could not read the round: match it by its run id and the round's head in `step_rounds`, and say so in the report.
   Rounds that the automatic repair budget absorbed never reach a person, so a worker's saved files count fewer.
 
 For M10, "found none" never means "none exist"; state how much of the merged change you read.
@@ -175,7 +175,7 @@ Look in particular for these shapes when the register is absent or does not cove
 - An expensive or repeated tool call.
 - A fact the worker needed and could not reach.
 
-A merge made outside the fleet's merge command is never a finding or a cost item: record only which method merged it and the resulting commit, which the task's external-merge note already holds.
+A merge made outside the fleet's merge command is never a finding or a cost item: record only the merge method and the resulting commit from the task's external-merge note, reading the method from its parent count (two parents is a merge commit, one is a squash or rebase merge, `unknown` stays unknown).
 Also state what went well and what was not a cost, so a later reader does not reopen a settled point.
 
 ### 5. Debt inventory
