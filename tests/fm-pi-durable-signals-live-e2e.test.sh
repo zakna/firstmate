@@ -197,8 +197,8 @@ wait_busy
 for _ in $(seq 1 120); do screen_text | grep -q 'sleep 20' && break; sleep 0.5; done
 "$ROOT/bin/fm-send.sh" "$ID" "Runtime steering verification: run exactly this shell command once: echo STEERED >> '$WT/steer.txt' . Then stop. Do no other work." > "$LAB/send2.log" 2>&1 \
   || fail "busy steer failed: $(cat "$LAB/send2.log")"
-# The host acknowledges on admission. Restoring the record models a crash
-# between admission and that move; the re-rung doorbell must not admit it again.
+# The host acknowledges once the steer is placed. Restoring the record models a
+# crash between placement and that move; the re-rung doorbell must not admit it again.
 wait_file "$H/state/$ID.inbox/handled/002.msg"
 cp "$H/state/$ID.inbox/handled/002.msg" "$H/state/$ID.inbox/002.msg"
 "$REAL_TMUX" -S "$SOCKET" send-keys -t "$TARGET" -l "$(fm_task_inbox_doorbell_line "$H/state/$ID.inbox/002.msg")"

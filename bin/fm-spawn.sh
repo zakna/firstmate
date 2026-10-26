@@ -239,7 +239,8 @@
 #   host resolves from ${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/models.json. The
 #   effort axis is recorded but omitted from argv because the host translates no
 #   thinking levels. Its conversation store is state/<id>.pi-durable/, owner-only;
-#   a relaunch reopens the same store, which is the task's one recovery authority.
+#   a relaunch reopens the same store, which is the task's one recovery authority,
+#   and its rebuilt brief arrives there as a context-only note, not a new start.
 #   For omp (Oh My Pi), fm-spawn resolves the `omp` executable from PATH once and
 #   refuses when it is absent. Every omp launch clears the foreign harness
 #   markers (omp publishes none of its own), sets the Firstmate-owned
@@ -2308,10 +2309,11 @@ launch_template() {
   # appends native worker lifecycle hooks. Clear NO_COLOR so the shared
   # composer guard can distinguish the dim placeholder from a real draft.
   devin) printf '%s' 'env -u CLAUDECODE -u PI_CODING_AGENT -u GROK_AGENT -u FM_PI_HARNESS -u FM_OMP_HARNESS -u ATLASSIAN_AGENT_TYPE -u ROVODEV_CLI -u NO_COLOR __DEVINBIN__ --permission-mode dangerous --respect-workspace-trust false --config __DEVINCONFIG__ __MODELFLAG__-- "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
-  # pi-durable (opt-in pilot, bin/fm-pi-durable.sh): the host admits the typed
-  # launch envelope once per distinct brief, so a relaunch that reopens the
-  # same store never starts the same brief twice. The models file is the
-  # operator's Pi custom-provider declaration, read where the pane runs.
+  # pi-durable (opt-in pilot, bin/fm-pi-durable.sh): the host starts the task
+  # from the typed launch envelope only on an empty store; a relaunch that
+  # reopens the store gets the rebuilt brief once as a context-only steering
+  # note, never a restart. The models file is the operator's Pi
+  # custom-provider declaration, read where the pane runs.
   pi-durable) printf '%s' 'env -u CLAUDECODE -u PI_CODING_AGENT -u GROK_AGENT -u FM_PI_HARNESS -u FM_OMP_HARNESS -u ATLASSIAN_AGENT_TYPE -u ROVODEV_CLI __PIDURABLELAUNCH__ --store __PIDURABLESTORE__ --cwd __WORKTREE__ __MODELFLAG__--models-json "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/models.json" __PIDURABLEBUSY__--brief "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
   # Kimi Code rejects a positional prompt, so it launches bare and receives
   # only an absolute brief pointer after the TUI readiness gate below.

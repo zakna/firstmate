@@ -11,17 +11,23 @@
 // - The per-task SQLite store under --store is the ONE recovery authority for
 //   the conversation. Reopening the same store on relaunch resumes the same
 //   conversation; nothing else replays work.
-// - The launch brief is admitted with a requestId derived from its exact
-//   text, so a relaunch that hands the same brief again finds the existing
-//   submission instead of starting the task twice, while a changed brief is
-//   admitted as new input.
+// - On an empty store the launch brief starts the task, admitted under
+//   fm-launch-brief:<sha256 of the brief>. Once the store holds that
+//   submission, a relaunch's rebuilt brief (task brief plus predecessor recap)
+//   is admitted once under fm-relaunch-brief:<sha256> as a steering note that
+//   the worker was relaunched with its conversation and completed tool results
+//   intact, the brief and recap are context only, and completed side effects
+//   must not be repeated. It never restarts the task.
 // - The steering inbox ($FM_TASK_INBOX, bin/fm-task-inbox-lib.sh) is bridged
 //   into durable input: on every submitted terminal row, and once at open,
 //   each unhandled NNN.msg is admitted in numeric order with a requestId
 //   derived from its name and bytes, so a re-rung doorbell or a relaunch never
-//   delivers one message twice. The host acknowledges each message (the move
-//   into handled/) once the store has admitted it, and the doorbell line
-//   itself is never model input.
+//   delivers one message twice. The host acknowledges a message (the move into
+//   handled/) only once its submission is placed into the conversation. A
+//   submission withdrawn before placement (an interrupt) leaves the message in
+//   the inbox, so the watcher's re-ring and escalation still apply, and the
+//   next bridge pass admits it again under a requestId naming the withdrawn
+//   submission. The doorbell line itself is never model input.
 // - Only `read` is replay-safe. Every side-effecting tool (bash, write, edit)
 //   keeps pi-durable's default unsafe policy: a call interrupted by a crash is
 //   never executed again; the model gets the committed interrupted result.
@@ -330,6 +336,7 @@ stream.start(async (events) => {
 				if (event.entry?.data?.isError) log(`  ${event.toolName} failed`);
 				break;
 			case "submission":
+				settleInbox(event.record);
 				if (event.record.status === "unanswered") log(`input not answered: ${short(event.record.reason ?? event.record)}`);
 				break;
 			case "auto_retry_start":
@@ -342,9 +349,53 @@ stream.start(async (events) => {
 	}
 });
 
+// Set when this open admits input that has not been answered yet, so its run,
+// not open-settled, owns the next busy transition.
+let admittedPending = false;
+const notePending = (record) => {
+	if (record.status === "queued" || record.status === "placed") admittedPending = true;
+};
+async function holdsLaunchBrief() {
+	let cursor;
+	do {
+		const page = await storage.scanSubmissions({ conversationId: root.id }, 100, cursor, context);
+		if (page.items.some((record) => record.requestId?.startsWith("fm-launch-brief:"))) return true;
+		cursor = page.next;
+	} while (cursor !== undefined);
+	return false;
+}
 if (args.brief !== undefined) {
 	const digest = createHash("sha256").update(args.brief).digest("hex");
-	await root.submit({ type: "input", content: args.brief, requestId: `fm-launch-brief:${digest}` }, context);
+	const submission = (await holdsLaunchBrief())
+		? await root.submit(
+				{
+					type: "input",
+					content:
+						"Firstmate relaunched this worker. This conversation and every completed tool result above are intact; " +
+						"continue the task from where it stands. The refreshed task brief and predecessor recap below are context only: " +
+						"do not start the task over, and do not repeat any side effect that already completed.\n\n" +
+						args.brief,
+					whenBusy: "steer",
+					requestId: `fm-relaunch-brief:${digest}`,
+				},
+				context,
+			)
+		: await root.submit({ type: "input", content: args.brief, requestId: `fm-launch-brief:${digest}` }, context);
+	notePending(await submission.status(context));
+}
+// Inbox messages admitted but not yet placed, by requestId.
+const awaitingPlacement = new Map();
+function settleInbox(record) {
+	const pending = awaitingPlacement.get(record.requestId);
+	if (pending === undefined || record.status === "queued") return;
+	awaitingPlacement.delete(record.requestId);
+	if (record.status === "unanswered") return;
+	try {
+		mkdirSync(join(pending.dir, "handled"), { recursive: true });
+		renameSync(join(pending.dir, pending.name), join(pending.dir, "handled", pending.name));
+	} catch (error) {
+		log(`inbox ${pending.name} placed but not acknowledged: ${error.message}`);
+	}
 }
 // Serialized so admissions from overlapping rows keep the inbox's order.
 let inboxChain = Promise.resolve();
@@ -371,30 +422,34 @@ function admitInbox() {
 			const body = split === -1 ? raw : raw.slice(split + 4);
 			const digest = createHash("sha256").update(raw).digest("hex");
 			const content = `Firstmate steering message ${name}:\n\n${body}`;
+			let requestId = `fm-inbox:${name}:${digest}`;
+			let submission;
 			try {
-				await root.submit({ type: "input", content, whenBusy: "steer", requestId: `fm-inbox:${name}:${digest}` }, context);
+				// A withdrawn submission keeps its requestId, so the message comes back
+				// under one that names it; a crash before the move re-admits under the
+				// same id, which the store answers with the existing submission.
+				for (let prior; (prior = await storage.submissionByRequest(root.id, requestId, context))?.status === "unanswered"; ) {
+					requestId = `fm-inbox:${name}:${digest}:${prior.id}`;
+				}
+				awaitingPlacement.set(requestId, { dir, name });
+				submission = await root.submit({ type: "input", content, whenBusy: "steer", requestId }, context);
 			} catch (error) {
+				awaitingPlacement.delete(requestId);
 				log(`inbox ${name} not admitted: ${error.message}`);
 				return; // later messages wait so the conversation keeps the inbox's order
 			}
-			// Admitted into the durable conversation: that is delivery, so the host
-			// acknowledges. A crash before this move re-admits under the same id,
-			// which the store answers with the existing submission.
-			try {
-				mkdirSync(join(dir, "handled"), { recursive: true });
-				renameSync(path, join(dir, "handled", name));
-			} catch (error) {
-				log(`inbox ${name} admitted but not acknowledged: ${error.message}`);
-			}
+			const record = await submission.status(context);
+			notePending(record);
+			settleInbox(record);
 		}
 	});
 	return inboxChain;
 }
 await admitInbox();
 harness.resume();
-// A reopened store with nothing left to run settles idle at once; a live run
-// reports busy through its own run_start or snapshot.
-await busy(() => (running ? undefined : "idle"), "open-settled");
+// A reopened store with nothing left to run settles idle at once; a live run,
+// or input this open admitted, reports busy through its own run_start.
+await busy(() => (running || admittedPending ? undefined : "idle"), "open-settled");
 
 let closing = false;
 async function shutdown(code) {
