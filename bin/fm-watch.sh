@@ -2759,16 +2759,16 @@ resurface_after_downtime() {
   wake "check: rearm-resurface"
 }
 
-while :; do
-  # Home-gone exit: a deleted home, state directory, or code root means this
-  # watcher's world is gone (a torn-down temporary home or a discarded
-  # disposable checkout). Exit with a logged reason rather than writing state
-  # into nothing, or into a live home from a checkout that no longer exists.
-  # A detached helper this watcher started (home-summary refresh, reconcile)
-  # can recreate a deleted state directory before the next poll, so a lock
-  # with no holder at all is read as the same teardown: only a fresh watcher
-  # ever recreates the lock, and that case is the self-eviction below.
-  # Scoped to this process alone: no other watcher is signalled.
+# Home-gone exit: a deleted home, state directory, or code root means this
+# watcher's world is gone (a torn-down temporary home or a discarded
+# disposable checkout). Exit with a logged reason rather than writing state
+# into nothing, or into a live home from a checkout that no longer exists.
+# A detached helper this watcher started (home-summary refresh, reconcile)
+# can recreate a deleted state directory before the next poll, so a lock
+# with no holder at all is read as the same teardown: only a fresh watcher
+# ever recreates the lock, and that case is the self-eviction below.
+# Scoped to this process alone: no other watcher is signalled.
+watcher_exit_if_world_gone() {
   if [ "$WATCH_HOME_EXISTED" -eq 1 ] && [ ! -d "$FM_HOME" ]; then
     echo "watcher: exiting - home no longer exists: $FM_HOME" >&2
     exit 1
@@ -2782,6 +2782,14 @@ while :; do
     echo "watcher: exiting - code root no longer exists: $SCRIPT_DIR" >&2
     exit 1
   fi
+}
+# A poll that passed this check can still find its state deleted before it
+# takes a state lock; that wait runs the same check instead of spinning.
+# shellcheck disable=SC2034 # Read by fm_lock_acquire_wait in fm-wake-lib.sh.
+FM_LOCK_WAIT_GONE_HOOK=watcher_exit_if_world_gone
+
+while :; do
+  watcher_exit_if_world_gone
 
   # Self-eviction: if the singleton lock no longer names this process, a second
   # watcher has taken over (e.g. a transient duplicate from a racy arm). Stand

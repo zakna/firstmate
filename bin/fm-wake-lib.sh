@@ -1300,9 +1300,15 @@ fm_lock_try_acquire() {
   return "$rc"
 }
 
+# A lock whose directory was deleted can never be created again, so a waiter
+# that sets FM_LOCK_WAIT_GONE_HOOK runs that command on each retry while the
+# lock's directory is missing; the wait fails if the command returns nonzero.
 fm_lock_acquire_wait() {
   local lockdir=$1
   while ! fm_lock_try_acquire "$lockdir"; do
+    if [ -n "${FM_LOCK_WAIT_GONE_HOOK:-}" ] && [ ! -d "${lockdir%/*}" ]; then
+      "$FM_LOCK_WAIT_GONE_HOOK" || return 1
+    fi
     sleep 0.1
   done
 }
