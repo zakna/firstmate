@@ -1,0 +1,2 @@
+not ok - a claimer whose mkdir lost the race reused sequence 21
+exit=1

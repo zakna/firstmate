@@ -1,0 +1,7 @@
+ok - watch-arm: an attached arm reports the wake its cycle delivered instead of a false failure
+ok - watch-arm: a delivered wake consumed by the handling turn still closes the attached arm cleanly
+ok - watch-arm: an unusable launch confirm window refuses to arm by name
+ok - watch-arm: a disposable validation checkout refuses to arm
+ok - watch-arm: a watcher exits when its state directory is removed
+not ok - watcher pid 22967 waited forever on a lock in its deleted state directory
+exit=1
