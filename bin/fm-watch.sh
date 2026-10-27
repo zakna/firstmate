@@ -161,11 +161,13 @@
 # evicted with TERM after its recorded identity is re-verified, and this arm
 # starts in its place, printing "watcher: replaced stalled pid <N> (...)". A
 # holder that survives TERM keeps the refusal and the nonzero exit.
-# Once per poll the watcher also checks that its home (when it existed at
-# start), its state directory, and its own bin directory still exist; when one
-# is gone it logs "watcher: exiting - <what> no longer exists: <path>" to stderr
-# and exits 1, so a watcher whose temporary home or disposable checkout was
-# deleted stops itself instead of running on as an orphan. That check is scoped
+# Once per poll, and from any wait on a lock whose directory has disappeared,
+# the watcher also checks that its home (when it existed at start), its state
+# directory, and its own bin directory still exist; when one is gone it logs
+# "watcher: exiting - <what> no longer exists: <path>" to stderr and exits 1,
+# so a watcher whose temporary home or disposable checkout was deleted stops
+# itself instead of running on as an orphan. A deletion that ends a poll some
+# other way is still named by the same line on exit. That check is scoped
 # to this process alone and never signals another watcher.
 set -u
 
@@ -2659,8 +2661,41 @@ pr_poll_publish_release() {
   PR_POLL_PUBLISH_LOCK=
 }
 
+# Home-gone exit: a deleted home, state directory, or code root means this
+# watcher's world is gone (a torn-down temporary home or a discarded
+# disposable checkout). Exit with a logged reason rather than writing state
+# into nothing, or into a live home from a checkout that no longer exists.
+# A detached helper this watcher started (home-summary refresh, reconcile)
+# can recreate a deleted state directory before the next poll, so a lock
+# with no holder at all is read as the same teardown: only a fresh watcher
+# ever recreates the lock, and that case is the self-eviction in the poll loop.
+# Scoped to this process alone: no other watcher is signalled.
+WATCHER_GONE_REPORTED=0
+watcher_report_world_gone() {
+  if [ "$WATCH_HOME_EXISTED" -eq 1 ] && [ ! -d "$FM_HOME" ]; then
+    echo "watcher: exiting - home no longer exists: $FM_HOME" >&2
+  elif [ ! -d "$STATE" ]; then
+    echo "watcher: exiting - state directory no longer exists: $STATE" >&2
+  elif [ ! -e "$WATCH_LOCK/pid" ]; then
+    echo "watcher: exiting - state directory was torn down (singleton lock removed): $STATE" >&2
+  elif [ ! -d "$SCRIPT_DIR" ]; then
+    echo "watcher: exiting - code root no longer exists: $SCRIPT_DIR" >&2
+  else
+    return 1
+  fi
+  WATCHER_GONE_REPORTED=1
+}
+
+watcher_exit_if_world_gone() {
+  watcher_report_world_gone || return 0
+  exit 1
+}
+
 watcher_cleanup() {
   local cleanup_status=0 owns_lock=0 transition=release-lock
+  # A deletion that lands mid-poll can end the watcher through a later step's
+  # failure or the self-eviction read before the poll-top check sees it.
+  [ "$WATCHER_GONE_REPORTED" -eq 1 ] || watcher_report_world_gone || true
   pr_poll_publish_release || cleanup_status=1
   pr_poll_control_release || cleanup_status=1
   if [ "$(cat "$WATCH_LOCK/pid" 2>/dev/null || true)" = "${WATCHER_PID:-}" ]; then
@@ -2759,32 +2794,9 @@ resurface_after_downtime() {
   wake "check: rearm-resurface"
 }
 
-# Home-gone exit: a deleted home, state directory, or code root means this
-# watcher's world is gone (a torn-down temporary home or a discarded
-# disposable checkout). Exit with a logged reason rather than writing state
-# into nothing, or into a live home from a checkout that no longer exists.
-# A detached helper this watcher started (home-summary refresh, reconcile)
-# can recreate a deleted state directory before the next poll, so a lock
-# with no holder at all is read as the same teardown: only a fresh watcher
-# ever recreates the lock, and that case is the self-eviction below.
-# Scoped to this process alone: no other watcher is signalled.
-watcher_exit_if_world_gone() {
-  if [ "$WATCH_HOME_EXISTED" -eq 1 ] && [ ! -d "$FM_HOME" ]; then
-    echo "watcher: exiting - home no longer exists: $FM_HOME" >&2
-    exit 1
-  elif [ ! -d "$STATE" ]; then
-    echo "watcher: exiting - state directory no longer exists: $STATE" >&2
-    exit 1
-  elif [ ! -e "$WATCH_LOCK/pid" ]; then
-    echo "watcher: exiting - state directory was torn down (singleton lock removed): $STATE" >&2
-    exit 1
-  elif [ ! -d "$SCRIPT_DIR" ]; then
-    echo "watcher: exiting - code root no longer exists: $SCRIPT_DIR" >&2
-    exit 1
-  fi
-}
-# A poll that passed this check can still find its state deleted before it
-# takes a state lock; that wait runs the same check instead of spinning.
+# A poll that passed the home-gone check can still find its state deleted
+# before it takes a state lock; that wait runs the same check instead of
+# spinning on a lock that can never be created again.
 # shellcheck disable=SC2034 # Read by fm_lock_acquire_wait in fm-wake-lib.sh.
 FM_LOCK_WAIT_GONE_HOOK=watcher_exit_if_world_gone
 
