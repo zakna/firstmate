@@ -1551,6 +1551,60 @@ test_watcher_exits_when_its_state_directory_is_removed() {
   pass "watch-arm: a watcher exits when its state directory is removed"
 }
 
+# The deletion can land after a poll has passed its home-gone check and before
+# that poll takes a state lock. A lock in a deleted directory can never be
+# created again, so the poll must not wait on it forever (the CI hang behind
+# "outlived its deleted state directory"). Holding the queue lock parks the
+# watcher in exactly that wait before the deletion.
+test_watcher_waiting_on_a_state_lock_exits_when_its_state_directory_is_removed() {
+  local dir home state fakebin armout holder_pid i
+  dir=$(make_case state-dir-removed-mid-poll)
+  home="$dir/home"
+  state="$dir/state"
+  fakebin="$dir/fakebin"
+  armout="$dir/arm.out"
+  mkdir -p "$home/data"
+  start_owned_watcher "$home" "$state" "$fakebin" "$armout"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_acquire_wait "$2"
+    : > "$3"
+    exec sleep 120
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$state/.wake-queue.lock" "$dir/holder.ready" &
+  holder_pid=$!
+  i=0
+  while [ "$i" -lt 100 ] && [ ! -e "$dir/holder.ready" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -e "$dir/holder.ready" ] \
+    || { kill "$holder_pid" "$WATCH_PID" 2>/dev/null; fail "the queue lock holder never acquired its lock"; }
+  # A beat written after the holder took the lock means a poll began that
+  # cannot finish without that lock.
+  rm -f "$state/.last-watcher-beat"
+  i=0
+  while [ "$i" -lt 200 ] && [ ! -e "$state/.last-watcher-beat" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -e "$state/.last-watcher-beat" ] \
+    || { kill "$holder_pid" "$WATCH_PID" 2>/dev/null; fail "the watcher never began a poll under the held queue lock"; }
+  sleep 1
+
+  rm -rf "$state"
+  if ! wait_for_pid_gone "$WATCH_PID" 200; then
+    kill -TERM "$WATCH_PID" "$holder_pid" 2>/dev/null
+    fail "watcher pid $WATCH_PID waited forever on a lock in its deleted state directory"
+  fi
+  kill "$holder_pid" 2>/dev/null || true
+  wait "$holder_pid" 2>/dev/null || true
+  wait_for_exit "$ARM_PID" 100 >/dev/null 2>&1 || true
+  grep -qF 'watcher: exiting - state directory' "$armout" \
+    || fail "watcher did not log the state-gone exit reason: $(cat "$armout")"
+  pass "watch-arm: a watcher waiting on a state lock exits when its state directory is removed"
+}
+
 # The same for a deleted home whose state directory still exists elsewhere: the
 # lock is released through the ordinary cleanup so nothing stale is left behind.
 test_watcher_exits_when_its_home_is_removed() {
@@ -1842,6 +1896,7 @@ test_attached_arm_reports_the_delivered_wake_after_drain
 test_arm_refuses_an_unusable_launch_confirm_window
 test_arm_refuses_a_disposable_validation_checkout
 test_watcher_exits_when_its_state_directory_is_removed
+test_watcher_waiting_on_a_state_lock_exits_when_its_state_directory_is_removed
 test_watcher_exits_when_its_home_is_removed
 test_reaper_stops_a_tracked_watcher
 test_attached_arm_still_fails_on_a_wake_it_did_not_deliver
