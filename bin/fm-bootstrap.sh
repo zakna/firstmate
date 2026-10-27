@@ -1064,7 +1064,7 @@ crew_dispatch_validate() {
   if $typed_active; then
     verified_harnesses=$(fm_control_harnesses | jq -Rsc 'split("\n") | map(select(length > 0))')
   else
-    verified_harnesses='["claude","codex","opencode","pi","pi-signed","grok","kimi","cursor","agy","muse","rovo","omp","devin"]'
+    verified_harnesses='["claude","codex","opencode","pi","pi-signed","grok","kimi","cursor","agy","muse","rovo","omp","devin","pi-durable"]'
   fi
   if ! ceilings=$("$SCRIPT_DIR/fm-harness.sh" effort-ceilings); then
     echo "CREW_DISPATCH: invalid config/crew-dispatch.json - could not read effort ceilings"

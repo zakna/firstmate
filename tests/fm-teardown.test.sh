@@ -878,6 +878,8 @@ test_teardown_keeps_the_task_records_in_its_data_directory() {
   git -C "$case_dir/wt" push -q origin fm/task-x1
   git -C "$case_dir/project" fetch -q origin
   seed_task_records "$case_dir"
+  mkdir -m 700 "$case_dir/state/task-x1.pi-durable"
+  : > "$case_dir/state/task-x1.pi-durable/conversation.sqlite"
   cp "$case_dir/state/task-x1.meta" "$case_dir/meta.before"
 
   set +e
@@ -889,6 +891,9 @@ test_teardown_keeps_the_task_records_in_its_data_directory() {
   assert_absent "$case_dir/state/task-x1.status" "records-kept: status log was not removed"
   assert_absent "$case_dir/state/task-x1.inbox" "records-kept: steering inbox was not removed"
   assert_absent "$case_dir/state/task-x1.meta" "records-kept: task record was not removed"
+  assert_absent "$case_dir/state/task-x1.pi-durable" "records-kept: pi-durable conversation store was not removed"
+  [ -z "$(find "$case_dir/data/task-x1" -name conversation.sqlite)" ] \
+    || fail "records-kept: the pi-durable conversation store was archived"
   assert_grep 'done [at=2]: fix committed' "$case_dir/data/task-x1/status-log.txt" \
     "records-kept: status log copy is missing its lines"
   assert_grep 'pending steer' "$case_dir/data/task-x1/steering/002.msg" \

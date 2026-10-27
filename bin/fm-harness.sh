@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Detect the agent harness this process tree runs on.
-# Usage: fm-harness.sh                  print own harness: claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|agy|devin|unknown
+# Usage: fm-harness.sh                  print own harness: claude|codex|opencode|pi|pi-signed|grok|kimi|cursor|gemini|muse|rovo|omp|agy|devin|pi-durable|unknown
 #        fm-harness.sh crew             print the effective CREWMATE harness
 #                                        (config/crew-harness; "default" resolves to own)
 #        fm-harness.sh secondmate       print the harness the PRIMARY uses to launch
@@ -246,6 +246,9 @@ harness_process_verdict() {  # <pid>
     # detected by ancestry alone.
     agy) echo "comm agy"; return ;;
     devin) echo "comm devin"; return ;;
+    # The pi-durable pilot host is Node launched with argv[0] pi-durable by
+    # bin/fm-pi-durable.sh, which macOS reports as comm.
+    pi-durable) echo "comm pi-durable"; return ;;
     node*|python*)
       # Bare interpreter: match the harness name in its script path.
       args=$(ps -o args= -p "$pid" 2>/dev/null)
@@ -254,6 +257,8 @@ harness_process_verdict() {  # <pid>
         return
       fi
       case "$args" in
+        # Linux keeps comm=node for the pilot host; its argv[0] still names it.
+        pi-durable\ *) echo "args pi-durable"; return ;;
         *claude*) echo "args claude"; return ;;
         *codex*) echo "args codex"; return ;;
         *opencode*) echo "args opencode"; return ;;
