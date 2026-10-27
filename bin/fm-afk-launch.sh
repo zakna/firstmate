@@ -178,7 +178,11 @@ fm_afk_launch_lock_acquire() {
   mkdir -p "$FM_AFK_LAUNCH_STATE" || return 1
   while [ "$attempt" -lt 200 ]; do
     attempt=$((attempt + 1))
-    if mkdir "$FM_AFK_LAUNCH_LOCK" 2>/dev/null; then
+    # mkdir(1)'s status alone is not exclusive (uutils coreutils before 0.11
+    # exits 0 when a concurrent mkdir created the path first), so the
+    # noclobber .won marker decides which launcher won.
+    if mkdir "$FM_AFK_LAUNCH_LOCK" 2>/dev/null \
+      && (set -C; : > "$FM_AFK_LAUNCH_LOCK/.won") 2>/dev/null; then
       if ! printf '%s' "$$" > "$FM_AFK_LAUNCH_LOCK/pid"; then
         rm -rf "$FM_AFK_LAUNCH_LOCK"
         return 1

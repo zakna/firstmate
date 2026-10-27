@@ -1203,6 +1203,7 @@ fm_lock_try_acquire_steal_mutex() {  # <steal-lock>
 fm_lock_try_acquire() {
   local lockdir=$1 pid steal cur rc steal_owner primary_owner current
   FM_LOCK_HELD_PID=
+  FM_LOCK_HELD_LIVE=0
   FM_LOCK_OWNER_DIR=
   FM_LOCK_RECOVERED_PID=
 
@@ -1230,6 +1231,7 @@ fm_lock_try_acquire() {
   fi
   if fm_pid_alive "$pid"; then
     FM_LOCK_HELD_PID=$pid
+    FM_LOCK_HELD_LIVE=1
     return 1
   fi
   if fm_lock_mid_acquire_is_fresh "$lockdir" "$pid"; then
@@ -1249,6 +1251,7 @@ fm_lock_try_acquire() {
   if fm_pid_alive "$cur"; then
     fm_lock_release "$steal"
     FM_LOCK_HELD_PID=$cur
+    FM_LOCK_HELD_LIVE=1
     FM_LOCK_OWNER_DIR=
     return 1
   fi
@@ -1398,16 +1401,10 @@ fm_lock_acquire_wait_bounded() {
     return 0
   fi
   if [ "$rc" -eq 124 ]; then
-    # That attempt names the holder it lost to. A busy lock changes hands
-    # constantly, so the holder may release before the lock is read again;
-    # it still held the lock at the deadline, which is contention to retry.
-    owner_pid=${FM_LOCK_HELD_PID:-}
-    case "$owner_pid" in
-      ''|*[!0-9]*|0) ;;
-      *)
-        return 124
-        ;;
-    esac
+    # That attempt names the live holder it lost to. A busy lock changes
+    # hands constantly, so the holder may release before the lock is read
+    # again; it still held the lock at the deadline, which is contention.
+    [ "${FM_LOCK_HELD_LIVE:-0}" -ne 1 ] || return 124
     owner_pid=$(cat "$lockdir/pid" 2>/dev/null || true)
     case "$owner_pid" in
       ''|*[!0-9]*|0) ;;

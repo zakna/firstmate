@@ -584,6 +584,15 @@ fm_remote_job_advance_seq_hint() { # <value>
   fi
 }
 
+# mkdir(1)'s status alone is not exclusive: uutils coreutils before 0.11
+# (Ubuntu 26.04's mkdir) exits 0 when a concurrent mkdir created the path
+# first (uutils/coreutils#13970). The noclobber .won marker is the O_EXCL
+# create that decides which caller won; whoever removes the directory removes
+# that marker first.
+fm_remote_job_mkdir_exclusive() { # <dir>
+  (umask 077; mkdir "$1" && set -C && : > "$1/.won") 2>/dev/null
+}
+
 fm_remote_job_next_seq() { # [stage-dir destination]
   local stage=${1:-} destination=${2:-} counter value claim attempt=0 recovered=0 maximum entry
   [ -n "$FM_REMOTE_JOB_STATE" ] && [ -n "$FM_REMOTE_JOB_SEQ_CLAIMS" ] || return 1
@@ -607,12 +616,7 @@ fm_remote_job_next_seq() { # [stage-dir destination]
     attempt=$((attempt + 1))
     value=$((value + 1))
     claim="$FM_REMOTE_JOB_SEQ_CLAIMS/$value"
-    # mkdir(1)'s status alone is not exclusive: uutils coreutils before 0.11
-    # (Ubuntu 26.04's mkdir) exits 0 when a concurrent mkdir created the path
-    # first (uutils/coreutils#13970). The noclobber marker is the O_EXCL
-    # create that decides which claimer won.
-    if (umask 077; mkdir "$claim") 2>/dev/null \
-      && (umask 077; set -C; : > "$claim/.won") 2>/dev/null; then
+    if fm_remote_job_mkdir_exclusive "$claim"; then
       chmod 700 "$claim" || return 1
       fm_remote_job_advance_seq_hint "$value" || true
       if [ -n "$stage" ]; then
