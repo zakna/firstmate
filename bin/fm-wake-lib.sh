@@ -1392,6 +1392,16 @@ fm_lock_acquire_wait_bounded() {
     return 0
   fi
   if [ "$rc" -eq 124 ]; then
+    # That attempt names the holder it lost to. A busy lock changes hands
+    # constantly, so the holder may release before the lock is read again;
+    # it still held the lock at the deadline, which is contention to retry.
+    owner_pid=${FM_LOCK_HELD_PID:-}
+    case "$owner_pid" in
+      ''|*[!0-9]*|0) ;;
+      *)
+        return 124
+        ;;
+    esac
     owner_pid=$(cat "$lockdir/pid" 2>/dev/null || true)
     case "$owner_pid" in
       ''|*[!0-9]*|0) ;;
