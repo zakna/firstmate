@@ -119,9 +119,13 @@ fi
 
 # Serialize writers. The lock protects seq advancement and the sidecar/record
 # pair; a holder that died mid-write is broken after FM_BUSY_LOCK_STALE_SECS.
+# mkdir(1)'s status alone is not exclusive (uutils coreutils before 0.11 exits
+# 0 when a concurrent mkdir created the path first), so the noclobber .won
+# marker decides which writer won.
+lock_mkdir() { { mkdir "$LOCK" && (set -C; : > "$LOCK/.won"); } 2>/dev/null; }
 lock_acquire() {
   local tries=0 now mtime age
-  while ! mkdir "$LOCK" 2>/dev/null; do
+  while ! lock_mkdir; do
     tries=$((tries + 1))
     if [ "$tries" -ge 40 ]; then
       now=$(date +%s)
@@ -133,7 +137,7 @@ lock_acquire() {
       age=$((now - mtime))
       if [ "$age" -ge "${FM_BUSY_LOCK_STALE_SECS:-5}" ]; then
         rmdir "$LOCK" 2>/dev/null || rm -rf "$LOCK" 2>/dev/null || true
-        mkdir "$LOCK" 2>/dev/null && break
+        lock_mkdir && break
       fi
       echo "error: busy-state lock timeout for $ID" >&2
       return 1
@@ -142,7 +146,7 @@ lock_acquire() {
   done
   return 0
 }
-lock_release() { rmdir "$LOCK" 2>/dev/null || true; }
+lock_release() { rm -f "$LOCK/.won"; rmdir "$LOCK" 2>/dev/null || true; }
 
 write_record() {  # <gen> <seq>
   local tmp

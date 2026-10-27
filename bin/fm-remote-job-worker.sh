@@ -214,7 +214,7 @@ worker_recover_quarantine() { # <account-home>
 worker_acquire_lock() { # <account-home> <identity>
   local account_home=$1 identity=$2 attempt=0
   while [ "$attempt" -lt 150 ]; do
-    if (umask 077; mkdir "$WORKER_LOCK") 2>/dev/null; then
+    if fm_remote_job_mkdir_exclusive "$WORKER_LOCK"; then
       WORKER_LOCK_HELD=1
       # Discard the predecessor's heartbeat before publishing our identity:
       # readiness must come from this owner after lock publication succeeds.
@@ -235,7 +235,7 @@ worker_acquire_lock() { # <account-home> <identity>
       continue
     fi
     [ ! -L "$WORKER_LOCK/pid" ] && [ ! -L "$WORKER_LOCK/start" ] && [ ! -L "$WORKER_LOCK/command" ] || return 1
-    rm -f -- "$WORKER_LOCK/pid" "$WORKER_LOCK/start" "$WORKER_LOCK/command" || return 1
+    rm -f -- "$WORKER_LOCK/pid" "$WORKER_LOCK/start" "$WORKER_LOCK/command" "$WORKER_LOCK/.won" || return 1
     rmdir "$WORKER_LOCK" || return 1
   done
   return 1
@@ -316,7 +316,7 @@ worker_cleanup() {
   owner_pid=$(fm_remote_job_read_single_line "$WORKER_LOCK/pid" 64 2>/dev/null || true)
   if [ -z "$owner_pid" ]; then
     [ ! -L "$WORKER_LOCK/start" ] && [ ! -L "$WORKER_LOCK/command" ] &&
-      rm -f -- "$WORKER_LOCK/start" "$WORKER_LOCK/command" 2>/dev/null || true
+      rm -f -- "$WORKER_LOCK/start" "$WORKER_LOCK/command" "$WORKER_LOCK/.won" 2>/dev/null || true
     rmdir "$WORKER_LOCK" 2>/dev/null || true
     WORKER_LOCK_HELD=0
     return 0
@@ -328,7 +328,7 @@ worker_cleanup() {
   [ ! -L "$pid_file" ] && rm -f -- "$pid_file" 2>/dev/null || true
   [ ! -L "$ready" ] && rm -f -- "$ready" 2>/dev/null || true
   [ ! -L "$identity" ] && rm -f -- "$identity" 2>/dev/null || true
-  rm -f -- "$WORKER_LOCK/pid" "$WORKER_LOCK/start" "$WORKER_LOCK/command" 2>/dev/null || true
+  rm -f -- "$WORKER_LOCK/pid" "$WORKER_LOCK/start" "$WORKER_LOCK/command" "$WORKER_LOCK/.won" 2>/dev/null || true
   rmdir "$WORKER_LOCK" 2>/dev/null || true
   WORKER_LOCK_HELD=0
 }
@@ -1264,7 +1264,7 @@ worker_supervisor_cleanup_dead_child() { # <account-home> <pid>
   [ ! -L "$ready" ] && rm -f -- "$ready" || return 1
   [ ! -L "$identity" ] && rm -f -- "$identity" || return 1
   [ ! -L "$lock/start" ] && [ ! -L "$lock/command" ] || return 1
-  rm -f -- "$lock/pid" "$lock/start" "$lock/command" || return 1
+  rm -f -- "$lock/pid" "$lock/start" "$lock/command" "$lock/.won" || return 1
   rmdir "$lock"
 }
 

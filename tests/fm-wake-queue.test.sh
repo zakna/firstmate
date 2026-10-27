@@ -2833,6 +2833,58 @@ test_live_presentation_holder_is_deadlined_without_weakening_ack() {
   pass "presentation lock waits are bounded and retriable without weakening acknowledgement atomicity"
 }
 
+# Under concurrent appends the queue lock changes hands constantly. When the
+# bounded wait expires, its last non-blocking attempt can see a live holder
+# that releases and exits before the deadline report reads the lock again.
+# That is still contention to retry on the next drain, never an unsafe lock.
+# The caller wraps the lock attempt to release the holder at exactly that
+# point, so the window the CI runner hit by load is opened deterministically.
+test_bounded_deadline_reports_a_holder_that_released_after_the_last_attempt() {
+  local dir state lock holder_pid i rc
+  dir=$(make_case bounded-deadline-holder-released)
+  state="$dir/state"
+  lock="$state/.wake-queue.lock"
+
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    fm_lock_acquire_wait "$2"
+    printf "%s\n" "${BASHPID:-$$}" > "$3"
+    while [ ! -e "$4" ]; do sleep 0.05; done
+    fm_lock_release "$2"
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$lock" "$dir/holder.ready" "$dir/release-holder" &
+  holder_pid=$!
+  i=0
+  while [ "$i" -lt 100 ] && [ ! -s "$dir/holder.ready" ]; do
+    sleep 0.05
+    i=$((i + 1))
+  done
+  [ -s "$dir/holder.ready" ] \
+    || { kill "$holder_pid" 2>/dev/null || true; fail "deadline fixture holder never acquired its lock"; }
+
+  rc=0
+  FM_STATE_OVERRIDE="$state" bash -c '
+    . "$1"
+    lock=$2 release=$3 attempts=0
+    eval "real_$(declare -f fm_lock_try_acquire)"
+    fm_lock_try_acquire() {
+      local status=0
+      attempts=$((attempts + 1))
+      real_fm_lock_try_acquire "$@" || status=$?
+      if [ "$attempts" -eq 2 ] && [ "$status" -ne 0 ]; then
+        : > "$release"
+        while [ -e "$lock" ] || [ -L "$lock" ]; do sleep 0.05; done
+      fi
+      return "$status"
+    }
+    fm_lock_acquire_wait_bounded "$lock" 1
+  ' _ "$ROOT/bin/fm-wake-lib.sh" "$lock" "$dir/release-holder" || rc=$?
+  : > "$dir/release-holder"
+  wait "$holder_pid" 2>/dev/null || true
+  [ "$rc" -eq 124 ] \
+    || fail "a holder released after the deadline's last attempt was reported as an unsafe lock (rc=$rc)"
+  pass "a bounded deadline reports contention when the holder releases after the last attempt"
+}
+
 test_malformed_presentation_lock_reports_acquire_failure() {
   local dir state status out err
   dir=$(make_case malformed-presentation-lock)
@@ -3505,6 +3557,7 @@ test_self_held_lock_reclaims_instead_of_deadlocking
 test_subshell_lock_ownership_without_bashpid
 test_bounded_lock_handoff_after_contention
 test_live_presentation_holder_is_deadlined_without_weakening_ack
+test_bounded_deadline_reports_a_holder_that_released_after_the_last_attempt
 test_malformed_presentation_lock_reports_acquire_failure
 test_secondmate_foreign_queue_stall_tracks_progress_and_alerts_once
 test_secondmate_declared_pause_rows_do_not_feed_stall_escalation

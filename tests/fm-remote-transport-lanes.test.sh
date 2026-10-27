@@ -134,6 +134,48 @@ SEQ_EXPECTED=$(seq 1 20)
   || fail "concurrent sequence claims were not unique and monotonic: $SEQ_RESULTS"
 [ "$(find "$STATE_ROOT/.seq-claims" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')" = 20 ] \
   || fail "concurrent sequence allocations did not retain every durable claim"
+# uutils coreutils mkdir before 0.11 (Ubuntu 26.04's /usr/bin/mkdir) checks
+# for the path, calls mkdir(2), and exits 0 on EEXIST when the path is then a
+# directory, so a claimer racing between those two steps also "succeeds"
+# (uutils/coreutils#13970). This shim holds that window open until a real
+# claimer has taken the same value, then answers the way uutils does.
+RACE_BIN="$TMP_ROOT/racy-mkdir-bin"
+mkdir -p "$RACE_BIN"
+cat > "$RACE_BIN/mkdir" <<'SH'
+#!/usr/bin/env bash
+target=${!#}
+if [ -e "$target" ]; then
+  printf 'mkdir: %s: File exists\n' "$target" >&2
+  exit 1
+fi
+: > "$FM_RACY_MKDIR_CHECKED"
+i=0
+while [ ! -e "$FM_RACY_MKDIR_RESUME" ] && [ "$i" -lt 600 ]; do
+  sleep 0.05
+  i=$((i + 1))
+done
+"$FM_RACY_MKDIR_REAL" "$@" 2>/dev/null && exit 0
+[ -d "$target" ]
+SH
+chmod +x "$RACE_BIN/mkdir"
+FM_RACY_MKDIR_REAL=$(command -v mkdir)
+export FM_RACY_MKDIR_REAL
+export FM_RACY_MKDIR_CHECKED="$TMP_ROOT/racy-mkdir.checked"
+export FM_RACY_MKDIR_RESUME="$TMP_ROOT/racy-mkdir.resume"
+(PATH="$RACE_BIN:$PATH"; fm_remote_job_next_seq) > "$TMP_ROOT/racy-claim" &
+RACY_PID=$!
+i=0
+while [ ! -e "$FM_RACY_MKDIR_CHECKED" ] && [ "$i" -lt 600 ]; do
+  sleep 0.05
+  i=$((i + 1))
+done
+[ -e "$FM_RACY_MKDIR_CHECKED" ] || fail "the racing claimer never reached its mkdir"
+REAL_CLAIM=$(fm_remote_job_next_seq) || fail "the real claimer could not allocate a sequence"
+: > "$FM_RACY_MKDIR_RESUME"
+wait "$RACY_PID" || fail "the racing claimer failed instead of moving past the taken value"
+RACY_CLAIM=$(cat "$TMP_ROOT/racy-claim")
+[ -n "$RACY_CLAIM" ] && [ "$RACY_CLAIM" != "$REAL_CLAIM" ] \
+  || fail "a claimer whose mkdir lost the race reused sequence $REAL_CLAIM"
 mkdir "$STATE_ROOT/.seq-claims/999998" "$STATE_ROOT/.seq-claims/999999"
 touch -t 200001010000 "$STATE_ROOT/.seq-claims/999998"
 fm_remote_job_reap_stale "$ACCOUNT_HOME" || fail "sequence claim reaping failed"

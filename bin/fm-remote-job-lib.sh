@@ -14,12 +14,13 @@
 # supervisor, supervisor_start, group, group_start, and armed records while
 # work executes.
 # Stage writes state=queued last. seq is a queue-wide monotonic staging
-# sequence reserved atomically by its persistent .seq-claims directory; the
+# sequence reserved atomically by its persistent .seq-claims directory, won by
+# the noclobber creation of that directory's .won marker; the
 # counter is only a forward-moving allocation hint. If the bounded hint walk
 # is exhausted, allocation rescans the claims for the maximum and continues
 # above it. Expired claims are reaped by an independently hourly-rate-limited
 # sweep that remains inline in the worker loop but uses one directory walk
-# with batched rmdir rather than per-claim uname/stat subprocesses.
+# with batched rm and rmdir rather than per-claim uname/stat subprocesses.
 # seq is the worker's FIFO ordering key within a home, with the job id as the
 # deterministic tiebreak.
 # FIFO is defined over completed stagings: a stage that returns before another
@@ -583,6 +584,15 @@ fm_remote_job_advance_seq_hint() { # <value>
   fi
 }
 
+# mkdir(1)'s status alone is not exclusive: uutils coreutils before 0.11
+# (Ubuntu 26.04's mkdir) exits 0 when a concurrent mkdir created the path
+# first (uutils/coreutils#13970). The noclobber .won marker is the O_EXCL
+# create that decides which caller won; whoever removes the directory removes
+# that marker first.
+fm_remote_job_mkdir_exclusive() { # <dir>
+  (umask 077; mkdir "$1" && set -C && : > "$1/.won") 2>/dev/null
+}
+
 fm_remote_job_next_seq() { # [stage-dir destination]
   local stage=${1:-} destination=${2:-} counter value claim attempt=0 recovered=0 maximum entry
   [ -n "$FM_REMOTE_JOB_STATE" ] && [ -n "$FM_REMOTE_JOB_SEQ_CLAIMS" ] || return 1
@@ -606,7 +616,7 @@ fm_remote_job_next_seq() { # [stage-dir destination]
     attempt=$((attempt + 1))
     value=$((value + 1))
     claim="$FM_REMOTE_JOB_SEQ_CLAIMS/$value"
-    if (umask 077; mkdir "$claim") 2>/dev/null; then
+    if fm_remote_job_mkdir_exclusive "$claim"; then
       chmod 700 "$claim" || return 1
       fm_remote_job_advance_seq_hint "$value" || true
       if [ -n "$stage" ]; then
@@ -864,11 +874,17 @@ fm_remote_job_reap_stale() { # <account-home>
       if [ -n "$tmp" ] && printf '%s\n' "$now" > "$tmp" && chmod 600 "$tmp" \
         && mv -f -- "$tmp" "$marker"; then
         # One directory walk: ! -newer matches whole-second mtime <= cutoff
-        # (the former >= age check). Batched rmdir tolerates concurrent mkdir/rmdir races
-        # and non-empty dirs the same way the old per-claim rmdir || true did.
+        # (the former >= age check). Each batch removes its claims' .won
+        # markers with one rm, then the claims with one rmdir, which tolerates
+        # concurrent mkdir/rmdir races and other content the same way the old
+        # per-claim rmdir || true did.
+        # shellcheck disable=SC2016 # Positional parameters expand in the child shell.
         find "$FM_REMOTE_JOB_SEQ_CLAIMS" -mindepth 1 -maxdepth 1 -type d \
           -name '[0-9]*' ! -name '*[!0-9]*' ! -name 0 \
-          ! -newer "$ref" -exec rmdir {} + 2>/dev/null || true
+          ! -newer "$ref" -exec sh -c '
+            printf "%s/.won\0" "$@" | xargs -0 rm -f --
+            rmdir -- "$@"
+          ' sh {} + 2>/dev/null || true
       else
         [ -z "$tmp" ] || rm -f -- "$tmp"
       fi
