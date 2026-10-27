@@ -1605,6 +1605,52 @@ test_watcher_waiting_on_a_state_lock_exits_when_its_state_directory_is_removed()
   pass "watch-arm: a watcher waiting on a state lock exits when its state directory is removed"
 }
 
+# A deletion that lands mid-poll can also end the watcher through a later
+# step's own failure before the next poll-top check runs. The exit must still
+# name the deleted state directory. The fake touch deletes the state directory
+# exactly when the poll refreshes its secondmate-liveness marker.
+test_watcher_names_a_state_directory_deleted_mid_poll() {
+  local dir home state fakebin armout real_touch i
+  dir=$(make_case state-dir-removed-mid-step)
+  home="$dir/home"
+  state="$dir/state"
+  fakebin="$dir/fakebin"
+  armout="$dir/arm.out"
+  mkdir -p "$home/data"
+  real_touch=$(command -v touch)
+  cat > "$fakebin/touch" <<SH
+#!/usr/bin/env bash
+case "\${!#}" in
+  */.secondmate-liveness-tick)
+    if [ -e "$dir/delete-state" ]; then
+      rm -f "$dir/delete-state"
+      rm -rf "$state"
+    fi
+    ;;
+esac
+exec "$real_touch" "\$@"
+SH
+  chmod +x "$fakebin/touch"
+  start_owned_watcher "$home" "$state" "$fakebin" "$armout"
+  i=0
+  while [ "$i" -lt 100 ] && [ ! -e "$state/.secondmate-liveness-tick" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -e "$state/.secondmate-liveness-tick" ] \
+    || { kill -TERM "$WATCH_PID" 2>/dev/null; fail "the watcher never refreshed its secondmate-liveness marker"; }
+
+  : > "$dir/delete-state"
+  rm -f "$state/.secondmate-liveness-tick"
+  wait_for_pid_gone "$WATCH_PID" 400 \
+    || { kill -TERM "$WATCH_PID" 2>/dev/null; fail "watcher pid $WATCH_PID outlived its state directory deleted mid-poll"; }
+  wait_for_exit "$ARM_PID" 100 >/dev/null 2>&1 || true
+  [ ! -e "$dir/delete-state" ] || fail "the mid-poll deletion never ran"
+  grep -qF 'watcher: exiting - state directory' "$armout" \
+    || fail "watcher did not name its state directory deleted mid-poll: $(cat "$armout")"
+  pass "watch-arm: a watcher names a state directory deleted mid-poll"
+}
+
 # The same for a deleted home whose state directory still exists elsewhere: the
 # lock is released through the ordinary cleanup so nothing stale is left behind.
 test_watcher_exits_when_its_home_is_removed() {
@@ -1897,6 +1943,7 @@ test_arm_refuses_an_unusable_launch_confirm_window
 test_arm_refuses_a_disposable_validation_checkout
 test_watcher_exits_when_its_state_directory_is_removed
 test_watcher_waiting_on_a_state_lock_exits_when_its_state_directory_is_removed
+test_watcher_names_a_state_directory_deleted_mid_poll
 test_watcher_exits_when_its_home_is_removed
 test_reaper_stops_a_tracked_watcher
 test_attached_arm_still_fails_on_a_wake_it_did_not_deliver
