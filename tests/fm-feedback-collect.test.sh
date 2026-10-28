@@ -362,6 +362,59 @@ SQL
   pass 'a run that carries a pull request URL binds to that pull request'
 }
 
+test_local_only_landing_binds_runs_of_its_own_repository() {
+  local dir="$TMP_ROOT/local-repo-scope" fakebin
+  mkdir -p "$dir/home/data"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO repos VALUES ('r2', 'https://github.com/o/other.git');
+INSERT INTO runs VALUES
+  ('scope-app', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
+  ('scope-other', 'r2', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10)));
+INSERT INTO step_results VALUES
+  ('s-scope-app', 'scope-app', 'review', 'completed', 'APP-REPO-ATTEMPT', NULL, NULL, $IN),
+  ('s-scope-other', 'scope-other', 'review', 'completed', 'OTHER-REPO-ATTEMPT', NULL, NULL, $IN);
+SQL
+  cat > "$dir/home/data/backlog.md" <<'MD'
+# Backlog
+
+- [x] task-local - Local only landing (repo: app) (kind: ship) (done 2026-09-21)
+  local main
+MD
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on a branch name shared by two repositories'
+  jq -e '
+    ([.records[] | select(.source == "gate-answer" and .text == "APP-REPO-ATTEMPT")] | length == 1)
+    and ([.records[] | select(.source == "gate-answer" and .text == "OTHER-REPO-ATTEMPT")] | length == 0)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "local-only landing bound a run of another repository: $(jq -c '[.records[] | select(.source == "gate-answer")]' "$dir/feedback.json")"
+  pass 'a local-only landing binds only the runs of its own repository'
+}
+
+test_gitlab_merge_request_landing_keeps_its_steers() {
+  local dir="$TMP_ROOT/gitlab-landing" fakebin mr=https://gitlab.example/team/app/-/merge_requests/7
+  mkdir -p "$dir/home/data" "$dir/home/state/task-gl.inbox"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  cat > "$dir/home/data/backlog.md" <<MD
+# Backlog
+
+- [x] task-gl - Merged on GitLab $mr (repo: app) (kind: ship) (merged 2026-09-21)
+MD
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-GITLAB\n' > "$dir/home/state/task-gl.inbox/001.msg"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on a GitLab landing'
+  jq -e --arg mr "$mr" '[.records[] | select(.source == "steer" and .text == "STEER-GITLAB")][0].ticket == $mr' \
+    "$dir/feedback.json" >/dev/null \
+    || fail "a merged GitLab delivery lost its steering records: $(jq -c '[.records[] | select(.source == "steer")]' "$dir/feedback.json")"
+  pass 'a merged GitLab merge request keeps its steering records'
+}
+
 test_empty_forge_pages_are_successful() {
   local dir="$TMP_ROOT/empty-pages" fakebin
   mkdir -p "$dir/home"
@@ -635,6 +688,7 @@ failures=0
 for test_name in test_collects_every_source_in_the_window test_reused_branch_keeps_landing_identity \
   test_backlog_done_entries_define_the_landed_set test_archived_steering_of_cleaned_tasks_is_read \
   test_runs_bind_to_their_landing_by_pull_request \
+  test_local_only_landing_binds_runs_of_its_own_repository test_gitlab_merge_request_landing_keeps_its_steers \
   test_empty_forge_pages_are_successful test_malformed_forge_wrapper_is_reported \
   test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
