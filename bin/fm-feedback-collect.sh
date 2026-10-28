@@ -134,7 +134,8 @@ if [ -f "$BACKLOG" ] && ! jq -Rs "$FM_LANDED_JQ_DEFS"'
                     // (if test("^SCOUT(?![A-Za-z0-9_])") then "scout" elif test("^SHIP(?![A-Za-z0-9_])") then "ship" else null end)),
              hold_kind: ($rest | meta("hold-kind")),
              completion: ($rest | completion | .date |= valid_date),
-             pr_url: ($rest | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first),
+             pr_url: ($rest | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+|https://[a-z0-9.-]+/[A-Za-z0-9._/-]+/-/merge_requests/[0-9]+")] | first),
+             repo: ($rest | meta("repo")),
              local_note: (if ($rest | sub("([[:space:]]*\\([^()]*\\))+[[:space:]]*$"; "") | test("(^|[[:space:]])local main$"))
                              or (($body_lines | last) == "local main"
                                  and ($body_lines | any(test("^Resolution recorded by fm-(captain|decision)-hold\\.$")) | not))
@@ -151,18 +152,28 @@ nm_query() { # <out-file> <sql>
   rows=$(sqlite3 -readonly -json "$NM_DB" "$2") || return 1
   printf '%s' "${rows:-[]}" > "$1"
 }
-# Backlog landings in the window become a VALUES list of (pr_url, task, end of
+# Backlog landings in the window become a VALUES list of (pr_url, task, repo, end of
 # the close day in local time, as tasks-axi dates it), so a landing outside the pipeline still binds its runs.
-BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" '
+# A row naming a repository carries the ids of the matching no-mistakes
+# repositories, so a branch name shared across repositories binds only its own.
+printf '[]' > "$WORK/repos.json"
+if command -v sqlite3 >/dev/null 2>&1 && [ -s "$NM_DB" ]; then
+  nm_query "$WORK/repos.json" "SELECT id, upstream_url FROM repos" || printf '[]' > "$WORK/repos.json"
+fi
+BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" --slurpfile repos "$WORK/repos.json" '
   def lit: if . == null then "NULL" else "\u0027" + gsub("\u0027"; "\u0027\u0027") + "\u0027" end;
   [.[] | select(.landed and .closed >= $since)
-    | "(\(.pr_url | lit), \(.id | lit), CAST(strftime(\u0027%s\u0027, \(.closed + " 23:59:59" | lit), \u0027utc\u0027) AS INTEGER))"] | join(", ")
+    | .repo as $name
+    | (if $name == null or ($repos[0] | length) == 0 then null
+       else "," + ([$repos[0][] | select((.upstream_url // "") | sub("\\.git$"; "") | endswith("/" + $name)) | .id] | join(",")) + "," end) as $ids
+    | "(\(.pr_url | lit), \(.id | lit), \($ids | lit), CAST(strftime(\u0027%s\u0027, \(.closed + " 23:59:59" | lit), \u0027utc\u0027) AS INTEGER))"] | join(", ")
 ' "$WORK/backlog.json")
-[ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL"
+[ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL, NULL"
 # A run carrying a pull request URL binds to the landing of that URL; a run
 # without one binds by interval only to a local-only landing (no URL) on its
-# branch.
-LANDED_RUNS="WITH backlog_landed(pr_url, task, landed_at) AS (VALUES $BACKLOG_LANDINGS),
+# branch, and a local-only landing takes only the runs of the repository its
+# backlog row names.
+LANDED_RUNS="WITH backlog_landed(pr_url, task, repo_ids, landed_at) AS (VALUES $BACKLOG_LANDINGS),
   pipeline_landings AS (
     SELECT m.repo_id, m.branch, m.pr_url, NULL AS task,
       MAX(COALESCE(m.pr_state_observed_at, m.updated_at)) AS landed_at
@@ -174,7 +185,8 @@ LANDED_RUNS="WITH backlog_landed(pr_url, task, landed_at) AS (VALUES $BACKLOG_LA
     SELECT DISTINCT r.repo_id, r.branch, b.pr_url, b.task, b.landed_at
     FROM backlog_landed b JOIN runs r
       ON (b.pr_url IS NOT NULL AND r.pr_url = b.pr_url)
-      OR (b.pr_url IS NULL AND (r.branch = b.task OR r.branch LIKE '%/' || b.task))
+      OR (b.pr_url IS NULL AND (r.branch = b.task OR r.branch LIKE '%/' || b.task)
+          AND (b.repo_ids IS NULL OR instr(b.repo_ids, ',' || r.repo_id || ',') > 0))
     WHERE b.pr_url IS NULL
       OR NOT EXISTS (SELECT 1 FROM pipeline_landings p WHERE p.pr_url = b.pr_url)
   ), all_landings AS (
