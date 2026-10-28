@@ -39,8 +39,4 @@ SQL
   pass 'run query ignores another repository or home that reuses the branch name'
 }
 
-failures=0
-for test_name in test_run_query_stays_inside_the_repository; do
-  ( "$test_name" ) || failures=$((failures + 1))
-done
-[ "$failures" -eq 0 ] || fail "$failures retro-skill regressions"
+( test_run_query_stays_inside_the_repository ) || fail 'retro-skill regression'
