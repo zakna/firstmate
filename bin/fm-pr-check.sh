@@ -23,8 +23,10 @@
 # never refuses arming.
 # From the same comments it also prints "bot findings: <n> unaddressed": each
 # top-level inline comment by a Bot-type author, on any head, whose thread is
-# not resolved and has no fix reply: a reply from the PR author that names a
-# commit SHA (7 or more hex characters). The head filter above cannot serve
+# not resolved and has no fix reply: any reply from the PR author that contains
+# a hex token of 7 or more characters counts as a fix, whether or not it names
+# a real commit. The count excludes findings in a review body and in issue
+# comments, which are not inline threads. The head filter above cannot serve
 # this, because GitHub moves a comment's commit_id to the newest head where its
 # line survives, so a finding fixed earlier reads as raised on the current head.
 # The resolved state and the PR author come from one GraphQL read of the PR's
