@@ -74,8 +74,10 @@ ISSUES=$(printf '%s\n' "$TEXT" | awk -v repo="$PR_REPO" -v own="$PR_NUMBER" '
       for (i = 1; i <= k; i++) if (nums[i] != "") add(repo, nums[i])
     }
     line = " " line
-    while (match(line, /[^A-Za-z0-9_&\/]#[0-9]+/)) {
-      add(repo, substr(line, RSTART + 2, RLENGTH - 2))
+    while (match(line, /[^A-Za-z0-9_&\/]#[A-Za-z0-9_]+/)) {
+      tok = substr(line, RSTART + 2, RLENGTH - 2)
+      # A reference ends at a word boundary and is not a 6-digit hex colour.
+      if (tok ~ /^[0-9]+$/ && tok !~ /^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$/) add(repo, tok)
       line = substr(line, RSTART + RLENGTH)
     }
   }')
