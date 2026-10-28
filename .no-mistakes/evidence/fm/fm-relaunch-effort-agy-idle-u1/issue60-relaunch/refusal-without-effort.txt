@@ -1,0 +1,17 @@
+$ fm-control.sh agyw relaunch --harness claude --note "switch to claude"   # no --effort
+error: relaunching agyw from agy onto claude would drop its recorded effort 'medium' for the new harness's own default; pass --effort <level> to choose one for claude (or --effort default to accept that default)
+exit=1
+
+--- state/agyw.meta after refusal
+window=firstmate:fm-agyw
+endpoint_task_id=agyw
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/treehouse/.treehouse/notes-1cd8c5/1/notes
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/home/projects/notes
+harness=agy
+kind=scout
+tasktmp=/tmp/fm-agyw
+model=gemini-3.8-flash-low
+effort=medium
+spawn_gen=s1793227853.71289.12648
+
+--- pane command after refusal: agy

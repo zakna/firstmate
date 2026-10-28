@@ -1,0 +1,40 @@
+HOME="/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//agy59lab.S1P8Jl/home" /Users/olivier/.local/bin/agy --prompt-interactive "Add 12345 and 67890. Reply wit
+h exactly the sum and nothing else" --model gemini-3.8-flash-low --effort low --dangerously-skip-permissions
+(base) Oliviers-MacBook-Pro:ws olivier$ HOME="/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//agy59lab.S1P8Jl/home" /Users/olivier/.local/bin/agy --prompt-int
+eractive "Add 12345 and 67890. Reply with exactly the sum and nothing else" --model gemini-3.8-flash-low --effort low --dangerously-skip-permissions
+
+
+      ▄▀▀▄        Antigravity CLI 1.4.9
+     ▀▀▀▀▀▀       olivier.vanheuverzwijn@gmail.com (Google AI Plus)
+    ▀▀▀▀▀▀▀▀      Gemini 3.8 Flash (Low)
+   ▄▀▀    ▀▀▄     /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy59lab.S1P8Jl/ws
+  ▄▀▀      ▀▀▄
+
+────────────────────────────────────────────────────────────
+> Add 12345 and 67890. Reply with exactly the sum and nothing else
+
+  80235
+
+────────────────────────────────────────────────────────────
+> Write a 1500-word essay on the history of glass
+⢿  Generating...
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+esc to cancel                                                                                                              accept-edits · Gemini 3.8 Flash · low
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

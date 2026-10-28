@@ -1,0 +1,27 @@
+$ fm-control.sh agyw relaunch --harness claude --effort medium --note "switch to claude"
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair missing watcher supervision according to the session-start block for this harness; do not use shell &.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+relaunched agyw harness=claude from=agy model=default effort=medium backend=tmux endpoint=firstmate:fm-agyw worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/treehouse/.treehouse/notes-1cd8c5/1/notes
+exit=0
+
+--- state/agyw.meta after relaunch
+window=firstmate:fm-agyw
+endpoint_task_id=agyw
+worktree=/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/treehouse/.treehouse/notes-1cd8c5/1/notes
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/home/projects/notes
+harness=claude
+kind=scout
+tasktmp=/tmp/fm-agyw
+model=default
+effort=medium
+claude_root=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//agy60/hh/.claude
+busy_gen=g1793227901.99743.2662
+spawn_gen=s1793227901.98279.29896
+control_relaunch_tx=96278.20261028T225139Z.24183
+
+--- pane command: 2.1.312

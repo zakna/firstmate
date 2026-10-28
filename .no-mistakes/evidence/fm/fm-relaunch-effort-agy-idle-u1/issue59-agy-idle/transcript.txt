@@ -1,0 +1,7 @@
+[HEAD] fm_busy_classify: idle agy-regex
+[HEAD] fm_backend_composer_state: empty
+[BASE] fm_busy_classify: unknown agy-regex
+[BASE] fm_backend_composer_state: unknown
+[HEAD typed] fm_backend_composer_state: unknown
+[BASE typed] fm_backend_composer_state: unknown
+[HEAD busy turn] fm_busy_classify: busy agy-regex

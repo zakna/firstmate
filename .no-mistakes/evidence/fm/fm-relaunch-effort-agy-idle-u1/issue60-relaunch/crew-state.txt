@@ -1,0 +1,5 @@
+$ fm-crew-state.sh agyw   # HEAD
+state: done · source: status-log · README.md first line: # notes
+
+$ fm-crew-state.sh agyw   # BASE 09bc38be
+state: unknown · source: pane · harness state unavailable (unknown agy-regex)

@@ -1,0 +1,1 @@
+lab claude pid 1561 (cwd /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/agy60/treehouse/.treehouse/notes-1cd8c5/1/notes) argv contains: --effort medium
