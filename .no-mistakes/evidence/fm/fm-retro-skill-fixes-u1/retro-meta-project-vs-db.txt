@@ -1,0 +1,9 @@
+## Real fleet task meta project= paths vs pipeline repos.working_path
+triage-rest-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+triage-tools-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+triage-small-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+triage-fm-tooling-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+triage-ha-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+triage-unraid-20261028 project=/Users/olivier/projects/firstmate branch= runs_matched=0
+training-weight-update-u1 project=/Users/olivier/projects/firstmate/projects/training branch=fm/training-weight-update-u1 runs_matched=0
+unraid-kavita-setup-u1 project=/Users/olivier/projects/firstmate/projects/unraid branch=fm/unraid-kavita-setup-u1 runs_matched=2

@@ -1,0 +1,26 @@
+## Repos with runs on branch fm/ha-cooling-journal-b-r1
+/Users/olivier/.treehouse/firstmate-b8697d/3/firstmate/projects/ha
+/Users/olivier/projects/firstmate/projects/ha
+
+## OLD query (base 46c4991f) branch=fm/ha-cooling-journal-b-r1 pr=https://github.com/zakna/ha/pull/80
+sqlite3 -readonly "$DB" "SELECT r.id, p.upstream_url, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
+  FROM runs r JOIN repos p ON p.id = r.repo_id
+  WHERE r.branch = 'fm/ha-cooling-journal-b-r1' OR r.pr_url = 'https://github.com/zakna/ha/pull/80' ORDER BY r.created_at;"
+--- output:
+01M295TZGF9TZ1HQA0V9WCWWFY|git@github.com:zakna/ha.git|cancelled|https://github.com/zakna/ha/pull/80|1789161995|1789455784|1789504460|183988
+01M2KD2P7SXEASQJ0Y8R7EB5TV|git@github.com:zakna/ha.git|failed||1789505132||1789505156|
+01M2MHJ8RY3PAWXD97PF9HKYSY|git@github.com:zakna/ha.git|cancelled||1789543392||1789548300|
+
+## NEW query (target ceefea12) project clone=/Users/olivier/.treehouse/firstmate-b8697d/3/firstmate/projects/ha
+sqlite3 -readonly "$DB" "SELECT r.id, p.working_path, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
+  FROM runs r JOIN repos p ON p.id = r.repo_id
+  WHERE p.working_path = '/Users/olivier/.treehouse/firstmate-b8697d/3/firstmate/projects/ha' AND (r.branch = 'fm/ha-cooling-journal-b-r1' OR r.pr_url = 'https://github.com/zakna/ha/pull/80')
+  ORDER BY r.created_at;"
+--- output:
+01M295TZGF9TZ1HQA0V9WCWWFY|/Users/olivier/.treehouse/firstmate-b8697d/3/firstmate/projects/ha|cancelled|https://github.com/zakna/ha/pull/80|1789161995|1789455784|1789504460|183988
+## NEW query, project clone=/Users/olivier/projects/firstmate/projects/ha
+01M2KD2P7SXEASQJ0Y8R7EB5TV|/Users/olivier/projects/firstmate/projects/ha|failed||1789505132||1789505156|
+01M2MHJ8RY3PAWXD97PF9HKYSY|/Users/olivier/projects/firstmate/projects/ha|cancelled||1789543392||1789548300|
+(rows: 2)
+## NEW query, project clone=/Users/olivier/projects/firstmate/projects/ha/
+(rows: 0)
