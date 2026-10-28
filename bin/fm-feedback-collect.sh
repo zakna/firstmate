@@ -23,14 +23,16 @@
 #   inside the window that bin/fm-landed-lib.sh counts as a non-scout delivery
 #   (a `merged <date>` row with a PR link, or a `done <date>` row with a
 #   `local main` note), so a local-only or direct-PR landing counts; a close
-#   date that is not a real calendar date counts as no close; plus each no-mistakes `runs` row with pr_state `merged` and a
-#   landed timestamp (`pr_state_observed_at`, else `updated_at`) at or after
-#   the window start. A run carrying a pull request URL belongs to the landing
-#   of that URL. A run without one belongs to the landing on its repository and
-#   branch whose interval (after the previous landing, no later than this one)
-#   holds its creation, so cancelled or restarted runs are included; a
-#   local-only landing, which has no URL, finds its runs by branch `<id>` or
-#   `<prefix>/<id>` and the close day's end in local time.
+#   date that is not a real calendar date counts as no close; plus each
+#   no-mistakes `runs` row with pr_state `merged` and a landed timestamp
+#   (`pr_state_observed_at`, else `updated_at`) at or after the window start.
+#   A run carrying a pull request URL belongs to the landing of that URL. A run
+#   without one belongs only to a local-only landing: the one on its repository
+#   and branch whose interval (after the previous landing, no later than this
+#   one) holds its creation, so its cancelled or restarted runs are included.
+#   A local-only landing finds its runs by branch `<id>` or `<prefix>/<id>` and
+#   the close day's end in local time. A run without a URL is never attached to
+#   a pull-request landing, so attempts made before a PR existed are left out.
 # - Gate answers and their stated reasons: `step_results.approval_reason`,
 #   `override_reason`, and `skip_reason`, plus every `step_rounds` row whose
 #   selection_source starts with `user` (`user` selected the listed finding
@@ -158,8 +160,8 @@ BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" '
 ' "$WORK/backlog.json")
 [ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL"
 # A run carrying a pull request URL binds to the landing of that URL; a run
-# without one binds by interval to its branch's landing, which is also how a
-# local-only landing (no URL) finds its runs.
+# without one binds by interval only to a local-only landing (no URL) on its
+# branch.
 LANDED_RUNS="WITH backlog_landed(pr_url, task, landed_at) AS (VALUES $BACKLOG_LANDINGS),
   pipeline_landings AS (
     SELECT m.repo_id, m.branch, m.pr_url, NULL AS task,
@@ -189,7 +191,7 @@ LANDED_RUNS="WITH backlog_landed(pr_url, task, landed_at) AS (VALUES $BACKLOG_LA
   FROM runs r JOIN landings l
     ON l.repo_id = r.repo_id AND l.branch = r.branch
    AND ((r.pr_url IS NOT NULL AND r.pr_url = l.pr_url)
-     OR (r.pr_url IS NULL AND r.created_at > l.previous_landed_at AND r.created_at <= l.landed_at))"
+     OR (r.pr_url IS NULL AND l.pr_url IS NULL AND r.created_at > l.previous_landed_at AND r.created_at <= l.landed_at))"
 WINDOW_RUNS="SELECT run_id FROM ($LANDED_RUNS)"
 if ! command -v sqlite3 >/dev/null 2>&1; then
   note_input no-mistakes absent "sqlite3 is not installed"

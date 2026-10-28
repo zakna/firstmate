@@ -22,7 +22,7 @@ CREATE TABLE step_rounds (id TEXT PRIMARY KEY, step_result_id TEXT, round INTEGE
   created_at INTEGER);
 INSERT INTO repos VALUES ('r1', 'https://github.com/o/app.git');
 INSERT INTO runs VALUES
-  ('landed-1', 'r1', 'fm/a', 'cancelled', NULL, 'none', NULL, $IN, $IN),
+  ('landed-1', 'r1', 'fm/a', 'cancelled', 'https://github.com/o/app/pull/7', 'none', NULL, $IN, $IN),
   ('landed-2', 'r1', 'fm/a', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $IN, $IN),
   ('old', 'r1', 'fm/old', 'completed', 'https://github.com/o/app/pull/2', 'merged', $OLD, $OLD, $OLD),
   ('open', 'r1', 'fm/open', 'running', 'https://github.com/o/app/pull/9', 'open', $IN, $IN, $IN);
@@ -213,13 +213,15 @@ test_reused_branch_keeps_landing_identity() {
   sqlite3 "$dir/state.sqlite" <<SQL
 INSERT INTO runs VALUES
   ('reused-before', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/6', 'merged', $OLD, $OLD, $OLD),
-  ('reused-attempt-1', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
+  ('reused-attempt-1', 'r1', 'fm/reused', 'cancelled', 'https://github.com/o/app/pull/7', 'none', NULL, $((IN - 10)), $((IN - 10))),
+  ('reused-nourl', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN - 5)), $((IN - 5))),
   ('reused-land-1', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $IN, $IN),
-  ('reused-attempt-2', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN + 10)), $((IN + 10))),
+  ('reused-attempt-2', 'r1', 'fm/reused', 'cancelled', 'https://github.com/o/app/pull/8', 'none', NULL, $((IN + 10)), $((IN + 10))),
   ('reused-land-2', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/8', 'merged', $in2, $in2, $in2);
 INSERT INTO step_results VALUES
   ('s-reused-1', 'reused-attempt-1', 'review', 'completed', 'REUSED-ONE', NULL, NULL, $IN),
-  ('s-reused-2', 'reused-attempt-2', 'review', 'completed', 'REUSED-TWO', NULL, NULL, $in2);
+  ('s-reused-2', 'reused-attempt-2', 'review', 'completed', 'REUSED-TWO', NULL, NULL, $in2),
+  ('s-reused-nourl', 'reused-nourl', 'review', 'completed', 'REUSED-NOURL', NULL, NULL, $IN);
 SQL
   printf '%s' '[{"user":{"login":"carol","type":"User"},"body":"PR8-COMMENT","created_at":"2026-09-22T10:00:00Z"}]' \
     > "$dir/pages/_repos_o_app_issues_8_comments.json"
@@ -237,6 +239,7 @@ SQL
     and ([.records[] | select(.source == "review-comment") | .ticket] | unique | sort
       == ["https://github.com/o/app/pull/7", "https://github.com/o/app/pull/8"])
     and ([.records[] | select(.source == "review-comment" and .text == "PR8-COMMENT")] | length == 1)
+    and ([.records[] | select(.text == "REUSED-NOURL")] | length == 0)
   ' "$dir/feedback.json" >/dev/null \
     || fail "reused branch evidence was misattributed: $(jq -c .records "$dir/feedback.json")"
   pass 'reused branch attempts retain their landing identities'
