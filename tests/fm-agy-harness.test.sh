@@ -217,6 +217,41 @@ esc to cancel')
   pass "fm-busy-lib: agy classifies idle on its idle status row over a composer row"
 }
 
+test_agy_idle_composer_reads_empty_only_on_the_whole_proof() {
+  local styled plain rule caps_tmux caps_styled caps_plain out screen
+  styled=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.ansi")
+  plain=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.plain")
+  caps_tmux=$'styled=1\ncursor=1\nidentity=1\nrows=0'
+  caps_styled=$'styled=1\ncursor=0\nidentity=0\nrows=20'
+  caps_plain=$'styled=0\ncursor=0\nidentity=0\nrows=20'
+  rule=$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)
+  agy_screen() {  # <composer rows...>
+    printf 'older output\n%s\n' "$rule"
+    printf '%s\n' "$@"
+    printf '%s\n? for shortcuts      accept-edits · Gemini 3.8 Flash · high\n' "$rule"
+  }
+  want() {  # <label> <want> <caps> <screen> [cursor]
+    out=$(fm_composer_classify_screen "$3" "$4" "${5:-}")
+    [ "$out" = "$2" ] || fail "$1: expected $2, got '$out'"
+  }
+  want "agy idle (styled)" empty "$caps_styled" "$styled"
+  want "agy idle (tmux, cursor on the glyph row)" empty "$caps_tmux" "$styled" 14
+  want "agy idle with the cursor elsewhere" unknown "$caps_tmux" "$styled" 3
+  want "agy plain capture cannot tell its ghost hint from typed text" unknown "$caps_plain" "$plain"
+  want "agy plain capture with an empty composer" empty "$caps_plain" "$(agy_screen '>')"
+  want "agy typed text is never read empty" unknown "$caps_styled" "$(agy_screen '> hello there')"
+  # A multiline draft whose last line is a markdown blockquote renders a
+  # trailing `>` row, which must not be taken for the whole empty composer.
+  screen=$(agy_screen '> first line of the draft' '>')
+  want "a multiline draft ending in a quote line" unknown "$caps_styled" "$screen"
+  want "the same draft on a plain capture" unknown "$caps_plain" "$screen"
+  screen=$(agy_screen '> first line' '' '>')
+  want "a draft with a blank line before the trailing quote" unknown "$caps_plain" "$screen"
+  want "a bare shell prompt without the agy status row" unknown "$caps_plain" "$(printf 'older output\n>\n')"
+  want "an agy composer with no rules around it" unknown "$caps_plain" "$(printf '>\n? for shortcuts\n')"
+  pass "fm-composer-lib: an idle agy composer reads empty only on its whole proof"
+}
+
 test_agy_tmux_names_the_native_binary_an_agent() {
   local got
   # shellcheck source=/dev/null
@@ -910,6 +945,7 @@ test_agy_busy_tail_needs_the_pinned_status_row
 test_agy_busy_signatures_are_harness_scoped
 test_agy_classify_reports_unknown_when_the_marker_scrolls_out
 test_agy_classify_reports_idle_for_an_idle_status_row_over_an_empty_composer
+test_agy_idle_composer_reads_empty_only_on_the_whole_proof
 test_agy_tmux_names_the_native_binary_an_agent
 test_herdr_done_with_live_registry_stays_live
 test_herdr_registered_status_over_a_shell_only_pane_is_stale_not_live
