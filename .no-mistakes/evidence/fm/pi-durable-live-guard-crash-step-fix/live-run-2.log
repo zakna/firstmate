@@ -1,0 +1,11 @@
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: OAuth providers, undeclared models, and thinking levels are refused before any store exists
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: spawn brief, safe read tool, bash tool, identity, streamed answer, busy then idle
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: no developer role and no reasoning_effort in 3 requests
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: store is owner-only
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: fm-send while busy admitted and acknowledged by the host, once despite a replayed record and re-ring, ran once
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: Escape aborts the running tool and the host stays alive
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: crash mid-tool is not replayed; relaunch reopens the same store (19 -> 30 entries)
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: endpoint failure is rendered and the host survives (state: busy pi-durable-host)
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: /quit stops the host
+ok - pi-durable 1.4.0 on node v26.12.1, qwen-fast: rollback to pi keeps the pilot store and the worktree
+run 2 rc=0 149s
