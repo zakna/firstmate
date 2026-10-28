@@ -20,9 +20,10 @@
 #
 # Where each input lives:
 # - Landed tickets: a backlog Done entry (`<home>/data/backlog.md`) closed
-#   inside the window as a ship that merged (`merged <date>`, or a ship with a
-#   PR link or a `local main` note), so a local-only or direct-PR landing
-#   counts; plus each no-mistakes `runs` row with pr_state `merged` and a
+#   inside the window that bin/fm-landed-lib.sh counts as a non-scout delivery
+#   (a `merged <date>` row with a PR link, or a `done <date>` row with a
+#   `local main` note), so a local-only or direct-PR landing counts; a close
+#   date that is not a real calendar date counts as no close; plus each no-mistakes `runs` row with pr_state `merged` and a
 #   landed timestamp (`pr_state_observed_at`, else `updated_at`) at or after
 #   the window start. A run carrying a pull request URL belongs to the landing
 #   of that URL. A run without one belongs to the landing on its repository and
@@ -63,6 +64,8 @@ umask 077
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=bin/fm-task-inbox-lib.sh
 . "$ROOT/bin/fm-task-inbox-lib.sh"
+# shellcheck source=bin/fm-landed-lib.sh
+. "$ROOT/bin/fm-landed-lib.sh"
 
 usage() {
   sed -n '2,/^set -eu$/s/^# \{0,1\}//p' "$0"
@@ -106,10 +109,16 @@ printf '[]' > "$WORK/proposals.json"
 
 # --- backlog -------------------------------------------------------------------
 # One object per markdown row: id, done, line, body, the close date, and whether
-# the row records a landing (a ship closed as merged, on a PR or on local main).
+# the row records a non-scout delivery under bin/fm-landed-lib.sh's rule (a
+# merged PR or a local-only landing), parsed into the fields that rule reads.
 BACKLOG="$HOME_DIR/data/backlog.md"
 BACKLOG_ERROR=0
-if [ -f "$BACKLOG" ] && ! jq -Rs '
+if [ -f "$BACKLOG" ] && ! jq -Rs "$FM_LANDED_JQ_DEFS"'
+    def meta($key): [scan("\\((?:[^()]*,[[:space:]]*)?" + $key + ":[[:space:]]*([^,)]*)")[0]] | first;
+    def verb_date($verb): [scan("(?:\\(|,[[:space:]]*)" + $verb + "[[:space:]]+([0-9]{4}-[0-9]{2}-[0-9]{2})[[:space:]]*[,)]")[0]] | last;
+    def valid_date: if . != null and (try ((. + "T00:00:00Z") | fromdateiso8601) catch null) != null then . else null end;
+    def completion:
+      [("merged", "reported", "done") as $v | {verb: $v, date: verb_date($v)} | select(.date != null)] | first // {verb: null, date: null};
     reduce (split("\n")[]) as $l ([];
       if ($l | test("^[-*] \\[[ xX]\\] ")) then
         . + [{id: ($l | capture("^[-*] \\[[ xX]\\] (?<i>[^ ]+)").i), done: ($l | test("^[-*] \\[[xX]\\] ")), line: $l, body: ""}]
@@ -117,11 +126,19 @@ if [ -f "$BACKLOG" ] && ! jq -Rs '
         .[-1].body += (if $l == "" then "\n" else ($l[2:] + "\n") end)
       else . end)
     | map(.body |= sub("\n+$"; "")
-      | . + {closed: (.line | [scan("(?:done|merged|reported) ([0-9]{4}-[0-9]{2}-[0-9]{2})")[0]] | last),
-             pr: (.line | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first)}
-      | . + {landed: (.done and .closed != null
-                      and ((.line | test("merged [0-9]{4}-[0-9]{2}-[0-9]{2}"))
-                           or ((.line | contains("(kind: ship)")) and (.pr != null or (.line | contains("local main"))))))})
+      | (.line | sub("^[-*] \\[[ xX]\\] [^ ]+ - "; "")) as $rest
+      | (.body | split("\n") | map(gsub("^[[:space:]]+|[[:space:]]+$"; "")) | map(select(. != ""))) as $body_lines
+      | . + {kind: ($rest | meta("kind")
+                    // (if test("^SCOUT(?![A-Za-z0-9_])") then "scout" elif test("^SHIP(?![A-Za-z0-9_])") then "ship" else null end)),
+             hold_kind: ($rest | meta("hold-kind")),
+             completion: ($rest | completion | .date |= valid_date),
+             pr_url: ($rest | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first),
+             local_note: (if ($rest | sub("([[:space:]]*\\([^()]*\\))+[[:space:]]*$"; "") | test("(^|[[:space:]])local main$"))
+                             or (($body_lines | last) == "local main"
+                                 and ($body_lines | any(test("^Resolution recorded by fm-(captain|decision)-hold\\.$")) | not))
+                          then "local main" else null end)}
+      | . + {closed: .completion.date}
+      | . + {landed: (.done and .closed != null and .kind != "scout" and landed_delivery)})
   ' "$BACKLOG" > "$WORK/backlog.json" 2>/dev/null; then
   BACKLOG_ERROR=1
   printf '[]' > "$WORK/backlog.json"
@@ -137,7 +154,7 @@ nm_query() { # <out-file> <sql>
 BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" '
   def lit: if . == null then "NULL" else "\u0027" + gsub("\u0027"; "\u0027\u0027") + "\u0027" end;
   [.[] | select(.landed and .closed >= $since)
-    | "(\(.pr | lit), \(.id | lit), \((.closed + "T00:00:00Z" | fromdateiso8601) + 86399))"] | join(", ")
+    | "(\(.pr_url | lit), \(.id | lit), \((.closed + "T00:00:00Z" | fromdateiso8601) + 86399))"] | join(", ")
 ' "$WORK/backlog.json")
 [ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL"
 # A run carrying a pull request URL binds to the landing of that URL; a run
@@ -283,7 +300,7 @@ gh_rows() { # <api-path> <jq-row-filter>: one JSON row per line on stdout
   done <<< "$decoded"
 }
 PRS=$(jq -rn --arg since "$SINCE" --slurpfile runs "$WORK/runs.json" --slurpfile backlog "$WORK/backlog.json" '
-  [($runs[0][].pr_url), ($backlog[0][] | select(.landed and .closed >= $since) | .pr)]
+  [($runs[0][].pr_url), ($backlog[0][] | select(.landed and .closed >= $since) | .pr_url)]
   | map(select(. != null and test("^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"))) | unique | .[]')
 if [ -z "$PRS" ]; then
   note_input review-comments absent "no landed GitHub pull request in the window"
@@ -401,7 +418,7 @@ jq --arg since "$SINCE" '
       elif .done and (.closed // "") >= $since and $decision
         and ($decision | test("\\b(declined?|rejected?|skip)\\b"; "i")) then {kind: "declined", decision: $decision}
       else empty end
-    + {ticket: (.pr // .id), task: .id, text: (.line + "\n" + .body | rtrimstr("\n"))}
+    + {ticket: (.pr_url // .id), task: .id, text: (.line + "\n" + .body | rtrimstr("\n"))}
     | with_entries(select(.value != null)))
 ' "$WORK/backlog.decisions.json" > "$WORK/proposals.json"
 if [ "$BACKLOG_ERROR" = 1 ]; then
@@ -474,7 +491,7 @@ for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.m
       --slurpfile backlog "$WORK/backlog.json" \
       '($backlog[0] | map(select(.landed and .id == $task and .closed >= $sinceday)) | first) as $row
        | select($row and $at_epoch >= $since)
-       | {ticket: ($row.pr // $task), task: $task, at: $at, message: ($seq | rtrimstr(".msg")), text: ($text | rtrimstr("\n"))}' \
+       | {ticket: ($row.pr_url // $task), task: $task, at: $at, message: ($seq | rtrimstr(".msg")), text: ($text | rtrimstr("\n"))}' \
       >> "$WORK/steers.jsonl"
   fi
 done

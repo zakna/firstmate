@@ -244,7 +244,8 @@ SQL
 
 test_backlog_done_entries_define_the_landed_set() {
   local dir="$TMP_ROOT/backlog-landed" fakebin
-  mkdir -p "$dir/home/data" "$dir/home/state/task-direct.inbox" "$dir/home/state/task-nodate.inbox"
+  mkdir -p "$dir/home/data" "$dir/home/state/task-direct.inbox" "$dir/home/state/task-forced.inbox" \
+    "$dir/home/state/task-captain.inbox" "$dir/home/state/task-local.inbox"
   make_db "$dir/state.sqlite"
   make_pages "$dir/pages"
   printf '%s' '[{"user":{"login":"dan","type":"User"},"body":"DIRECT-PR-COMMENT","created_at":"2026-09-21T10:00:00Z"}]' \
@@ -260,18 +261,27 @@ SQL
   cat > "$dir/home/data/backlog.md" <<'MD'
 # Backlog
 
-- [x] task-local - Local only landing - local main (repo: app) (kind: ship) (merged 2026-09-21)
+## Done
+- [x] task-local - Local only landing (repo: app) (kind: ship) (done 2026-09-21)
+  local main
 - [x] task-direct - Direct PR https://github.com/o/app/pull/11 (repo: app) (kind: ship) (merged 2026-09-21)
-- [x] task-nodate - Closed with a done date only https://github.com/o/app/pull/12 (repo: app) (kind: ship) (done 2026-09-21)
+- [x] task-forced - Discarded PR https://github.com/o/app/pull/12 (repo: app) (kind: ship) (done 2026-09-21)
+- [x] task-captain - Captain call https://github.com/o/app/pull/13 (repo: app) (kind: captain) (merged 2026-09-21)
+- [x] task-baddate - Bad close date https://github.com/o/app/pull/14 (repo: app) (kind: ship) (merged 2026-13-01)
 - [x] task-scout - A scout report data/task-scout/report.md (repo: app) (kind: scout) (reported 2026-09-21)
 MD
   printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-DIRECT\n' > "$dir/home/state/task-direct.inbox/001.msg"
-  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-NODATE\n' > "$dir/home/state/task-nodate.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-FORCED\n' > "$dir/home/state/task-forced.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-CAPTAIN\n' > "$dir/home/state/task-captain.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-LOCAL\n' > "$dir/home/state/task-local.inbox/001.msg"
   mkdir -p "$dir/home/state/task-scout.inbox"
   printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-SCOUT\n' > "$dir/home/state/task-scout.inbox/001.msg"
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_issues_12_comments.json"
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_12_reviews.json"
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_12_comments.json"
+  for n in 12 13 14; do
+    printf '%s' '[{"user":{"login":"dan","type":"User"},"body":"NOT-LANDED-COMMENT","created_at":"2026-09-21T10:00:00Z"}]' \
+      > "$dir/pages/_repos_o_app_issues_${n}_comments.json"
+    printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_${n}_reviews.json"
+    printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_${n}_comments.json"
+  done
   fakebin=$(make_fakebin "$dir" "$dir/pages")
   PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
     --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
@@ -280,7 +290,8 @@ MD
     ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-ATTEMPT")][0].ticket == "task-local")
     and ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
       == "https://github.com/o/app/pull/11")
-    and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-NODATE"])
+    and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-LOCAL"])
+    and ([.records[] | select(.source == "review-comment" and .text == "NOT-LANDED-COMMENT")] | length == 0)
   ' "$dir/feedback.json" >/dev/null \
     || fail "landed set ignored backlog Done entries: $(jq -c .records "$dir/feedback.json")"
   assert_grep 'Landed set: backlog Done entries' "$dir/feedback.md" 'markdown states the backlog-derived landed set'
