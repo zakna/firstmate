@@ -242,6 +242,109 @@ SQL
   pass 'reused branch attempts retain their landing identities'
 }
 
+test_backlog_done_entries_define_the_landed_set() {
+  local dir="$TMP_ROOT/backlog-landed" fakebin
+  mkdir -p "$dir/home/data" "$dir/home/state/task-direct.inbox" "$dir/home/state/task-nodate.inbox"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  printf '%s' '[{"user":{"login":"dan","type":"User"},"body":"DIRECT-PR-COMMENT","created_at":"2026-09-21T10:00:00Z"}]' \
+    > "$dir/pages/_repos_o_app_issues_11_comments.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_reviews.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_comments.json"
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO runs VALUES
+  ('local-attempt', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10)));
+INSERT INTO step_results VALUES
+  ('s-local', 'local-attempt', 'review', 'completed', 'LOCAL-ATTEMPT', NULL, NULL, $IN);
+SQL
+  cat > "$dir/home/data/backlog.md" <<'MD'
+# Backlog
+
+- [x] task-local - Local only landing - local main (repo: app) (kind: ship) (merged 2026-09-21)
+- [x] task-direct - Direct PR https://github.com/o/app/pull/11 (repo: app) (kind: ship) (merged 2026-09-21)
+- [x] task-nodate - Closed with a done date only https://github.com/o/app/pull/12 (repo: app) (kind: ship) (done 2026-09-21)
+- [x] task-scout - A scout report data/task-scout/report.md (repo: app) (kind: scout) (reported 2026-09-21)
+MD
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-DIRECT\n' > "$dir/home/state/task-direct.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-NODATE\n' > "$dir/home/state/task-nodate.inbox/001.msg"
+  mkdir -p "$dir/home/state/task-scout.inbox"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-SCOUT\n' > "$dir/home/state/task-scout.inbox/001.msg"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_issues_12_comments.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_12_reviews.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_12_comments.json"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on backlog-defined landings'
+  jq -e '
+    ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-ATTEMPT")][0].ticket == "task-local")
+    and ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
+      == "https://github.com/o/app/pull/11")
+    and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-NODATE"])
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "landed set ignored backlog Done entries: $(jq -c .records "$dir/feedback.json")"
+  assert_grep 'Landed set: backlog Done entries' "$dir/feedback.md" 'markdown states the backlog-derived landed set'
+  pass 'backlog Done entries define the landed set, including local-only and direct-PR landings'
+}
+
+test_archived_steering_of_cleaned_tasks_is_read() {
+  local dir="$TMP_ROOT/archived-steering" fakebin
+  mkdir -p "$dir/home/data/task-a/steering/handled"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  make_backlog "$dir/home"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nARCHIVED-HANDLED\n' > "$dir/home/data/task-a/steering/handled/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-23T08:00:00Z\n--\nARCHIVED-PENDING\n' > "$dir/home/data/task-a/steering/002.msg"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on archived steering'
+  jq -e '
+    ([.records[] | select(.source == "steer") | .text] | sort == ["ARCHIVED-HANDLED", "ARCHIVED-PENDING"])
+    and ([.records[] | select(.source == "steer")] | all(.ticket == "https://github.com/o/app/pull/7"))
+    and ([.inputs[] | select(.name == "steers")][0].status == "read")
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "archived steering was not collected: $(jq -c . "$dir/feedback.json")"
+  # A task whose inbox is still live and already archived is reported once.
+  make_inbox "$dir/home"
+  mkdir -p "$dir/home/data/task-a/steering/handled"
+  cp "$dir/home/state/task-a.inbox/handled/001.msg" "$dir/home/data/task-a/steering/handled/001.msg"
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback2" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on overlapping steering'
+  jq -e '[.records[] | select(.source == "steer" and (.text | startswith("STEER-NEW")))] | length == 1' \
+    "$dir/feedback2.json" >/dev/null \
+    || fail "steer present in both inbox and archive was duplicated: $(jq -c '[.records[] | select(.source == "steer")]' "$dir/feedback2.json")"
+  pass 'steering archived under data/<id>/steering is collected once'
+}
+
+test_runs_bind_to_their_landing_by_pull_request() {
+  local dir="$TMP_ROOT/bind-by-pr" fakebin in2
+  mkdir -p "$dir/home"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  in2=$(epoch 2026-09-22T10:00:00Z)
+  sqlite3 "$dir/state.sqlite" <<SQL
+INSERT INTO runs VALUES
+  ('bind-land-1', 'r1', 'fm/bind', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $((IN - 100)), $IN),
+  ('bind-for-8', 'r1', 'fm/bind', 'cancelled', 'https://github.com/o/app/pull/8', 'closed', NULL, $((IN - 50)), $((IN - 50))),
+  ('bind-land-2', 'r1', 'fm/bind', 'completed', 'https://github.com/o/app/pull/8', 'merged', $in2, $((IN + 50)), $in2);
+INSERT INTO step_results VALUES
+  ('s-bind-8', 'bind-for-8', 'review', 'completed', 'BELONGS-TO-EIGHT', NULL, NULL, $IN);
+SQL
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_issues_8_comments.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_reviews.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_comments.json"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on overlapping pull request runs'
+  jq -e '[.records[] | select(.source == "gate-answer" and .text == "BELONGS-TO-EIGHT")][0].ticket
+    == "https://github.com/o/app/pull/8"' "$dir/feedback.json" >/dev/null \
+    || fail "run carrying a pull request URL was bound by time interval: $(jq -c .records "$dir/feedback.json")"
+  pass 'a run that carries a pull request URL binds to that pull request'
+}
+
 test_empty_forge_pages_are_successful() {
   local dir="$TMP_ROOT/empty-pages" fakebin
   mkdir -p "$dir/home"
@@ -513,6 +616,8 @@ test_usage_errors() {
 
 failures=0
 for test_name in test_collects_every_source_in_the_window test_reused_branch_keeps_landing_identity \
+  test_backlog_done_entries_define_the_landed_set test_archived_steering_of_cleaned_tasks_is_read \
+  test_runs_bind_to_their_landing_by_pull_request \
   test_empty_forge_pages_are_successful test_malformed_forge_wrapper_is_reported \
   test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
