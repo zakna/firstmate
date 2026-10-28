@@ -205,7 +205,7 @@ esc to cancel                                                           Gemini 3
 test_agy_classify_reports_idle_for_an_idle_status_row_over_an_empty_composer() {
   local statedir got
   statedir="$TMP_ROOT/classify-idle"; mkdir -p "$statedir"
-  got=$(fm_busy_classify tmux fake:win agy agy-case-3 "$statedir" "$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.txt")")
+  got=$(fm_busy_classify tmux fake:win agy agy-case-3 "$statedir" "$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.plain")")
   [ "$got" = "idle agy-regex" ] || fail "an idle agy pane must classify idle agy-regex, got '$got'"
   got=$(fm_busy_classify tmux fake:win agy agy-case-4 "$statedir" 'reply landed
 ? for shortcuts                                                         Gemini 3.8 Flash · low')

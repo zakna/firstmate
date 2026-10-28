@@ -1248,7 +1248,7 @@ test_matrix_agy_idle_bare_gt_row() {
   # The bare `>` is also a dead-shell glyph, so the status row is the proof.
   local styled plain
   styled=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.ansi")
-  plain=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.txt")
+  plain=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.plain")
   assert_screen "agy idle (herdr)" empty "$CAPS_STYLED_NOID" "$styled"
   assert_screen "agy idle (tmux, cursor on the glyph row)" empty "$CAPS_TMUX" "$styled" 14 'agy\tidle'
   assert_screen "agy idle with the cursor elsewhere" unknown "$CAPS_TMUX" "$styled" 3 'agy\tidle'
