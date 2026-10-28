@@ -8,10 +8,11 @@
 # The issues are read from the brief's `# Task` section (the whole brief when it
 # has none), so the scaffold's generic text names nothing. Four forms count:
 # a full https://github.com/<owner>/<repo>/issues/<n> URL, <owner>/<repo>#<n>,
-# a bare #<n>, and words such as "issue 213" or "issues 213, 214 and 215"; the
-# last two resolve to the PR's own repository, except that a bare #<n> right
-# after the name of another repository of the PR's owner, as in "fm-tooling
-# #49", resolves to that repository. A number that
+# a bare #<n> that ends at a word boundary and is not a 6-digit hex colour
+# such as #123456, and words such as "issue 213" or "issues 213, 214 and
+# 215"; the last two resolve to the PR's own repository, except that a bare
+# #<n> right after the name of another repository of the PR's owner, as in
+# "fm-tooling #49", resolves to that repository. A number that
 # GitHub reports as a pull request, and the PR's own number, are not issues.
 # Exit 0 when every named issue passes, when the brief names none, when there
 # is no brief, when the PR is not a GitHub PR, or when the PR is not merged
