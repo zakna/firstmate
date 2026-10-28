@@ -127,6 +127,16 @@ test_issues_named_in_words_are_read_back() {
   pass "issues named in words are read back"
 }
 
+test_hex_colours_and_non_boundary_hashes_are_not_issues() {
+  local dir out got
+  dir=$(make_case not-issues "Keep the colour #000000 and #1a2b3c, tag #12abc, and fix #12.")
+  issue "$dir" acme_widgets_12 closed
+  out=$(run_readback "$dir") || fail "text that names no issue refused the readback: $out"
+  got=$(grep -o 'issues/[0-9A-Za-z]*' "$dir/gh/calls" | sort -u | tr '\n' ' ')
+  [ "$got" = 'issues/12 ' ] || fail "only issue 12 should be read, got: $got"
+  pass "hex colours and hashes without a word boundary are not issues"
+}
+
 test_unreadable_issue_refuses_and_no_issue_reads_nothing() {
   local dir out
   dir=$(make_case unreadable "Fix #12.")
@@ -164,6 +174,7 @@ test_teardown_rejects_an_empty_waiver() {
 test_open_issue_without_a_comment_since_merge_refuses
 test_commented_closed_and_pr_numbers_pass
 test_issues_named_in_words_are_read_back
+test_hex_colours_and_non_boundary_hashes_are_not_issues
 test_unreadable_issue_refuses_and_no_issue_reads_nothing
 test_unmerged_pr_is_not_read_back
 test_teardown_rejects_an_empty_waiver
