@@ -8,8 +8,11 @@
 # The issues are read from the brief's `# Task` section (the whole brief when it
 # has none), so the scaffold's generic text names nothing. Four forms count:
 # a full https://github.com/<owner>/<repo>/issues/<n> URL, <owner>/<repo>#<n>,
-# a bare #<n>, and words such as "issue 213" or "issues 213, 214 and 215"; the
-# last two resolve to the PR's own repository. A number that
+# a bare #<n> that ends at a word boundary and is not a 6-digit hex colour
+# such as #123456, and words such as "issue 213" or "issues 213, 214 and
+# 215"; the last two resolve to the PR's own repository, except that a bare
+# #<n> right after the name of another repository of the PR's owner, as in
+# "fm-tooling #49", resolves to that repository. A number that
 # GitHub reports as a pull request, and the PR's own number, are not issues.
 # Exit 0 when every named issue passes, when the brief names none, when there
 # is no brief, when the PR is not a GitHub PR, or when the PR is not merged
@@ -44,11 +47,12 @@ else
   TEXT=$(cat "$BRIEF")
 fi
 
-# One <owner>/<repo> <number> pair per line, first mention order, no repeats.
+# One <owner>/<repo> <number> pair per line, first mention order, no repeats;
+# a bare #<n> right after a word carries that word as a third field.
 ISSUES=$(printf '%s\n' "$TEXT" | awk -v repo="$PR_REPO" -v own="$PR_NUMBER" '
-  function add(r, n) {
-    if (r == repo && n == own) return
-    key = r " " n
+  function add(r, n, w) {
+    if (w == "" && r == repo && n == own) return
+    key = r " " n (w == "" ? "" : " " w)
     if (!(key in seen)) { seen[key] = 1; print key }
   }
   {
@@ -74,9 +78,18 @@ ISSUES=$(printf '%s\n' "$TEXT" | awk -v repo="$PR_REPO" -v own="$PR_NUMBER" '
       for (i = 1; i <= k; i++) if (nums[i] != "") add(repo, nums[i])
     }
     line = " " line
-    while (match(line, /[^A-Za-z0-9_&\/]#[0-9]+/)) {
-      add(repo, substr(line, RSTART + 2, RLENGTH - 2))
-      line = substr(line, RSTART + RLENGTH)
+    while (match(line, /[^A-Za-z0-9_&\/]#[A-Za-z0-9_]+/)) {
+      tok = substr(line, RSTART + 2, RLENGTH - 2)
+      end = RSTART + RLENGTH
+      before = substr(line, 1, RSTART)
+      word = ""
+      if (match(before, /(^|[^A-Za-z0-9_.-])[A-Za-z0-9_.-]+ $/)) {
+        word = substr(before, RSTART, RLENGTH - 1)
+        sub(/^[^A-Za-z0-9_.-]/, "", word)
+      }
+      # A reference ends at a word boundary and is not a 6-digit hex colour.
+      if (tok ~ /^[0-9]+$/ && tok !~ /^[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$/) add(repo, tok, word)
+      line = substr(line, end)
     }
   }')
 [ -n "$ISSUES" ] || exit 0
@@ -100,7 +113,33 @@ case "$MERGED_AT" in
     exit 1 ;;
 esac
 
+# A bare #<n> after the name of a repository of the PR's owner is an issue of
+# that repository; after any other word it stays with the PR's repository.
+OWNER=${PR_REPO%%/*}
 FAILED=0
+RESOLVED=
+while read -r repo number word; do
+  if [ -n "$word" ]; then
+    if out=$(gh api "repos/$OWNER/$word" --jq .full_name 2>&1); then
+      repo=$out
+    else
+      case "$out" in
+        *"HTTP 404"*) ;;
+        *)
+          echo "issue readback: could not resolve $word #$number" >&2
+          FAILED=1
+          continue ;;
+      esac
+    fi
+  fi
+  [ "$repo $number" = "$PR_REPO $PR_NUMBER" ] || RESOLVED="$RESOLVED$repo $number
+"
+done <<EOF
+$ISSUES
+EOF
+ISSUES=$(printf '%s' "$RESOLVED" | awk '!seen[$0]++')
+[ -n "$ISSUES" ] || exit "$FAILED"
+
 while read -r repo number; do
   url="https://github.com/$repo/issues/$number"
   if ! info=$(gh api "repos/$repo/issues/$number" --jq '.state + " " + (if .pull_request then "pr" else "issue" end)' 2>/dev/null); then

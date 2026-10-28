@@ -19,6 +19,8 @@ command -v jq >/dev/null 2>&1 || { echo "SKIP: jq is not installed"; exit 0; }
 #   pr.json                         the `gh pr view` answer
 #   issue-<owner>_<repo>_<n>.json   an issue, absent means a lookup error
 #   comments-<owner>_<repo>_<n>.json its comments, absent means []
+#   repo-<owner>_<repo>.json        a repository (lowercase name), absent means HTTP 404
+#   repo-<owner>_<repo>.err         a failed repository lookup, with this stderr
 # Every call is logged to $FM_TEST_GH_DIR/calls.
 make_fake_gh() {  # <case-dir>
   local fakebin
@@ -40,10 +42,17 @@ case "$1 $2" in
     rest=${path#repos/}
     owner=${rest%%/*}; rest=${rest#*/}
     repo=${rest%%/*}; rest=${rest#*/issues/}
+    case "$path" in
+      "repos/$owner/$repo") repo=$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]')
+        file=$dir/repo-${owner}_${repo}.json
+        [ -f "$dir/repo-${owner}_${repo}.err" ] && { cat "$dir/repo-${owner}_${repo}.err" >&2; exit 1; }
+        [ -f "$file" ] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; } ;;
+      *)
     case "$rest" in
       */comments) file=$dir/comments-${owner}_${repo}_${rest%/comments}.json
         [ -f "$file" ] || { printf '[]' | jq -r "$filter"; exit; } ;;
       *) file=$dir/issue-${owner}_${repo}_${rest}.json ;;
+    esac ;;
     esac ;;
   *) exit 1 ;;
 esac
@@ -127,6 +136,47 @@ test_issues_named_in_words_are_read_back() {
   pass "issues named in words are read back"
 }
 
+test_hex_colours_and_non_boundary_hashes_are_not_issues() {
+  local dir out got
+  dir=$(make_case not-issues "Keep the colour #000000 and #1a2b3c, tag #12abc, and fix #12.")
+  issue "$dir" acme_widgets_12 closed
+  out=$(run_readback "$dir") || fail "text that names no issue refused the readback: $out"
+  got=$(grep -o 'issues/[0-9A-Za-z]*' "$dir/gh/calls" | sort -u | tr '\n' ' ')
+  [ "$got" = 'issues/12 ' ] || fail "only issue 12 should be read, got: $got"
+  pass "hex colours and hashes without a word boundary are not issues"
+}
+
+# "fm-tooling #49" names issue 49 of the owner's fm-tooling repository, not
+# issue 49 of the PR's repository; a bare #n after any other word stays local.
+test_bare_hash_after_a_sibling_repository_name_reads_that_repository() {
+  local dir out
+  dir=$(make_case sibling-repo "File it upstream through the fm-tooling route, like fm-tooling #49. Fix #12; see Fm-Tooling #49.")
+  printf '{"full_name":"acme/fm-tooling"}\n' > "$dir/gh/repo-acme_fm-tooling.json"
+  issue "$dir" acme_fm-tooling_49 open
+  issue "$dir" acme_widgets_12 closed
+  issue "$dir" acme_widgets_49 closed
+  out=$(run_readback "$dir") && fail "an open issue of the named repository passed: $out"
+  printf '%s\n' "$out" | grep -qF "https://github.com/acme/fm-tooling/issues/49 is open with no comment since the merge at $MERGED_AT" \
+    || fail "the refusal did not name the issue of the named repository: $out"
+  grep -qF 'repos/acme/widgets/issues/49' "$dir/gh/calls" && fail "#49 was read from the PR's repository"
+  printf '%s\n' "$out" | grep -qF 'Fm-Tooling' && fail "the brief's spelling of the repository was used: $out"
+  [ "$(grep -c '^api repos/acme/fm-tooling/issues/49 ' "$dir/gh/calls")" = 1 ] || fail "issue 49 of fm-tooling was not read exactly once"
+  grep -qF 'repos/acme/widgets/issues/12' "$dir/gh/calls" || fail "#12 after an ordinary word was not read from the PR's repository"
+  pass "a bare #n after a repository name of the same owner reads that repository"
+}
+
+test_unresolvable_repository_name_refuses() {
+  local dir out
+  dir=$(make_case sibling-repo-error "Like fm-tooling #49.")
+  printf 'gh: Server Error (HTTP 502)\n' > "$dir/gh/repo-acme_fm-tooling.err"
+  issue "$dir" acme_widgets_49 closed
+  out=$(run_readback "$dir") && fail "a repository name that could not be resolved passed: $out"
+  printf '%s\n' "$out" | grep -qF 'could not resolve fm-tooling #49' \
+    || fail "the refusal did not name the unresolved reference: $out"
+  grep -qF 'repos/acme/widgets/issues/49' "$dir/gh/calls" && fail "#49 fell back to the PR's repository"
+  pass "a repository name that cannot be resolved refuses instead of falling back"
+}
+
 test_unreadable_issue_refuses_and_no_issue_reads_nothing() {
   local dir out
   dir=$(make_case unreadable "Fix #12.")
@@ -164,6 +214,9 @@ test_teardown_rejects_an_empty_waiver() {
 test_open_issue_without_a_comment_since_merge_refuses
 test_commented_closed_and_pr_numbers_pass
 test_issues_named_in_words_are_read_back
+test_hex_colours_and_non_boundary_hashes_are_not_issues
+test_bare_hash_after_a_sibling_repository_name_reads_that_repository
+test_unresolvable_repository_name_refuses
 test_unreadable_issue_refuses_and_no_issue_reads_nothing
 test_unmerged_pr_is_not_read_back
 test_teardown_rejects_an_empty_waiver
