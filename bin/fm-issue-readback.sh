@@ -115,18 +115,30 @@ esac
 # A bare #<n> after the name of a repository of the PR's owner is an issue of
 # that repository; after any other word it stays with the PR's repository.
 OWNER=${PR_REPO%%/*}
-ISSUES=$(while read -r repo number word; do
-  if [ -n "$word" ] && gh api "repos/$OWNER/$word" --jq .full_name >/dev/null 2>&1; then
-    repo=$OWNER/$word
+FAILED=0
+RESOLVED=
+while read -r repo number word; do
+  if [ -n "$word" ]; then
+    if err=$(gh api "repos/$OWNER/$word" --jq .full_name 2>&1 >/dev/null); then
+      repo=$OWNER/$word
+    else
+      case "$err" in
+        *"HTTP 404"*) ;;
+        *)
+          echo "issue readback: could not resolve $word #$number" >&2
+          FAILED=1
+          continue ;;
+      esac
+    fi
   fi
-  [ "$repo $number" = "$PR_REPO $PR_NUMBER" ] || printf '%s %s\n' "$repo" "$number"
-done <<EOF | awk '!seen[$0]++'
+  [ "$repo $number" = "$PR_REPO $PR_NUMBER" ] || RESOLVED="$RESOLVED$repo $number
+"
+done <<EOF
 $ISSUES
 EOF
-)
-[ -n "$ISSUES" ] || exit 0
+ISSUES=$(printf '%s' "$RESOLVED" | awk '!seen[$0]++')
+[ -n "$ISSUES" ] || exit "$FAILED"
 
-FAILED=0
 while read -r repo number; do
   url="https://github.com/$repo/issues/$number"
   if ! info=$(gh api "repos/$repo/issues/$number" --jq '.state + " " + (if .pull_request then "pr" else "issue" end)' 2>/dev/null); then
