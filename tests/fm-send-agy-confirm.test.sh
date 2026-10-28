@@ -3,8 +3,10 @@
 #
 # A typed send to an explicit tmux agy endpoint is acknowledged only by the
 # submit core's idle-to-busy transition poll: agy's bare `>` composer verdict
-# is `unknown` (dead-shell rule), so the poll watching the pane's verified
-# `esc to cancel` busy footer is the only proof a landed Enter can get. agy
+# is `unknown` while text sits in it (dead-shell rule), so the poll watching
+# the pane's verified `esc to cancel` busy footer is the only proof a landed
+# Enter can get. The stubs keep the steer text in the composer until the busy
+# footer renders, as a pane whose Enter has not yet taken effect does. agy
 # renders that footer ~1.5s after Enter for a short steer and ~4s for a
 # multi-line brief (live-measured on agy 1.2.1), while the shared default
 # confirm budget is 3 retries x 0.4s - so fm-send used to exit 1 "not
@@ -64,7 +66,7 @@ case "\${1:-}" in
     styled=0
     for a in "\$@"; do [ "\$a" = -e ] && styled=1; done
     if [ "\$styled" = 1 ]; then
-      printf '> \n? for shortcuts\n'
+      printf '> Append steer1 line to notes.md\n? for shortcuts\n'
       exit 0
     fi
     n=\$(( \$(cat "\$cnt_file" 2>/dev/null || echo 0) + 1 ))
@@ -72,7 +74,7 @@ case "\${1:-}" in
     if [ "\$n" -ge $busy_at ]; then
       printf '> \n? for shortcuts\n ⏺ 5s · esc to cancel · gemini-3.8-flash-low\n'
     else
-      printf '> \n? for shortcuts\n'
+      printf '> Append steer1 line to notes.md\n? for shortcuts\n'
     fi
     exit 0 ;;
   list-windows) printf 'win\n'; exit 0 ;;

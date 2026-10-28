@@ -1785,6 +1785,59 @@ fm_composer_dialog_sink_release() {
   fi
 }
 
+# _fm_composer_agy_idle_empty: 0 when the screen is an idle agy composer with
+# nothing typed. agy draws a borderless bare `>` row between two solid rules,
+# with its idle status row (`? for shortcuts`, the busy row's `esc to cancel`
+# never coexists with it) as the last row on the screen. The bare `>` is also
+# a dead-shell prompt, so the glyph alone proves nothing; the status row is
+# the identity proof and the cursor, when known, must sit on the glyph row.
+# The row's remainder must be empty, or agy's ghost hint: a 256-colour
+# foreground run (SGR 38;5;241) covering all of it, readable only on a styled
+# capture. Captured live on agy 1.2.0, 2026-10-28.
+_fm_composer_agy_idle_empty() {  # <screen> <plain> <styled> <cursor-row>
+  local screen=$1 plain=$2 styled=$3 cy=${4:-} line i=0 last=-1 status=-1 glyph=-1 prev
+  local -a rows=() nb=()
+  mapfile -t rows <<<"$plain"
+  for line in "${rows[@]}"; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    [ -z "$line" ] || nb+=("$i")
+    i=$((i + 1))
+  done
+  last=$((${#nb[@]} - 1))
+  [ "$last" -ge 1 ] || return 1
+  status=${nb[$last]}
+  case "${rows[$status]#"${rows[$status]%%[![:space:]]*}"}" in
+    '? for shortcuts'|'? for shortcuts '*) ;;
+    *) return 1 ;;
+  esac
+  prev=$((last - 1))
+  line=${rows[${nb[$prev]}]}
+  line="${line#"${line%%[![:space:]]*}"}"
+  if [ "${line//─/}" = "" ] && [ "${#line}" -ge 8 ] && [ "$prev" -ge 1 ]; then
+    prev=$((prev - 1))
+    line=${rows[${nb[$prev]}]}
+    line="${line#"${line%%[![:space:]]*}"}"
+  fi
+  glyph=${nb[$prev]}
+  case "$line" in '>'|'> '*) ;; *) return 1 ;; esac
+  [ -z "$cy" ] || [ "$cy" = "$glyph" ] || return 1
+  line=${line#>}
+  line="${line#"${line%%[![:space:]]*}"}"
+  [ -z "$line" ] && return 0
+  [ "$styled" = 1 ] || return 1
+  local raw
+  raw=$(_fm_composer_screen_row "$glyph" "$screen")
+  raw=${raw#*$'\033[39m'}
+  case "$raw" in
+    ' '$'\033[38;5;241m'*$'\033[39m') ;;
+    *) return 1 ;;
+  esac
+  raw=${raw#' '$'\033[38;5;241m'}
+  raw=${raw%$'\033[39m'}
+  case "$raw" in *$'\033'*) return 1 ;; esac
+  return 0
+}
+
 fm_composer_classify_screen() {  # <caps> <screen> [cursor_row] [identity]
   local caps=$1 screen=$2 cy=${3:-} identity=${4:-}
   local styled=0 cursor=0 has_identity=0 kv plain
@@ -1804,6 +1857,9 @@ EOF
     case "$cy" in *[!0-9]*) printf 'unknown'; return 0 ;; esac
   fi
   plain=$(printf '%s\n' "$screen" | fm_composer_strip_ansi)
+  if _fm_composer_agy_idle_empty "$screen" "$plain" "$styled" "$cy"; then
+    printf 'empty'; return 0
+  fi
   FM_COMPOSER_SCAN_TITLED_RULES=0 _fm_composer_scan_screen "$plain" "$cy"
   # A titled rule is ordinary text unless the pane is proven to run claude:
   # only then is it re-read as claude's composer separator.

@@ -904,6 +904,25 @@ fm_busy_agy_tail_busy() {
     | grep -qiE 'esc[[:space:]]+to[[:space:]]+cancel'
 }
 
+# fm_busy_agy_tail_idle: the AGY-only idle counterpart. Consumes the tail on
+# stdin; 0 when the last non-blank row is agy's idle status row
+# (`? for shortcuts`, which replaces the busy row's `esc to cancel`) directly
+# under a `>` composer row, optionally with the composer's closing rule between
+# them. The composer row's text is not read: typed or ghost text there does not
+# make a turn run. An idle footer with no composer row above it is a scrolled
+# or partial tail and stays unknown.
+fm_busy_agy_tail_idle() {
+  grep -v '^[[:space:]]*$' | tail -3 | awk '
+    { l[NR] = $0 }
+    END {
+      if (NR < 2) exit 1
+      if (l[NR] !~ /^[[:space:]]*\? for shortcuts([[:space:]]|$)/) exit 1
+      i = NR - 1
+      if (l[i] ~ /^[[:space:]]*(─){8,}[[:space:]]*$/) i--
+      exit !(i >= 1 && l[i] ~ /^[[:space:]]*>([[:space:]]|$)/)
+    }'
+}
+
 # --- launch-prompt signatures (fm_busy_launch_prompt_parked) ----------------
 #
 # Each function consumes a captured pane tail on stdin (the caller's whole
@@ -1248,9 +1267,12 @@ fm_busy_classify() {  # <backend> <target> <harness> <id> <state-dir> [tail40]
         fi
       fi
       # Best-effort like rovo: a long turn can scroll the busy marker out of
-      # the captured tail, so its absence means "can't tell," never idle.
+      # the captured tail, so its absence alone means "can't tell," never idle.
+      # Idle needs the positive idle status row under a composer row.
       if printf '%s' "$tail40" | fm_busy_agy_tail_busy; then
         printf 'busy agy-regex'
+      elif printf '%s' "$tail40" | fm_busy_agy_tail_idle; then
+        printf 'idle agy-regex'
       else
         printf 'unknown agy-regex'
       fi

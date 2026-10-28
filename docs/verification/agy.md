@@ -109,7 +109,7 @@ The completed turn showed the reply, then the idle composer:
 `fm_busy_agy_tail_busy` and the delivery guard in `bin/fm-composer-lib.sh` match the `esc to cancel` token alone: the TUI pins that status row to the bottom of the pane for the whole turn, and the idle row replaces it with `? for shortcuts`.
 The `Generating...` spinner word is deliberately not a signal: it is a free-floating output line, so ordinary worker output such as `Generating report...` would otherwise classify an idle worker as busy or acknowledge a submit that did not land.
 No busy phase without the status row was observed live; every captured mid-turn frame carried it.
-`fm_busy_classify` reports `unknown agy-regex` when the token is absent, because a long turn can scroll the marker out of the captured tail.
+`fm_busy_classify` reports `unknown agy-regex` when the token is absent, because a long turn can scroll the marker out of the captured tail; it reports `idle agy-regex` when the last row is `? for shortcuts` directly under a `>` composer row (capture: `tests/captures/agy-1.2.0-idle-ghost.ansi`, agy 1.2.0, 2026-10-28).
 The signature is hardcoded with no environment override, so a stray variable can never change worker-state classification.
 Herdr's own registry agreed throughout: `agent get` reported `agent_status=working` mid-turn and `idle` after, so on Herdr the native verdict carries busy with no new code.
 

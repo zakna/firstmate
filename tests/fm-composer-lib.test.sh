@@ -1255,7 +1255,7 @@ test_matrix_agy_idle_bare_gt_row() {
   assert_screen "agy plain capture cannot tell its ghost hint from typed text" unknown "$CAPS_PLAIN" "$plain"
   assert_screen "agy plain capture with an empty composer" empty "$CAPS_PLAIN" \
     "$(printf 'older output\n%s\n>\n%s\n? for shortcuts      accept-edits · Gemini 3.8 Flash · high\n' "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)" "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)")"
-  assert_screen "agy typed text is pending" pending "$CAPS_STYLED_NOID" \
+  assert_screen "agy typed text is never read empty" unknown "$CAPS_STYLED_NOID" \
     "$(printf 'older output\n%s\n> hello there\n%s\n? for shortcuts      accept-edits · Gemini 3.8 Flash · high\n' "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)" "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)")"
   assert_screen "a bare shell prompt without the agy status row stays unknown" unknown "$CAPS_PLAIN" \
     "$(printf 'older output\n>\n')"
