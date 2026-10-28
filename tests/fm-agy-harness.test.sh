@@ -202,6 +202,21 @@ esc to cancel                                                           Gemini 3
   pass "fm-busy-lib: agy classifies busy on its marker and unknown without it"
 }
 
+test_agy_classify_reports_idle_for_an_idle_status_row_over_an_empty_composer() {
+  local statedir got
+  statedir="$TMP_ROOT/classify-idle"; mkdir -p "$statedir"
+  got=$(fm_busy_classify tmux fake:win agy agy-case-3 "$statedir" "$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.txt")")
+  [ "$got" = "idle agy-regex" ] || fail "an idle agy pane must classify idle agy-regex, got '$got'"
+  got=$(fm_busy_classify tmux fake:win agy agy-case-4 "$statedir" 'reply landed
+? for shortcuts                                                         Gemini 3.8 Flash · low')
+  [ "$got" = "unknown agy-regex" ] || fail "an idle footer with no composer row must stay unknown, got '$got'"
+  got=$(fm_busy_classify tmux fake:win agy agy-case-5 "$statedir" '>
+? for shortcuts
+esc to cancel')
+  [ "$got" = "busy agy-regex" ] || fail "the busy marker must win over the idle footer, got '$got'"
+  pass "fm-busy-lib: agy classifies idle on its idle status row over a composer row"
+}
+
 test_agy_tmux_names_the_native_binary_an_agent() {
   local got
   # shellcheck source=/dev/null
@@ -894,6 +909,7 @@ test_agy_control_mechanics_are_the_verified_ones
 test_agy_busy_tail_needs_the_pinned_status_row
 test_agy_busy_signatures_are_harness_scoped
 test_agy_classify_reports_unknown_when_the_marker_scrolls_out
+test_agy_classify_reports_idle_for_an_idle_status_row_over_an_empty_composer
 test_agy_tmux_names_the_native_binary_an_agent
 test_herdr_done_with_live_registry_stays_live
 test_herdr_registered_status_over_a_shell_only_pane_is_stale_not_live

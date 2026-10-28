@@ -1242,6 +1242,26 @@ test_dialog_note_skips_the_match_when_no_sink_is_set() {
   pass "a dialog note without a sink skips the match, and release leaves a caller RETURN trap"
 }
 
+test_matrix_agy_idle_bare_gt_row() {
+  # Real idle agy 1.2.0 (tests/captures): a borderless `>` row between two
+  # rules, ghost hint in SGR 38;5;241, `? for shortcuts` as the last row.
+  # The bare `>` is also a dead-shell glyph, so the status row is the proof.
+  local styled plain
+  styled=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.ansi")
+  plain=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.txt")
+  assert_screen "agy idle (herdr)" empty "$CAPS_STYLED_NOID" "$styled"
+  assert_screen "agy idle (tmux, cursor on the glyph row)" empty "$CAPS_TMUX" "$styled" 14 'agy\tidle'
+  assert_screen "agy idle with the cursor elsewhere" unknown "$CAPS_TMUX" "$styled" 3 'agy\tidle'
+  assert_screen "agy plain capture cannot tell its ghost hint from typed text" unknown "$CAPS_PLAIN" "$plain"
+  assert_screen "agy plain capture with an empty composer" empty "$CAPS_PLAIN" \
+    "$(printf 'older output\n%s\n>\n%s\n? for shortcuts      accept-edits · Gemini 3.8 Flash · high\n' "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)" "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)")"
+  assert_screen "agy typed text is pending" pending "$CAPS_STYLED_NOID" \
+    "$(printf 'older output\n%s\n> hello there\n%s\n? for shortcuts      accept-edits · Gemini 3.8 Flash · high\n' "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)" "$(printf '─%.0s' 1 2 3 4 5 6 7 8 9 10)")"
+  assert_screen "a bare shell prompt without the agy status row stays unknown" unknown "$CAPS_PLAIN" \
+    "$(printf 'older output\n>\n')"
+  pass "fm-composer-lib: an idle agy composer reads empty, and only on its status-row proof"
+}
+
 test_quoted_exit_picker_text_is_not_a_dialog() {
   local screen out rc sink enters
   screen=$(quoted_exit_picker_screen)
@@ -1278,3 +1298,4 @@ test_background_exit_picker_stays_pending_and_blocks_retry
 test_dialog_heading_and_footer_must_be_the_recorded_lines
 test_dialog_note_skips_the_match_when_no_sink_is_set
 test_quoted_exit_picker_text_is_not_a_dialog
+test_matrix_agy_idle_bare_gt_row

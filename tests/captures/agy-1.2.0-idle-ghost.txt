@@ -1,0 +1,24 @@
+
+
+      ▄▀▀▄        Antigravity CLI 1.4.9
+     ▀▀▀▀▀▀       user@example.com (Google AI Plus)
+    ▀▀▀▀▀▀▀▀      Gemini 3.8 Flash (High)
+   ▄▀▀    ▀▀▄     /work/tree
+  ▄▀▀      ▀▀▄
+
+
+ ┃ Verbosity now defaults to medium
+ ┃ Verbosity is now medium by default, so tool calls and thoughts roll up into summaries. You can
+ ┃ change your preferred verbosity anytime in /config > Verbosity.
+ ┃ esc to dismiss
+────────────────────────────────────────────────────────────────────────────────────────────────────
+> Accept-edits mode: file edits auto-approved (shift+tab to cycle)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+? for shortcuts                                               accept-edits · Gemini 3.8 Flash · high
+
+
+
+
+
+
+
