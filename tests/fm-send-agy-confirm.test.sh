@@ -40,10 +40,10 @@ TMP_ROOT=$(fm_test_tmproot fm-send-agy-confirm)
 
 # A fake tmux that models agy's late busy render, plus a fake sleep that
 # records every requested duration (one per line) into FM_SLEEP_LOG instead of
-# sleeping. The styled capture (-e) always shows agy's idle bare-`>` composer
-# (verdict `unknown`); the plain capture - the one fm_pane_busy_state polls -
-# shows the idle screen until its BUSY_AT-th call and the verified `esc to
-# cancel` busy row from then on. The BUSY_AT threshold is read from the
+# sleeping. The styled capture (-e) always shows the steer text still in agy's
+# `>` composer (verdict `unknown`); the plain capture - the one
+# fm_pane_busy_state polls - shows that same idle screen until its BUSY_AT-th
+# call and the verified `esc to cancel` busy row from then on. The BUSY_AT threshold is read from the
 # per-case dir so cases are independent.
 make_stubs() {  # <dir> <busy-at> -> echoes fakebin dir
   local dir=$1 busy_at=$2 fb="$1/fakebin"
