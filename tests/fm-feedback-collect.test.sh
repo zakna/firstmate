@@ -192,7 +192,7 @@ test_collects_every_source_in_the_window() {
   for absent in OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-APPROVED-OLD PROPOSAL-WORDPART PROPOSAL-NO-RECORD task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
   done
-  assert_grep 'Landed set: tickets merged through a no-mistakes pipeline run only.' "$md" 'markdown states the landed-set boundary'
+  assert_grep 'Landed set: backlog Done entries that record a landing in the window, plus tickets merged through a no-mistakes pipeline run.' "$md" 'markdown states the landed-set boundary'
   assert_grep '| finding | 5 |' "$md" 'markdown counts records by source'
   assert_grep '| warning | 3 |' "$md" 'markdown counts findings by severity'
   assert_grep '| a.sh | 2 |' "$md" 'markdown counts records by file'

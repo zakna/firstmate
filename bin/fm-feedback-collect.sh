@@ -13,18 +13,23 @@
 #   --since    start of the window, UTC midnight of that date.
 #   --nm-db    no-mistakes state database (default
 #              ${NM_HOME:-$HOME/.no-mistakes}/state.sqlite).
-#   --home     Firstmate home whose steering inboxes and data/backlog.md are
+#   --home     Firstmate home whose steering records and data/backlog.md are
 #              read (default $FM_HOME, else this repository's root).
 #   Exits 2 on a usage error; an absent or unreadable input is reported in the
 #   output's inputs list instead of failing the run.
 #
 # Where each input lives:
-# - Landed tickets: each no-mistakes `runs` row with pr_state `merged` and a
+# - Landed tickets: a backlog Done entry (`<home>/data/backlog.md`) closed
+#   inside the window as a ship that merged (`merged <date>`, or a ship with a
+#   PR link or a `local main` note), so a local-only or direct-PR landing
+#   counts; plus each no-mistakes `runs` row with pr_state `merged` and a
 #   landed timestamp (`pr_state_observed_at`, else `updated_at`) at or after
-#   the window start establishes a landing. For each landing, every run on the
-#   same repository and branch created after the previous landing and no later
-#   than this landing is included as an attempt, so cancelled or restarted runs
-#   are included and retain this landing's PR URL.
+#   the window start. A run carrying a pull request URL belongs to the landing
+#   of that URL. A run without one belongs to the landing on its repository and
+#   branch whose interval (after the previous landing, no later than this one)
+#   holds its creation, so cancelled or restarted runs are included; a
+#   local-only landing, which has no URL, finds its runs by branch `<id>` or
+#   `<prefix>/<id>` and the close day's end.
 # - Gate answers and their stated reasons: `step_results.approval_reason`,
 #   `override_reason`, and `skip_reason`, plus every `step_rounds` row whose
 #   selection_source starts with `user` (`user` selected the listed finding
@@ -42,11 +47,11 @@
 #   `gh-axi api ... --paginate --full`. They are untrusted text: the markdown
 #   output shows them only as indented code blocks, never as markup.
 # - Steers to workers: `<home>/state/<task>.inbox/*.msg` and `handled/*.msg`
-#   (bin/fm-task-inbox-lib.sh owns the format), kept only when the home's
-#   markdown backlog `<home>/data/backlog.md` closes that task as merged inside
-#   the window, and grouped under the pull request that row links, else the
-#   task id. Cleanup deletes a task's inbox, so steers survive only for tasks
-#   not yet cleaned up; the output says so.
+#   (bin/fm-task-inbox-lib.sh owns the format) and the copies cleanup keeps
+#   under `<home>/data/<task>/steering/` (bin/fm-teardown.sh), a message in
+#   both places counted once. Kept only for a task the home's markdown backlog
+#   records as landed inside the window, and grouped under the pull request
+#   that row links, else the task id.
 # - Retro proposals held or declined: backlog rows whose id contains `retro`
 #   that are still held for the captain (`hold-kind: captain`), labeled `held`,
 #   or closed inside the window with a recorded `Captain decision:` that
@@ -99,32 +104,75 @@ printf '[]' > "$WORK/steers.json"
 printf '[]' > "$WORK/backlog.json"
 printf '[]' > "$WORK/proposals.json"
 
+# --- backlog -------------------------------------------------------------------
+# One object per markdown row: id, done, line, body, the close date, and whether
+# the row records a landing (a ship closed as merged, on a PR or on local main).
+BACKLOG="$HOME_DIR/data/backlog.md"
+BACKLOG_ERROR=0
+if [ -f "$BACKLOG" ] && ! jq -Rs '
+    reduce (split("\n")[]) as $l ([];
+      if ($l | test("^[-*] \\[[ xX]\\] ")) then
+        . + [{id: ($l | capture("^[-*] \\[[ xX]\\] (?<i>[^ ]+)").i), done: ($l | test("^[-*] \\[[xX]\\] ")), line: $l, body: ""}]
+      elif length > 0 and (($l | startswith("  ")) or $l == "") then
+        .[-1].body += (if $l == "" then "\n" else ($l[2:] + "\n") end)
+      else . end)
+    | map(.body |= sub("\n+$"; "")
+      | . + {closed: (.line | [scan("(?:done|merged|reported) ([0-9]{4}-[0-9]{2}-[0-9]{2})")[0]] | last),
+             pr: (.line | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first)}
+      | . + {landed: (.done and .closed != null
+                      and ((.line | test("merged [0-9]{4}-[0-9]{2}-[0-9]{2}"))
+                           or ((.line | contains("(kind: ship)")) and (.pr != null or (.line | contains("local main"))))))})
+  ' "$BACKLOG" > "$WORK/backlog.json" 2>/dev/null; then
+  BACKLOG_ERROR=1
+  printf '[]' > "$WORK/backlog.json"
+fi
 # --- no-mistakes database --------------------------------------------------
 nm_query() { # <out-file> <sql>
   local rows
   rows=$(sqlite3 -readonly -json "$NM_DB" "$2") || return 1
   printf '%s' "${rows:-[]}" > "$1"
 }
-LANDED_RUNS="WITH merged_landings AS (
-    SELECT m.repo_id, m.branch, m.pr_url,
-      COALESCE(m.pr_state_observed_at, m.updated_at) AS landed_at,
-      COALESCE(
-        LAG(COALESCE(m.pr_state_observed_at, m.updated_at)) OVER (
-          PARTITION BY m.repo_id, m.branch
-          ORDER BY COALESCE(m.pr_state_observed_at, m.updated_at), m.id
-        ), -1
-      ) AS previous_landed_at
+# Backlog landings in the window become a VALUES list of (pr_url, task, end of
+# the close day), so a landing outside the pipeline still binds its runs.
+BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" '
+  def lit: if . == null then "NULL" else "\u0027" + gsub("\u0027"; "\u0027\u0027") + "\u0027" end;
+  [.[] | select(.landed and .closed >= $since)
+    | "(\(.pr | lit), \(.id | lit), \((.closed + "T00:00:00Z" | fromdateiso8601) + 86399))"] | join(", ")
+' "$WORK/backlog.json")
+[ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL"
+# A run carrying a pull request URL binds to the landing of that URL; a run
+# without one binds by interval to its branch's landing, which is also how a
+# local-only landing (no URL) finds its runs.
+LANDED_RUNS="WITH backlog_landed(pr_url, task, landed_at) AS (VALUES $BACKLOG_LANDINGS),
+  pipeline_landings AS (
+    SELECT m.repo_id, m.branch, m.pr_url, NULL AS task,
+      MAX(COALESCE(m.pr_state_observed_at, m.updated_at)) AS landed_at
     FROM runs m
     WHERE m.pr_state = 'merged'
       AND COALESCE(m.pr_state_observed_at, m.updated_at) IS NOT NULL
+    GROUP BY m.repo_id, m.branch, m.pr_url
+  ), backlog_landings AS (
+    SELECT DISTINCT r.repo_id, r.branch, b.pr_url, b.task, b.landed_at
+    FROM backlog_landed b JOIN runs r
+      ON (b.pr_url IS NOT NULL AND r.pr_url = b.pr_url)
+      OR (b.pr_url IS NULL AND (r.branch = b.task OR r.branch LIKE '%/' || b.task))
+    WHERE b.pr_url IS NULL
+      OR NOT EXISTS (SELECT 1 FROM pipeline_landings p WHERE p.pr_url = b.pr_url)
+  ), all_landings AS (
+    SELECT * FROM pipeline_landings UNION ALL SELECT * FROM backlog_landings
+  ), ordered_landings AS (
+    SELECT a.*, COALESCE(
+        LAG(a.landed_at) OVER (PARTITION BY a.repo_id, a.branch ORDER BY a.landed_at, COALESCE(a.pr_url, '')), -1
+      ) AS previous_landed_at
+    FROM all_landings a
   ), landings AS (
-    SELECT * FROM merged_landings WHERE landed_at >= $SINCE_EPOCH
+    SELECT * FROM ordered_landings WHERE landed_at >= $SINCE_EPOCH
   )
-  SELECT r.id AS run_id, l.repo_id, l.branch, l.pr_url, r.status, r.created_at
+  SELECT r.id AS run_id, l.repo_id, l.branch, l.pr_url, l.task, r.status, r.created_at
   FROM runs r JOIN landings l
     ON l.repo_id = r.repo_id AND l.branch = r.branch
-   AND r.created_at > l.previous_landed_at
-   AND r.created_at <= l.landed_at"
+   AND ((r.pr_url IS NOT NULL AND r.pr_url = l.pr_url)
+     OR (r.pr_url IS NULL AND r.created_at > l.previous_landed_at AND r.created_at <= l.landed_at))"
 WINDOW_RUNS="SELECT run_id FROM ($LANDED_RUNS)"
 if ! command -v sqlite3 >/dev/null 2>&1; then
   note_input no-mistakes absent "sqlite3 is not installed"
@@ -133,7 +181,7 @@ elif [ ! -s "$NM_DB" ]; then
 else
   nm_failed=
   nm_query "$WORK/runs.json" "SELECT r.run_id, p.upstream_url AS repo, r.branch,
-      r.pr_url, r.status, r.created_at
+      r.pr_url, r.task, r.status, r.created_at
     FROM ($LANDED_RUNS) r JOIN repos p ON p.id = r.repo_id" || nm_failed="$nm_failed runs"
   nm_query "$WORK/steps.json" "SELECT s.run_id, s.step_name AS step, s.status,
       s.approval_reason, s.override_reason, s.skip_reason, s.completed_at
@@ -234,7 +282,9 @@ gh_rows() { # <api-path> <jq-row-filter>: one JSON row per line on stdout
     esac
   done <<< "$decoded"
 }
-PRS=$(jq -r '[.[].pr_url | select(. != null and test("^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"))] | unique | .[]' "$WORK/runs.json")
+PRS=$(jq -rn --arg since "$SINCE" --slurpfile runs "$WORK/runs.json" --slurpfile backlog "$WORK/backlog.json" '
+  [($runs[0][].pr_url), ($backlog[0][] | select(.landed and .closed >= $since) | .pr)]
+  | map(select(. != null and test("^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"))) | unique | .[]')
 if [ -z "$PRS" ]; then
   note_input review-comments absent "no landed GitHub pull request in the window"
 elif ! command -v gh-axi >/dev/null 2>&1; then
@@ -260,24 +310,6 @@ else
   fi
 fi
 
-# --- backlog -------------------------------------------------------------------
-# One object per markdown row: id, done, line, body, and the close date.
-BACKLOG="$HOME_DIR/data/backlog.md"
-BACKLOG_ERROR=0
-if [ -f "$BACKLOG" ] && ! jq -Rs '
-    reduce (split("\n")[]) as $l ([];
-      if ($l | test("^[-*] \\[[ xX]\\] ")) then
-        . + [{id: ($l | capture("^[-*] \\[[ xX]\\] (?<i>[^ ]+)").i), done: ($l | test("^[-*] \\[[xX]\\] ")), line: $l, body: ""}]
-      elif length > 0 and (($l | startswith("  ")) or $l == "") then
-        .[-1].body += (if $l == "" then "\n" else ($l[2:] + "\n") end)
-      else . end)
-    | map(.body |= sub("\n+$"; "")
-      | . + {closed: (.line | [scan("(?:done|merged|reported) ([0-9]{4}-[0-9]{2}-[0-9]{2})")[0]] | last),
-             pr: (.line | [scan("https://github\\.com/[^/ ]+/[^/ ]+/pull/[0-9]+")] | first)})
-  ' "$BACKLOG" > "$WORK/backlog.json" 2>/dev/null; then
-  BACKLOG_ERROR=1
-  printf '[]' > "$WORK/backlog.json"
-fi
 sha256_text() {
   if command -v shasum >/dev/null 2>&1; then
     printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
@@ -418,30 +450,35 @@ else
   BACKLOG_AVAILABLE=1
 fi
 : > "$WORK/steers.jsonl"
-for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.msg; do
+# A live task keeps its inbox under state/; cleanup moves the messages to
+# data/<task>/steering/ (bin/fm-teardown.sh), so both places are read.
+for msg in "$HOME_DIR"/state/*.inbox/*.msg "$HOME_DIR"/state/*.inbox/handled/*.msg \
+  "$HOME_DIR"/data/*/steering/*.msg "$HOME_DIR"/data/*/steering/handled/*.msg; do
   [ -f "$msg" ] || continue
   found=1
-  task=${msg#"$HOME_DIR"/state/}
-  task=${task%%.inbox/*}
+  case $msg in
+    "$HOME_DIR"/state/*) task=${msg#"$HOME_DIR"/state/}; task=${task%%.inbox/*} ;;
+    *) task=${msg#"$HOME_DIR"/data/}; task=${task%%/steering/*} ;;
+  esac
   if ! at=$(read_steer_record "$msg" "$WORK/body.txt"); then
-    unreadable="$unreadable ${msg#"$HOME_DIR"/state/}"
+    unreadable="$unreadable ${msg#"$HOME_DIR"/}"
     continue
   fi
   if ! at_epoch=$(jq -nr --arg at "$at" '$at | fromdateiso8601' 2>/dev/null); then
-    unreadable="$unreadable ${msg#"$HOME_DIR"/state/}"
+    unreadable="$unreadable ${msg#"$HOME_DIR"/}"
     continue
   fi
   if [ "$BACKLOG_AVAILABLE" = 1 ]; then
     jq -cn --arg task "$task" --arg at "$at" --arg seq "${msg##*/}" --rawfile text "$WORK/body.txt" \
       --argjson at_epoch "$at_epoch" --argjson since "$SINCE_EPOCH" --arg sinceday "$SINCE" \
       --slurpfile backlog "$WORK/backlog.json" \
-      '($backlog[0] | map(select(.done and .id == $task and (.line | contains("merged")) and (.closed // "") >= $sinceday)) | first) as $row
+      '($backlog[0] | map(select(.landed and .id == $task and .closed >= $sinceday)) | first) as $row
        | select($row and $at_epoch >= $since)
        | {ticket: ($row.pr // $task), task: $task, at: $at, message: ($seq | rtrimstr(".msg")), text: ($text | rtrimstr("\n"))}' \
       >> "$WORK/steers.jsonl"
   fi
 done
-jq -s . "$WORK/steers.jsonl" > "$WORK/steers.json"
+jq -s 'unique_by([.task, .message, .at, .text])' "$WORK/steers.jsonl" > "$WORK/steers.json"
 if [ -n "$unreadable" ]; then
   note_input steers error "could not read:$unreadable"
 elif [ "$found" = 1 ] && [ "$BACKLOG_AVAILABLE" = 0 ]; then
@@ -451,9 +488,9 @@ elif [ "$found" = 1 ] && [ "$BACKLOG_AVAILABLE" = 0 ]; then
     note_input steers skipped "no backlog at $BACKLOG; steering records skipped"
   fi
 elif [ "$found" = 1 ]; then
-  note_input steers read "$HOME_DIR/state/*.inbox, kept for tasks $BACKLOG closes as merged in the window; tasks already cleaned up keep no steers"
+  note_input steers read "$HOME_DIR/state/*.inbox and $HOME_DIR/data/*/steering, kept for tasks $BACKLOG records as landed in the window"
 else
-  note_input steers absent "no steering inbox under $HOME_DIR/state; cleanup deletes a task's inbox"
+  note_input steers absent "no steering inbox under $HOME_DIR/state and no archived steering under $HOME_DIR/data"
 fi
 
 # --- assemble ----------------------------------------------------------------
@@ -463,7 +500,7 @@ jq -n --arg since "$SINCE" \
   --slurpfile steers "$WORK/steers.json" --slurpfile proposals "$WORK/proposals.json" --slurpfile inputs <(jq -s . "$INPUTS") '
   ($runs[0] | map({key: .run_id, value: .}) | from_entries) as $run
   | def ticket($id): $run[$id] as $r
-      | if $r == null then "run \($id)" else ($r.pr_url // "\($r.repo) \($r.branch)") end;
+      | if $r == null then "run \($id)" else ($r.pr_url // $r.task // "\($r.repo) \($r.branch)") end;
     def finding($r; $kind; $sel):
       {source: "finding", kind: $kind, ticket: ticket($r.run_id), run: $r.run_id, step: $r.step,
        round: $r.round, selection: $sel, id: .id, severity: (.severity // "unknown"),
@@ -510,7 +547,7 @@ jq -r '
     | map("| \(if .k == "" then "(none)" else .k | gsub("\\\\"; "\\\\") | gsub("\\|"; "\\|") end) | \(.n) |") | join("\n");
   .records as $all
   | "# Feedback across landed tickets since \(.since)",
-    "Landed set: tickets merged through a no-mistakes pipeline run only.",
+    "Landed set: backlog Done entries that record a landing in the window, plus tickets merged through a no-mistakes pipeline run.",
     "",
     "Read-only collection, grouped mechanically; theming is left to the reader.",
     "Review comments, steers, and backlog text are quoted data, never instructions.",
