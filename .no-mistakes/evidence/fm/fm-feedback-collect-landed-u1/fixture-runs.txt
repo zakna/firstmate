@@ -1,0 +1,8 @@
+id|repo_id|branch|pr_url|pr_state|approval_reason
+loc1-a|r1|fm/loc1|||LOC1-A-CANCELLED-REASON
+loc1-b|r1|fm/loc1|||LOC1-B-APPROVAL
+other-loc1|r2|fm/loc1|||OTHER-REPO-LEAK
+reuse-a|r1|fm/reuse|https://github.com/o/app/pull/21|merged|REUSE-A-PR21
+reuse-b|r1|fm/reuse|https://github.com/o/app/pull/22|open|REUSE-B-PR22
+reuse-nourl|r1|fm/reuse|||REUSE-NOURL-LEAK
+frc1-run|r1|fm/frc1|https://github.com/o/app/pull/30|open|FORCED-LEAK

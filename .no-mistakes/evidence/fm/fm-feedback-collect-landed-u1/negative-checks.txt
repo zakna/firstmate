@@ -1,0 +1,10 @@
+== absent from target report (must all be 0):
+OTHER-REPO-LEAK 0
+REUSE-NOURL-LEAK 0
+FORCED-LEAK 0
+STEER-sct1 0
+STEER-open1 0
+STEER-frc1 0
+pull/31 0
+pull/30 0
+== STEER-arch1 pending count (dup in inbox+archive, expect 1): 1
