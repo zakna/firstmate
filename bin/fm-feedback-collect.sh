@@ -30,7 +30,7 @@
 #   branch whose interval (after the previous landing, no later than this one)
 #   holds its creation, so cancelled or restarted runs are included; a
 #   local-only landing, which has no URL, finds its runs by branch `<id>` or
-#   `<prefix>/<id>` and the close day's end.
+#   `<prefix>/<id>` and the close day's end in local time.
 # - Gate answers and their stated reasons: `step_results.approval_reason`,
 #   `override_reason`, and `skip_reason`, plus every `step_rounds` row whose
 #   selection_source starts with `user` (`user` selected the listed finding
@@ -150,11 +150,11 @@ nm_query() { # <out-file> <sql>
   printf '%s' "${rows:-[]}" > "$1"
 }
 # Backlog landings in the window become a VALUES list of (pr_url, task, end of
-# the close day), so a landing outside the pipeline still binds its runs.
+# the close day in local time, as tasks-axi dates it), so a landing outside the pipeline still binds its runs.
 BACKLOG_LANDINGS=$(jq -r --arg since "$SINCE" '
   def lit: if . == null then "NULL" else "\u0027" + gsub("\u0027"; "\u0027\u0027") + "\u0027" end;
   [.[] | select(.landed and .closed >= $since)
-    | "(\(.pr_url | lit), \(.id | lit), \((.closed + "T00:00:00Z" | fromdateiso8601) + 86399))"] | join(", ")
+    | "(\(.pr_url | lit), \(.id | lit), CAST(strftime(\u0027%s\u0027, \(.closed + " 23:59:59" | lit), \u0027utc\u0027) AS INTEGER))"] | join(", ")
 ' "$WORK/backlog.json")
 [ -n "$BACKLOG_LANDINGS" ] || BACKLOG_LANDINGS="(NULL, NULL, NULL) EXCEPT SELECT NULL, NULL, NULL"
 # A run carrying a pull request URL binds to the landing of that URL; a run

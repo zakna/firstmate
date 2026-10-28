@@ -254,9 +254,11 @@ test_backlog_done_entries_define_the_landed_set() {
   printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_comments.json"
   sqlite3 "$dir/state.sqlite" <<SQL
 INSERT INTO runs VALUES
-  ('local-attempt', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10)));
+  ('local-attempt', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
+  ('local-late', 'r1', 'fm/task-local', 'completed', NULL, 'none', NULL, $(epoch 2026-09-22T02:00:00Z), $(epoch 2026-09-22T02:00:00Z));
 INSERT INTO step_results VALUES
-  ('s-local', 'local-attempt', 'review', 'completed', 'LOCAL-ATTEMPT', NULL, NULL, $IN);
+  ('s-local', 'local-attempt', 'review', 'completed', 'LOCAL-ATTEMPT', NULL, NULL, $IN),
+  ('s-local-late', 'local-late', 'review', 'completed', 'LOCAL-LATE', NULL, NULL, $IN);
 SQL
   cat > "$dir/home/data/backlog.md" <<'MD'
 # Backlog
@@ -283,11 +285,12 @@ MD
     printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_${n}_comments.json"
   done
   fakebin=$(make_fakebin "$dir" "$dir/pages")
-  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+  TZ=America/Los_Angeles PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
     --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
     || fail 'collector failed on backlog-defined landings'
   jq -e '
     ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-ATTEMPT")][0].ticket == "task-local")
+    and ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-LATE")][0].ticket == "task-local")
     and ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
       == "https://github.com/o/app/pull/11")
     and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-LOCAL"])
