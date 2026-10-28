@@ -1069,9 +1069,10 @@ resolve_relaunch_profile() {
   # transaction, where nothing has changed yet.
   fm_control_harness_supports_kind "$TARGET_HARNESS" "$KIND" \
     || die "'$TARGET_HARNESS' is not verified to run a $KIND task, so relaunching $ID onto it would stop the running agent for a launch that must be refused; choose an adapter verified for this kind"
-  # A model or effort chosen for the previous harness does not transfer to a
-  # different one, so an explicit harness change resets both axes unless the
-  # caller names them too.
+  # A model chosen for the previous harness does not transfer to a different
+  # one, so an explicit harness change resets it unless the caller names it.
+  # A recorded effort is never dropped silently: the switch refuses until the
+  # caller names the effort for the new harness.
   if [ "$MODEL_SET" = 1 ]; then
     TARGET_MODEL=$NEW_MODEL
   elif [ "$HARNESS_SET" = 0 ] && [ -n "$CONFIG_HARNESS" ]; then
@@ -1087,6 +1088,8 @@ resolve_relaunch_profile() {
     TARGET_EFFORT=${CONFIG_EFFORT:-default}
   elif [ "$TARGET_HARNESS" = "$PRIOR_HARNESS" ]; then
     TARGET_EFFORT=$PRIOR_EFFORT
+  elif [ "$PRIOR_EFFORT" != default ]; then
+    die "relaunching $ID from $PRIOR_HARNESS onto $TARGET_HARNESS would drop its recorded effort '$PRIOR_EFFORT' for the new harness's own default; pass --effort <level> to choose one for $TARGET_HARNESS (or --effort default to accept that default)"
   else
     TARGET_EFFORT=default
   fi
