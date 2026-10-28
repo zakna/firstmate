@@ -1,0 +1,4 @@
+pr view https://github.com/zakna/firstmate/pull/91 --json state,mergedAt -q .state + " " + (.mergedAt // "")
+api repos/zakna/fm-tooling --jq .full_name
+api repos/zakna/fm-tooling/issues/73 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+api repos/zakna/fm-tooling/issues/73/comments?since=2026-10-27T23:13:36Z&per_page=100 --jq [.[] | select(.created_at > "2026-10-27T23:13:36Z")] | length

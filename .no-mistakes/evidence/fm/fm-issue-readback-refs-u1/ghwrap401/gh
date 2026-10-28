@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$GH_CALL_LOG"
+case "$1 $2" in "api repos/zakna/fm-tooling") GH_TOKEN=invalid-token-for-test exec /opt/homebrew/bin/gh "$@" ;; esac
+exec /opt/homebrew/bin/gh "$@"

@@ -1,0 +1,42 @@
+=== [base] s1-issue-brief: File it upstream through the fm-tooling route, like fm-tooling #49.
+exit=0
+--- gh calls:
+    api repos/zakna/firstmate/issues/49 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+=== [head] s1-issue-brief: File it upstream through the fm-tooling route, like fm-tooling #49.
+exit=0
+--- gh calls:
+    api repos/zakna/fm-tooling --jq .full_name
+    api repos/zakna/fm-tooling/issues/49 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+=== [base] s2-hex: Keep the colour #000000 and #1a2b3c, tag #12abc, and an anchor &#39; are styling, not issues.
+issue readback: could not read https://github.com/zakna/firstmate/issues/000000
+exit=1
+--- gh calls:
+    api repos/zakna/firstmate/issues/000000 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+    api repos/zakna/firstmate/issues/1 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+    api repos/zakna/firstmate/issues/12 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+=== [head] s2-hex: Keep the colour #000000 and #1a2b3c, tag #12abc, and an anchor &#39; are styling, not issues.
+exit=0
+--- gh calls:
+=== [base] s3-open-sibling: Fix the readback bug, tracked as fm-tooling #73.
+exit=0
+--- gh calls:
+    api repos/zakna/firstmate/issues/73 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+=== [head] s3-open-sibling: Fix the readback bug, tracked as fm-tooling #73.
+issue readback: https://github.com/zakna/fm-tooling/issues/73 is open with no comment since the merge at 2026-10-27T23:13:36Z
+exit=1
+--- gh calls:
+    api repos/zakna/fm-tooling --jq .full_name
+    api repos/zakna/fm-tooling/issues/73 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+    api repos/zakna/fm-tooling/issues/73/comments?since=2026-10-27T23:13:36Z&per_page=100 --jq [.[] | select(.created_at > "2026-10-27T23:13:36Z")] | length
+=== [base] s4-404-and-case: See nosuchrepo-xyz #49 and Fm-Tooling #49 and fm-tooling #49.
+exit=0
+--- gh calls:
+    api repos/zakna/firstmate/issues/49 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+=== [head] s4-404-and-case: See nosuchrepo-xyz #49 and Fm-Tooling #49 and fm-tooling #49.
+exit=0
+--- gh calls:
+    api repos/zakna/nosuchrepo-xyz --jq .full_name
+    api repos/zakna/Fm-Tooling --jq .full_name
+    api repos/zakna/fm-tooling --jq .full_name
+    api repos/zakna/firstmate/issues/49 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+    api repos/zakna/fm-tooling/issues/49 --jq .state + " " + (if .pull_request then "pr" else "issue" end)

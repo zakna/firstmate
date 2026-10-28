@@ -1,0 +1,2 @@
+pr view https://github.com/zakna/firstmate/pull/91 --json state,mergedAt -q .state + " " + (.mergedAt // "")
+api repos/zakna/fm-tooling --jq .full_name

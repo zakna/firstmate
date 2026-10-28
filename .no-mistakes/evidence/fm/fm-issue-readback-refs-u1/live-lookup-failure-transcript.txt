@@ -1,0 +1,5 @@
+=== [head] s1 brief with the sibling-repo lookup sent with an invalid token (real GitHub 401)
+issue readback: could not resolve fm-tooling #49
+exit=1
+--- gh calls:
+    api repos/zakna/fm-tooling --jq .full_name

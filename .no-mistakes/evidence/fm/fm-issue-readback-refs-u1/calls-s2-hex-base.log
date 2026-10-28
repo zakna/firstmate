@@ -1,0 +1,4 @@
+pr view https://github.com/zakna/firstmate/pull/91 --json state,mergedAt -q .state + " " + (.mergedAt // "")
+api repos/zakna/firstmate/issues/000000 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+api repos/zakna/firstmate/issues/1 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
+api repos/zakna/firstmate/issues/12 --jq .state + " " + (if .pull_request then "pr" else "issue" end)
