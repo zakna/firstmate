@@ -56,7 +56,7 @@ Open the pipeline database read-only.
 - The task's status log and steering messages: under `state/` while the task runs, and after cleanup as `status-log.txt` and `steering/` under `data/<task-id>/`.
 - The backlog item and its notes.
 - The pull request, or on a Gerrit project the submitted change: description, review comments from people and bots, checks or label votes, patch sets, merge or submit time, and the merged diff.
-- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request in the ticket's own repository, matched by its upstream address.
+- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request in the ticket's own repository, matched by its project clone, the `project=` path in the delivering task's metadata described below.
 - The earlier retro reports of the same project in this home: the reports whose first line starts with `# Retro: ` and whose second line is exactly `Project: <project>`.
   `P='<project>'; export P; if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' {} +; fi`
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
@@ -122,15 +122,16 @@ A ticket delivered without the pipeline has no run; report M2 to M6 as not appli
 These queries extract M2 to M6 and the M8 worklist.
 They read another tool's storage, so if one fails the schema has changed: report the metric under "Could not establish" and do not guess.
 A delivery whose validation was cancelled, failed, or restarted has several runs; every attempt is part of the process under study.
+In the first query, `<project clone>` is that exact `project=` path, the primary clone the database registers as `working_path`; a query returning no run for a ticket you know was validated means the path is wrong, not that the pipeline was skipped.
 Run the per-run queries for each run the first query returns, report M2 to M6 per attempt, and add the attempts up for the block, keeping the attempts distinguishable.
 
 ```sh
 DB="${NM_HOME:-$HOME/.no-mistakes}/state.sqlite"
 
 # every attempt: all runs on the delivery's branch or pull request in the delivery's own repository
-sqlite3 -readonly "$DB" "SELECT r.id, p.upstream_url, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
+sqlite3 -readonly "$DB" "SELECT r.id, p.working_path, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
   FROM runs r JOIN repos p ON p.id = r.repo_id
-  WHERE p.upstream_url = '<repository upstream url>' AND (r.branch = '<branch>' OR r.pr_url = '<pull request url>')
+  WHERE p.working_path = '<project clone>' AND (r.branch = '<branch>' OR r.pr_url = '<pull request url>')
   ORDER BY r.created_at;"
 
 # M2, and per-step durations
