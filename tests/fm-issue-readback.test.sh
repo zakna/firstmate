@@ -19,7 +19,7 @@ command -v jq >/dev/null 2>&1 || { echo "SKIP: jq is not installed"; exit 0; }
 #   pr.json                         the `gh pr view` answer
 #   issue-<owner>_<repo>_<n>.json   an issue, absent means a lookup error
 #   comments-<owner>_<repo>_<n>.json its comments, absent means []
-#   repo-<owner>_<repo>.json        a repository, absent means HTTP 404
+#   repo-<owner>_<repo>.json        a repository (lowercase name), absent means HTTP 404
 #   repo-<owner>_<repo>.err         a failed repository lookup, with this stderr
 # Every call is logged to $FM_TEST_GH_DIR/calls.
 make_fake_gh() {  # <case-dir>
@@ -43,7 +43,8 @@ case "$1 $2" in
     owner=${rest%%/*}; rest=${rest#*/}
     repo=${rest%%/*}; rest=${rest#*/issues/}
     case "$path" in
-      "repos/$owner/$repo") file=$dir/repo-${owner}_${repo}.json
+      "repos/$owner/$repo") repo=$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]')
+        file=$dir/repo-${owner}_${repo}.json
         [ -f "$dir/repo-${owner}_${repo}.err" ] && { cat "$dir/repo-${owner}_${repo}.err" >&2; exit 1; }
         [ -f "$file" ] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; } ;;
       *)
@@ -149,7 +150,7 @@ test_hex_colours_and_non_boundary_hashes_are_not_issues() {
 # issue 49 of the PR's repository; a bare #n after any other word stays local.
 test_bare_hash_after_a_sibling_repository_name_reads_that_repository() {
   local dir out
-  dir=$(make_case sibling-repo "File it upstream through the fm-tooling route, like fm-tooling #49. Fix #12.")
+  dir=$(make_case sibling-repo "File it upstream through the fm-tooling route, like fm-tooling #49. Fix #12; see Fm-Tooling #49.")
   printf '{"full_name":"acme/fm-tooling"}\n' > "$dir/gh/repo-acme_fm-tooling.json"
   issue "$dir" acme_fm-tooling_49 open
   issue "$dir" acme_widgets_12 closed
@@ -158,6 +159,8 @@ test_bare_hash_after_a_sibling_repository_name_reads_that_repository() {
   printf '%s\n' "$out" | grep -qF "https://github.com/acme/fm-tooling/issues/49 is open with no comment since the merge at $MERGED_AT" \
     || fail "the refusal did not name the issue of the named repository: $out"
   grep -qF 'repos/acme/widgets/issues/49' "$dir/gh/calls" && fail "#49 was read from the PR's repository"
+  printf '%s\n' "$out" | grep -qF 'Fm-Tooling' && fail "the brief's spelling of the repository was used: $out"
+  [ "$(grep -c '^api repos/acme/fm-tooling/issues/49 ' "$dir/gh/calls")" = 1 ] || fail "issue 49 of fm-tooling was not read exactly once"
   grep -qF 'repos/acme/widgets/issues/12' "$dir/gh/calls" || fail "#12 after an ordinary word was not read from the PR's repository"
   pass "a bare #n after a repository name of the same owner reads that repository"
 }

@@ -119,10 +119,10 @@ FAILED=0
 RESOLVED=
 while read -r repo number word; do
   if [ -n "$word" ]; then
-    if err=$(gh api "repos/$OWNER/$word" --jq .full_name 2>&1 >/dev/null); then
-      repo=$OWNER/$word
+    if out=$(gh api "repos/$OWNER/$word" --jq .full_name 2>&1); then
+      repo=$out
     else
-      case "$err" in
+      case "$out" in
         *"HTTP 404"*) ;;
         *)
           echo "issue readback: could not resolve $word #$number" >&2
