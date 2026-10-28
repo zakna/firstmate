@@ -1,0 +1,108 @@
+{
+  "schema": "fm-feedback-collect.v1",
+  "since": "2026-10-27",
+  "inputs": [
+    {
+      "name": "no-mistakes",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fmfc-live/state.sqlite: 4 runs on landed tickets"
+    },
+    {
+      "name": "review-comments",
+      "status": "read",
+      "detail": "3 pull requests"
+    },
+    {
+      "name": "retro-proposals",
+      "status": "absent",
+      "detail": "no held or declined retro row in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fmfc-live/home/data/backlog.md"
+    },
+    {
+      "name": "steers",
+      "status": "read",
+      "detail": "/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fmfc-live/home/state/*.inbox and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fmfc-live/home/data/*/steering, kept for tasks /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fmfc-live/home/data/backlog.md records as landed in the window"
+    }
+  ],
+  "records": [
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "loc1",
+      "run": "loc-early",
+      "step": "review",
+      "text": "LOC-EARLY-ANSWER"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "loc1",
+      "run": "loc-late",
+      "step": "test",
+      "text": "LOC-LATE-ANSWER"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/94",
+      "run": "reuse-a",
+      "step": "test",
+      "text": "REUSE-A-ANSWER"
+    },
+    {
+      "source": "gate-answer",
+      "kind": "approval",
+      "ticket": "https://github.com/zakna/firstmate/pull/95",
+      "run": "reuse-b",
+      "step": "test",
+      "text": "REUSE-B-ANSWER"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/93",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-28T21:23:50Z",
+      "text": "<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 {\"code_review\":{\"commit_sha\":\"8bbe0d2a386f6e3ff7cc88286ef5b4d409036c2b\",\"has_any_findings\":false,\"has_unresolved_findings\":false,\"status\":\"completed\"},\"security_review\":{\"commit_sha\":null,\"has_any_findings\":null,\"has_unresolved_findings\":null,\"status\":null}} -->\n\n## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request.\n\n| Review | Status | Commit | Review trigger |\n| --- | --- | --- | --- |\n| 📝 **Code Review** | ✅ **Completed** <relative-time datetime=\"2026-10-28T21:24:36.179249Z\">2026-10-28T21:24:36.179249Z</relative-time> | `8bbe0d2` | PR opened |\n\n\n\n<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n\n[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\" or \"@codex security review\".\n\nCodex reacts with 👀 while any review is running, comments if it has suggestions, and reacts with 👍 once all reviews finish with no findings.\n\n</details>"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/94",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-28T21:30:14Z",
+      "text": "<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 {\"code_review\":{\"commit_sha\":\"2928bff88db8e8a6646b925daba481a887ea4f7e\",\"has_any_findings\":false,\"has_unresolved_findings\":false,\"status\":\"completed\"},\"security_review\":{\"commit_sha\":null,\"has_any_findings\":null,\"has_unresolved_findings\":null,\"status\":null}} -->\n\n## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request.\n\n| Review | Status | Commit | Review trigger |\n| --- | --- | --- | --- |\n| 📝 **Code Review** | ✅ **Completed** <relative-time datetime=\"2026-10-28T21:31:08.989667Z\">2026-10-28T21:31:08.989667Z</relative-time> | `2928bff` | PR opened |\n\n\n\n<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n\n[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\" or \"@codex security review\".\n\nCodex reacts with 👀 while any review is running, comments if it has suggestions, and reacts with 👍 once all reviews finish with no findings.\n\n</details>"
+    },
+    {
+      "source": "review-comment",
+      "kind": "conversation",
+      "ticket": "https://github.com/zakna/firstmate/pull/95",
+      "author": "chatgpt-codex-connector[bot]",
+      "author_type": "Bot",
+      "file": "",
+      "created": "2026-10-28T21:31:49Z",
+      "text": "<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 {\"code_review\":{\"commit_sha\":\"480cfd8bd138408fa6ff16949f43869fb8600f00\",\"has_any_findings\":false,\"has_unresolved_findings\":false,\"status\":\"completed\"},\"security_review\":{\"commit_sha\":null,\"has_any_findings\":null,\"has_unresolved_findings\":null,\"status\":null}} -->\n\n## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request.\n\n| Review | Status | Commit | Review trigger |\n| --- | --- | --- | --- |\n| 📝 **Code Review** | ✅ **Completed** <relative-time datetime=\"2026-10-28T21:32:28.423798Z\">2026-10-28T21:32:28.423798Z</relative-time> | `480cfd8` | PR opened |\n\n\n\n<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n\n[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\" or \"@codex security review\".\n\nCodex reacts with 👀 while any review is running, comments if it has suggestions, and reacts with 👍 once all reviews finish with no findings.\n\n</details>"
+    },
+    {
+      "source": "steer",
+      "kind": "steer",
+      "ticket": "https://github.com/zakna/firstmate/pull/93",
+      "task": "dpr1",
+      "at": "2026-10-28T11:00:00Z",
+      "message": "002",
+      "text": "STEER-ARCHIVED-ONLY-DPR1"
+    },
+    {
+      "source": "steer",
+      "kind": "steer",
+      "ticket": "loc1",
+      "task": "loc1",
+      "at": "2026-10-28T10:00:00Z",
+      "message": "001",
+      "text": "STEER-ARCHIVED-LOC1"
+    }
+  ]
+}

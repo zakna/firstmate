@@ -1,0 +1,16 @@
+== after
+gate-answer	loc1	LOC-EARLY-ANSWER
+gate-answer	loc1	LOC-LATE-ANSWER
+gate-answer	https://github.com/zakna/firstmate/pull/94	REUSE-A-ANSWER
+gate-answer	https://github.com/zakna/firstmate/pull/95	REUSE-B-ANSWER
+steer	https://github.com/zakna/firstmate/pull/93	STEER-ARCHIVED-ONLY-DPR1
+steer	loc1	STEER-ARCHIVED-LOC1
+review-comment	https://github.com/zakna/firstmate/pull/93
+review-comment	https://github.com/zakna/firstmate/pull/94
+review-comment	https://github.com/zakna/firstmate/pull/95
+== before
+gate-answer	https://github.com/zakna/firstmate/pull/94	REUSE-A-ANSWER
+gate-answer	https://github.com/zakna/firstmate/pull/95	REUSE-NOURL-ANSWER
+gate-answer	https://github.com/zakna/firstmate/pull/94	REUSE-B-ANSWER
+review-comment	https://github.com/zakna/firstmate/pull/94
+review-comment	https://github.com/zakna/firstmate/pull/95
