@@ -22,7 +22,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
 ## Dispatch
 
 1. Resolve `<ticket>` to one landed delivery: a task id in this home's backlog, a project issue, or a pull request.
-   A landed delivery is a merged pull request or an approved local-only landing.
+   A landed delivery is a merged pull request, a submitted Gerrit change on a project registered with `forge=gerrit`, or an approved local-only landing.
    If the ticket has not landed, or more than one delivery matches, say so and stop; a retro on work still under way measures nothing.
 2. Dispatch a scout on the ticket's project through the ordinary scout intake.
    The retro always runs in a fresh worker, never the one that delivered the ticket, because the delivering worker cannot see its own blind spots and the supervisor's own errors are in scope.
@@ -55,8 +55,8 @@ Open the pipeline database read-only.
 - The delivering task's records under `data/<task-id>/`: its instructions, any saved review findings, and any review-comment inventory.
 - The task's status log and steering messages: under `state/` while the task runs, and after cleanup as `status-log.txt` and `steering/` under `data/<task-id>/`.
 - The backlog item and its notes.
-- The pull request: description, review comments from people and bots, checks, merge time, and the merged diff.
-- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request.
+- The pull request, or on a Gerrit project the submitted change: description, review comments from people and bots, checks or label votes, patch sets, merge or submit time, and the merged diff.
+- The pipeline database, `${NM_HOME:-$HOME/.no-mistakes}/state.sqlite`, for every run on the ticket's branch or pull request in the ticket's own repository, matched by its upstream address.
 - The earlier retro reports of the same project in this home: the reports whose first line starts with `# Retro: ` and whose second line is exactly `Project: <project>`.
   `P='<project>'; export P; if [ -d "${FM_HOME:?}/data" ]; then find "${FM_HOME:?}/data" -mindepth 2 -maxdepth 2 -type f -name report.md -exec awk 'FNR == 1 { retro = substr($0, 1, 9) == "# Retro: " } FNR == 2 && retro && $0 == "Project: " ENVIRON["P"] { print FILENAME }' {} +; fi`
   A home may hold several projects, and another project's follow-ups are not evidence about this one.
@@ -127,10 +127,11 @@ Run the per-run queries for each run the first query returns, report M2 to M6 pe
 ```sh
 DB="${NM_HOME:-$HOME/.no-mistakes}/state.sqlite"
 
-# every attempt: all runs on the delivery's branch or pull request, with the repository they belong to
+# every attempt: all runs on the delivery's branch or pull request in the delivery's own repository
 sqlite3 -readonly "$DB" "SELECT r.id, p.upstream_url, r.status, r.pr_url, r.created_at, r.ci_ready_at, r.updated_at, r.parked_ms
   FROM runs r JOIN repos p ON p.id = r.repo_id
-  WHERE r.branch = '<branch>' OR r.pr_url = '<pull request url>' ORDER BY r.created_at;"
+  WHERE p.upstream_url = '<repository upstream url>' AND (r.branch = '<branch>' OR r.pr_url = '<pull request url>')
+  ORDER BY r.created_at;"
 
 # M2, and per-step durations
 sqlite3 -readonly "$DB" "SELECT step_name, status, duration_ms FROM step_results
@@ -191,7 +192,7 @@ Write each remaining item ready to file, with:
 - the consequence, in the terms of the person who uses the project;
 - a suggested direction, not a mandate; when it names a command or a pass condition, run it against a reproduction that carries the target's recorded environment facts and cite the command, or mark it `unrun:` and list each outcome the operator can see and what each outcome means;
 - the project's own required labels;
-- a link to the parent ticket and a statement that it is not a duplicate of it.
+- a link to the parent ticket and a statement that it is not a duplicate of it; when the delivery has no external ticket, such as an approved local-only landing, the delivering task's backlog id, or the explicit marker `no parent ticket`, in place of the link.
 
 Keep supervisor vocabulary, quoted instructions, and direct address out of the issue text; it is published in the project.
 Whoever files an item first saves its body to a file `B` and refuses to file when this check prints any line, because a body sliced past its item's end publishes the rest of the report.
