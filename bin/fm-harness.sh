@@ -26,6 +26,18 @@
 #                                        effort or above (allowed maximum low). Other
 #                                        harnesses, models, and an empty or default
 #                                        effort pass.
+#        fm-harness.sh validate-effort-gauge <harness> <model> <effort> [<override-reason>]
+#                                        When config/effort-gauge names a full Opus
+#                                        effort, refuse a claude Opus launch above the
+#                                        gauge: that effort while the weekly runway
+#                                        reaches its reset, one step lower when
+#                                        quota-axi projects exhaustion first. The
+#                                        runway is read fresh on every call; an
+#                                        unreadable or stale reading refuses too.
+#                                        A non-empty reason overrides, printing the
+#                                        gauge on stderr. Absent config, other
+#                                        harnesses and models, and empty effort pass
+#                                        (fm-tooling #34).
 #        fm-harness.sh ancestry [<pid>] print "<strength> <harness>" for the nearest
 #                                        harness process at or above <pid> (default this
 #                                        process), or nothing when the walk finds none.
@@ -579,7 +591,46 @@ validate_model_effort() {
   return 1
 }
 
+# Effort gauge (fm-tooling #34): config/effort-gauge holds the full Opus effort.
+# A projected weekly exhaustion before the reset steps it down one level.
+validate_effort_gauge() {
+  local harness=${1:-} model=${2:-} effort=${3:-} reason=${4:-} full gauge want snap rank
+  local levels=(low medium high xhigh max ultra) i
+  [ "$harness" = claude ] || return 0
+  case "$(printf '%s' "$model" | tr '[:upper:]' '[:lower:]')" in *opus*) ;; *) return 0 ;; esac
+  [ -r "$CONFIG/effort-gauge" ] || return 0
+  full=$(tr -d '[:space:]' < "$CONFIG/effort-gauge")
+  rank=-1
+  for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$full" ] && rank=$i; done
+  [ "$rank" -ge 0 ] || { echo "error: config/effort-gauge must name one of ${levels[*]}, got '$full'" >&2; return 1; }
+  want=-1
+  for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$effort" ] && want=$i; done
+  [ "$want" -ge 0 ] || return 0
+  snap=$(quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
+  gauge=$(printf '%s' "$snap" | jq -r '
+    .providers[]? | select(.provider == "claude") |
+    if .state.stale == true or .state.status != "fresh" then "unreadable"
+    else ([.quotaSemantics.effectiveAvailability[]? | select(.scope == "all_models")] | first | .runway.status // "unreadable") end' 2>/dev/null | head -1)
+  case "$gauge" in
+    through_reset) ;;
+    projected_exhaustion) [ "$rank" -eq 0 ] || rank=$((rank - 1)) ;;
+    *)
+      [ -z "$reason" ] || return 0
+      echo "error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; pass --effort-gauge-override <reason> to launch at '$effort' anyway" >&2
+      return 1
+      ;;
+  esac
+  [ "$want" -gt "$rank" ] || return 0
+  if [ -n "$reason" ]; then
+    echo "warning: effort gauge allows '${levels[$rank]}' (runway $gauge); launching '$effort' by override: $reason" >&2
+    return 0
+  fi
+  echo "error: effort '$effort' is above the effort gauge '${levels[$rank]}' (Claude weekly runway: $gauge); lower --effort or pass --effort-gauge-override <reason>" >&2
+  return 1
+}
+
 case "${1:-}" in
+  validate-effort-gauge) shift; validate_effort_gauge "$@" ;;
   validate-model-effort) shift; validate_model_effort "$@" ;;
   effort-ceilings) effort_ceilings_json ;;
   validate-native-effort) shift; validate_native_effort "$@" ;;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Spawn a direct report: a crewmate in a treehouse or Orca worktree, or a
 # secondmate in its isolated firstmate home.
-# Usage: fm-spawn.sh <task-id> <project-dir> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off> [--branch-prefix <prefix>] [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] [--herdr-resume-lock-wait]
+# Usage: fm-spawn.sh <task-id> <project-dir> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off> [--branch-prefix <prefix>] [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--effort-gauge-override <reason>] [--backend <name>] [--herdr-resume-lock-wait]
 #        fm-spawn.sh <task-id> <project-dir> --scout [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] [--herdr-resume-lock-wait]
 #        fm-spawn.sh <task-id> [<firstmate-home>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] --secondmate
 #   --mode and --yolo are this task's delivery contract, REQUIRED for every ship
@@ -766,6 +766,7 @@ RELAUNCH=0
 # Absent/unset keeps upstream refuse-on-contention. See header.
 HERDR_RESUME_LOCK_WAIT=0
 POS=()
+EFFORT_GAUGE_OVERRIDE=
 want_value=
 for a in "$@"; do
   if [ -n "$want_value" ]; then
@@ -788,6 +789,7 @@ for a in "$@"; do
       EFFORT=$a
       EFFORT_SET=1
       ;;
+    effort_gauge_override) EFFORT_GAUGE_OVERRIDE=$a ;;
     backend)
       BACKEND_ARG=$a
       BACKEND_SET=1
@@ -841,6 +843,8 @@ for a in "$@"; do
     MODEL=${a#--model=}
     MODEL_SET=1
     ;;
+  --effort-gauge-override) want_value=effort_gauge_override ;;
+  --effort-gauge-override=*) EFFORT_GAUGE_OVERRIDE=${a#--effort-gauge-override=} ;;
   --effort) want_value=effort ;;
   --effort=*)
     EFFORT=${a#--effort=}
@@ -2557,6 +2561,11 @@ fi
 # A Sonnet or Haiku model above its allowed effort is refused before any
 # provisioning (bin/fm-harness.sh validate-model-effort owns the limits).
 "$SCRIPT_DIR/fm-harness.sh" validate-model-effort "$HARNESS" "$MODEL" "$EFFORT" || exit 1
+# config/effort-gauge caps a fresh Claude Opus spawn by the current weekly runway
+# (bin/fm-harness.sh validate-effort-gauge owns the rule); a relaunch keeps the
+# effort its worker started with.
+[ "$RELAUNCH" -eq 1 ] ||
+  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" "$EFFORT_GAUGE_OVERRIDE" || exit 1
 # Ultra is an explicit native capability, never a Pi thinking-level alias.
 # Validate the fully resolved profile before worktree or endpoint provisioning.
 if [ "$EFFORT" = ultra ]; then

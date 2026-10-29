@@ -1111,6 +1111,13 @@ A malformed or unreadable file refuses every fresh ship or scout spawn until it 
 Firstmate cannot see which part of a worker's life uses the resource, so the number bounds whole workers from launch to handoff, and the tightest resource every worker needs should decide it.
 [`bin/fm-project-capacity-lib.sh`](../bin/fm-project-capacity-lib.sh) owns the file format, what holds a place, and why concurrent spawns cannot both take the last one.
 
+## Effort gauge (config/effort-gauge)
+
+The optional local, gitignored `config/effort-gauge` holds one effort level: the full effort for Claude Opus workers.
+When it exists, `bin/fm-spawn.sh` reads the Claude weekly runway from `quota-axi` on every fresh spawn and refuses an Opus `--effort` above the gauge: the file's level while the runway reaches its reset, one level lower when `quota-axi` projects exhaustion first.
+A stale or unreadable reading refuses too, and `--effort-gauge-override <reason>` launches anyway and prints the gauge.
+A relaunch keeps the worker's effort, and [`bin/fm-harness.sh`](../bin/fm-harness.sh) `validate-effort-gauge` owns the rule.
+
 ## Crew dispatch profiles (config/crew-dispatch.json)
 
 `config/crew-dispatch.json` is an optional local, gitignored file containing natural-language rules that firstmate reads before dispatching a crewmate or scout.
