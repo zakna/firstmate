@@ -1183,7 +1183,11 @@ remote_steering_archive() {
   local out kind name payload dir sub tmp
   out=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh steering "$ID" < /dev/null 2>&1) || {
     [ -z "$out" ] || printf '%s\n' "$out" >&2
-    echo "error: teardown refused: could not read the remote steering records of $ID; nothing was removed" >&2
+    case "$out" in
+      *'unknown command: steering'*)
+        echo "error: teardown refused: the code root on the remote host of $ID predates the steering archive; run bin/fm-update.sh to bring it current, then retry; nothing was removed" >&2 ;;
+      *) echo "error: teardown refused: could not read the remote steering records of $ID; nothing was removed" >&2 ;;
+    esac
     return 1
   }
   dir="$DATA/$ID"
