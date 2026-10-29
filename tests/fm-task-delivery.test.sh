@@ -513,6 +513,38 @@ test_promotion_branch_command_is_shell_safe() {
   pass "fm-promote: ref-format-valid shell metacharacters stay literal in promotion branch commands"
 }
 
+# A local-only landing leaves no pull request, and cleanup closes the Done entry
+# with only `local main`, so the landed commit must survive in the task record
+# that teardown keeps as data/<id>/meta.txt (the lookup /retro reads).
+test_local_merge_records_the_landed_commit() {
+  local home proj id main base fix meta
+  home="$TMP_ROOT/local-merge-landed/home"
+  proj="$TMP_ROOT/local-merge-landed/proj"
+  id=local-merge-landed-e3
+  mkdir -p "$home/state" "$home/data" "$proj"
+  git -C "$proj" init -q || fail "could not initialize landed-commit fixture"
+  git -C "$proj" config user.email test@example.com
+  git -C "$proj" config user.name test
+  printf 'base\n' > "$proj/base"
+  git -C "$proj" add base || fail "could not stage landed-commit fixture base"
+  git -C "$proj" commit -qm base || fail "could not commit landed-commit fixture base"
+  main=$(git -C "$proj" branch --show-current)
+  base=$(git -C "$proj" rev-parse HEAD)
+  git -C "$proj" checkout -qb "fm/$id" || fail "could not create landed-commit ship branch"
+  printf 'change\n' > "$proj/change"
+  git -C "$proj" add change || fail "could not stage landed-commit change"
+  git -C "$proj" commit -qm change || fail "could not commit landed-commit change"
+  fix=$(git -C "$proj" rev-parse HEAD)
+  git -C "$proj" checkout -q "$main" || fail "could not restore landed-commit default branch"
+  meta="$home/state/$id.meta"
+  printf 'project=%s\nmode=local-only\nbranch=fm/%s\n' "$proj" "$id" > "$meta"
+  FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$MERGE_LOCAL" "$id" >/dev/null \
+    || fail "local merge for the landed-commit fixture should succeed"
+  assert_grep "landed_commit=$fix" "$meta" "local merge did not record the landed commit"
+  assert_grep "landed_base=$base" "$meta" "local merge did not record the commit it landed onto"
+  pass "fm-merge-local: the landed commit and its base reach the task record"
+}
+
 test_local_merge_uses_the_recorded_ship_branch() {
   local home proj id main fix out
   home="$TMP_ROOT/local-merge-branch/home"
@@ -1791,6 +1823,7 @@ test_promotion_delivers_the_real_definition_of_done
 test_promotion_persists_the_selected_ship_branch
 test_promotion_branch_command_is_shell_safe
 test_local_merge_uses_the_recorded_ship_branch
+test_local_merge_records_the_landed_commit
 test_project_mode_matches_whole_multiword_names
 test_project_mode_maps_the_conditional_policy
 test_project_mode_binds_the_forge_orthogonally
