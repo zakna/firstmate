@@ -1,0 +1,11 @@
+OLD      NEW       BODY
+refusal  refusal   Copilot wasn't able to review any files in this pull request.
+refusal  refusal   Copilot wasn't able to review any files in this pull request.⏎⏎<details>⏎<summary>Files no
+refusal  refusal   Codex was unable to review this pull request. Please try again later.
+refusal  refusal   Codex was unable to review this pull request.
+refusal  refusal   You have reached your Codex usage limits for code reviews.
+refusal  review    Copilot wasn't able to review src/auth.ts: login() skips the token check
+refusal  review    Copilot wasn't able to review 1 of 3 files. Finding: foo() skips the auth check.
+refusal  review    Codex was unable to review this pull request. Also: foo() leaks the token.
+refusal  review    Copilot wasn't able to review any files in this pull request.⏎⏎<details>⏎<summary>Files no
+review   review    This adds a rate limit to the login endpoint.

@@ -1,0 +1,11 @@
+# Scenario: two+ supervisors append recovery lessons concurrently with the SKILL.md template
+# template: printf '%s\n' '<line>' >> data/recovery-lessons.md
+lines written:     1000 (expected 1000)
+distinct lines:     1000
+lines with literal backticks, $FM_HOME and it's: 1000 / 1000
+sample:
+2026-10-29 | `fm-send` returned rc=4 for sup1 #1 | $FM_HOME unset, it's stale | rerun `fm-send` with $FM_HOME
+2026-10-29 | `fm-send` returned rc=4 for sup3 #1 | $FM_HOME unset, it's stale | rerun `fm-send` with $FM_HOME
+
+# Contrast: read-modify-write (old pattern) under the same concurrency
+rmw lines kept:       40 (of 1000)

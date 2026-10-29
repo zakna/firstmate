@@ -1,0 +1,3 @@
+ok - allowlisted review-bot findings wake as untrusted signals; a could-not-review notice that also lists findings does; bare notices and other authors do not
+ok - new maintainer review wakes once and stays pending until acknowledged
+ok - new maintainer inline wakes once and stays pending until acknowledged
