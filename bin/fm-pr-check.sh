@@ -39,10 +39,10 @@
 # chatgpt-codex-connector): "yes" when such a review is on the exact head, or
 # such a comment names a prefix of the head SHA, and it is not a refusal;
 # "refused" when, instead, one dated at or after the head commit opens with a
-# refusal ("You have reached your ... usage limits", or a one-sentence
-# "<name> was unable to review" / "Copilot wasn't able to review" notice, with
-# only <details> blocks after it; a review that goes on to list findings is not
-# a refusal); "no" otherwise. A failed read, or a newest commit that is not the recorded head,
+# refusal ("You have reached your ... usage limits", or a bare "<name> was
+# unable to review this pull request" / "Copilot wasn't able to review any files
+# in this pull request" notice followed only by "Please try again later" or a
+# "Files not reviewed" details block; any other text keeps it a review); "no" otherwise. A failed read, or a newest commit that is not the recorded head,
 # prints "unknown". It never refuses arming.
 # The recorded pr= also frees the task's place in a declared project capacity
 # (bin/fm-project-capacity-lib.sh).
@@ -200,7 +200,7 @@ if [ -n "$PR_HEAD" ] && command -v jq >/dev/null 2>&1; then
   if BOT_REVIEW_JSON=$(gh api graphql -f query="$BOT_REVIEW_QUERY" -f owner="${PROJECT_PATH%%/*}" -f name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
     && BOT_REVIEW=$(printf '%s' "$BOT_REVIEW_JSON" | jq -er --arg head "$PR_HEAD" '
       def review_bot: (.author.login // "" | sub("\\[bot\\]$"; "")) | IN("Copilot", "copilot-pull-request-reviewer", "chatgpt-codex-connector");
-      def refusal: (.body // "") | gsub("<details>(.|\\n)*?</details>"; "") | test("^\\s*(You have reached your .* usage limits|(\\S+ was unable to review|Copilot wasn\u0027t able to review)([^.\\n]|\\.(?=\\S))*\\.?\\s*$)"; "i");
+      def refusal: (.body // "") | gsub("<details>\\s*<summary>Files not reviewed[^<]*</summary>(.|\\n)*?</details>"; "") | test("^\\s*(You have reached your .* usage limits|(\\S+ was unable to review|Copilot wasn\u0027t able to review)( any files in)? this pull request\\.?(\\s*Please try again later\\.?)?\\s*$)"; "i");
       def names_head: [(.body // "") | scan("[0-9a-fA-F]{7,40}")] | any(ascii_downcase as $t | $head | startswith($t));
       .data.repository.pullRequest as $p
       | ($p.commits.nodes[0].commit) as $c

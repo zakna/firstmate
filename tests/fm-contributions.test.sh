@@ -241,8 +241,14 @@ test_review_bot_findings_wake() {
      body:"Copilot wasn\u0027t able to review any files in this pull request.",
      html_url:"https://github.com/o/r/pull/8#pullrequestreview-22",submitted_at:"2026-09-16T08:01:00Z"},
     {id:26,user:{login:"copilot-pull-request-reviewer[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
-     body:"Copilot wasn\u0027t able to review README.md.\n\n<details>\n<summary>Files not reviewed (1)</summary>\n\n* **README.md**: Language not supported\n</details>\n",
+     body:"Copilot wasn\u0027t able to review any files in this pull request.\n\n<details>\n<summary>Files not reviewed (1)</summary>\n\n* **README.md**: Language not supported\n</details>\n",
      html_url:"https://github.com/o/r/pull/8#pullrequestreview-26",submitted_at:"2026-09-16T08:01:00Z"},
+    {id:27,user:{login:"chatgpt-codex-connector[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
+     body:"Codex was unable to review this pull request. Please try again later.",
+     html_url:"https://github.com/o/r/pull/8#pullrequestreview-27",submitted_at:"2026-09-16T08:01:00Z"},
+    {id:28,user:{login:"copilot-pull-request-reviewer[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
+     body:"Copilot wasn\u0027t able to review src/auth.ts: login() skips the token check",
+     html_url:"https://github.com/o/r/pull/8#pullrequestreview-28",submitted_at:"2026-09-16T08:01:00Z"},
     {id:25,user:{login:"copilot-pull-request-reviewer[bot]"},author_association:"NONE",commit_id:$head,state:"COMMENTED",
      body:"Copilot wasn\u0027t able to review 1 of 3 files in this pull request. Finding: foo() skips the auth check.",
      html_url:"https://github.com/o/r/pull/8#pullrequestreview-25",submitted_at:"2026-09-16T08:01:00Z"},
@@ -265,10 +271,10 @@ test_review_bot_findings_wake() {
   registered_checks "$home" >/dev/null
   out=$(with_home "$home" "$ROOT/bin/fm-contributions.sh" pending) || fail 'could not read pending review-bot signals'
   printf '%s' "$out" | jq -e '
-    (map(.source) | sort) == ["https://github.com/o/r/pull/8#discussion_r31","https://github.com/o/r/pull/8#pullrequestreview-21","https://github.com/o/r/pull/8#pullrequestreview-24","https://github.com/o/r/pull/8#pullrequestreview-25"]
+    (map(.source) | sort) == ["https://github.com/o/r/pull/8#discussion_r31","https://github.com/o/r/pull/8#pullrequestreview-21","https://github.com/o/r/pull/8#pullrequestreview-24","https://github.com/o/r/pull/8#pullrequestreview-25","https://github.com/o/r/pull/8#pullrequestreview-28"]
     and all(.[]; .reviewer == "bot")' >/dev/null \
     || fail "only allowlisted review-bot findings must be pending, marked reviewer=bot: $out"
-  [ "$(awk 'END { print NR }' "$home/state/.wake-queue")" = 4 ] \
+  [ "$(awk 'END { print NR }' "$home/state/.wake-queue")" = 5 ] \
     || fail 'each admitted review-bot finding must enqueue one durable wake'
   pass 'allowlisted review-bot findings wake as untrusted signals; a could-not-review notice that also lists findings does; bare notices and other authors do not'
 }

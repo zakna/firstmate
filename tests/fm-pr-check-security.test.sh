@@ -835,8 +835,10 @@ test_bot_review_on_head_is_reported() {
     "$(bot_review_payload "" "{\"author\":{\"login\":\"vercel\"},\"body\":\"Latest commit: 0123456\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
   bot_review_case refused "Copilot was not able to review the head" \
     "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
-  bot_review_case refused "Copilot could not review a dotted file name" \
-    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review README.md.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case refused "Codex could not review and asks to try again later" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Codex was unable to review this pull request. Please try again later.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a could-not-review opening names a finding in one sentence" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review src/auth.ts: login() skips the token check\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case refused "Copilot's notice carries only a files-not-reviewed details block" \
     "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\\n\\n<details>\\n<summary>Files not reviewed (1)</summary>\\n\\n* **README.md**: Language not supported\\n</details>\\n\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case yes "a could-not-review opening is followed by real findings" \
