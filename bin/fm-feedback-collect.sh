@@ -46,8 +46,8 @@
 #   delivery (`merged <date>` with a PR link or a GitLab merge-request link, or
 #   `done <date>` with a `local main` note), so a direct-PR or local-only
 #   landing contributes its pull request comments and steers; a close date that
-#   is not a real calendar date counts as no close. Matching pipeline runs to
-#   a landing is unchanged: see "Landed tickets (run attribution)".
+#   is not a real calendar date counts as no close. Backlog entries do not
+#   bind pipeline runs: see "Landed tickets (run attribution)".
 # - Steers to workers: `<home>/state/<task>.inbox/*.msg` and `handled/*.msg`
 #   (bin/fm-task-inbox-lib.sh owns the format) and the copies cleanup keeps
 #   under `<home>/data/<task>/steering/` (bin/fm-teardown.sh), a message in
