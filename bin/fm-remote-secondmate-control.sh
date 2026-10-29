@@ -78,6 +78,10 @@ validate_id() { case "$1" in ''|*[!A-Za-z0-9._-]*) die "invalid secondmate id: $
 validate_home() { # <id> [allow-absent]
   local id=$1 allow_absent=${2:-no} marker
   if [ ! -e "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] && [ "$allow_absent" = yes ]; then return 2; fi
+  # Sourcing the shared libraries recreates an empty state directory under a
+  # removed home, so a home holding only directories is also already retired.
+  if [ "$allow_absent" = yes ] && [ -d "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] \
+    && [ -z "$(find "$TARGET_HOME" -mindepth 1 ! -type d 2>/dev/null | head -n 1)" ]; then return 2; fi
   [ -d "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] || die "remote secondmate home is unavailable or unsafe"
   [ -f "$TARGET_HOME/.fm-secondmate-home" ] && [ ! -L "$TARGET_HOME/.fm-secondmate-home" ] \
     || die "remote home is not a seeded secondmate home"
