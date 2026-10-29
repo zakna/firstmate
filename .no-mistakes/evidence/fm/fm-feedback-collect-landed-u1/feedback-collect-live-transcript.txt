@@ -1,0 +1,39 @@
+== producing backlog with real tasks-axi ==
+# Backlog
+
+## In flight
+## Queued
+- [ ] live1 - Open task, not landed (kind: ship) (since 2026-10-29)
+## Done
+- [x] arch1 - Cleaned task with archived steering https://github.com/zakna/firstmate/pull/94 (kind: ship) (merged 2026-10-29)
+- [x] frc1 - Force-discarded PR (kind: ship) (done 2026-10-29)
+  discarded
+- [x] dpr1 - Direct PR merged without pipeline https://github.com/zakna/firstmate/pull/95 (kind: ship) (merged 2026-10-29)
+- [x] loc1 - Local-only landing (kind: ship) (done 2026-10-29)
+  local main
+== steering via fm-task-inbox-lib ==
+data/arch1/steering/002.msg
+data/arch1/steering/handled/001.msg
+data/loc1/steering/001.msg
+state/dpr1.inbox/001.msg
+state/frc1.inbox/001.msg
+state/live1.inbox/001.msg
+state/loc1.inbox/001.msg
+== run collector (no-mistakes DB absent; real gh-axi) ==
+wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/out.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/out.json (6 records)
+exit=0
+== steer records ==
+[{"ticket":"https://github.com/zakna/firstmate/pull/94","task":"arch1","text":"STEER-arch1"},{"ticket":"https://github.com/zakna/firstmate/pull/94","task":"arch1","text":"STEER-arch1-pending"},{"ticket":"https://github.com/zakna/firstmate/pull/95","task":"dpr1","text":"STEER-dpr1"},{"ticket":"loc1","task":"loc1","text":"STEER-loc1"}]
+== inputs ==
+{"name":"no-mistakes","status":"absent","detail":"no database at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/none.sqlite"}
+{"name":"review-comments","status":"read","detail":"2 pull requests"}
+{"name":"retro-proposals","status":"absent","detail":"no held or declined retro row in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/data/backlog.md"}
+{"name":"steers","status":"read","detail":"/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/state/*.inbox and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/data/*/steering, kept for tasks /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/data/backlog.md records as landed in the window"}
+== review-comment tickets ==
+["https://github.com/zakna/firstmate/pull/94","https://github.com/zakna/firstmate/pull/95"]
+== malformed date adversarial ==
+wrote /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/out2.md and /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.2ihhaS/out2.json (6 records)
+exit=0
+["arch1","arch1","dpr1","loc1"]
+["https://github.com/zakna/firstmate/pull/94","https://github.com/zakna/firstmate/pull/95"]
+lab removed
