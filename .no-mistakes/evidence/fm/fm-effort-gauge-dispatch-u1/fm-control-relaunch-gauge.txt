@@ -1,0 +1,3 @@
+ok - fm-control relaunch: the effort gauge gates only a relaunch that changes the recorded effort
+ok - fm-control relaunch: the effort gauge is read once, before the old agent stops
+(passed 6 of 7 runs: 3 serial + 3 parallel reruns all passed; one earlier run failed, see fm-control-relaunch-gauge-flaky-run.txt)

@@ -1,0 +1,88 @@
+### A: no gauge config -> not gated
+config/effort-gauge=<absent>  quota=REAL
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort max
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### B: real live runway (projected_exhaustion) steps xhigh down to high; xhigh refused
+config/effort-gauge=xhigh  quota=REAL
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort xhigh
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+error: effort 'xhigh' is above the effort gauge 'high' (Claude weekly runway: projected_exhaustion); lower --effort
+exit=1
+state/: 
+
+### C: real live runway; high (stepped gauge) passes gate
+config/effort-gauge=xhigh  quota=REAL
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort high
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### D: through_reset; xhigh (full gauge) passes
+config/effort-gauge=xhigh  quota=through_reset
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort xhigh
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### E: through_reset; max above gauge refused
+config/effort-gauge=xhigh  quota=through_reset
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort max
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+error: effort 'max' is above the effort gauge 'xhigh' (Claude weekly runway: through_reset); lower --effort
+exit=1
+state/: 
+
+### F: exhausted now refuses even low
+config/effort-gauge=xhigh  quota=exhausted
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+error: Claude weekly quota is exhausted now; refusing an Opus launch at 'low'
+exit=1
+state/: 
+
+### G: unreadable quota-axi reading refuses (does not disable gate)
+config/effort-gauge=xhigh  quota=BAD
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; refusing an Opus launch at 'low'
+exit=1
+state/: 
+
+### H: sonnet not gated
+config/effort-gauge=xhigh  quota=exhausted
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-sonnet-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### I: opus with no --effort not gated
+config/effort-gauge=xhigh  quota=exhausted
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### J: codex harness not gated
+config/effort-gauge=xhigh  quota=exhausted
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness codex --effort xhigh
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere: No such file or directory
+exit=1
+state/: 
+
+### K: malformed gauge file refuses
+config/effort-gauge=bogus  quota=REAL
+$ bin/fm-spawn.sh gt1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7/projects/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.wdPkt7
+error: config/effort-gauge must name one of low medium high xhigh max ultra, got 'bogus'
+exit=1
+state/: 
+

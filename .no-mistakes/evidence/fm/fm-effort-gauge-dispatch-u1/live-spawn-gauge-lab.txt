@@ -1,0 +1,54 @@
+== real quota-axi reading (claude) ==
+[{"provider":"claude","state":"fresh","stale":false,"runway":"projected_exhaustion"}]
+
+== no config/effort-gauge: Opus high is not gated (fails later on missing project) ==
+$ bin/fm-spawn.sh lab-g0 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort high
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere: No such file or directory
+exit=1
+
+== config/effort-gauge = high ==
+$ bin/fm-spawn.sh lab-g1 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort high
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+error: effort 'high' is above the effort gauge 'medium' (Claude weekly runway: projected_exhaustion); lower --effort
+exit=1
+
+$ bin/fm-spawn.sh lab-g2 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort max
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+error: effort 'max' is above the effort gauge 'medium' (Claude weekly runway: projected_exhaustion); lower --effort
+exit=1
+
+$ bin/fm-spawn.sh lab-g3 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere: No such file or directory
+exit=1
+
+$ bin/fm-spawn.sh lab-g4 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere: No such file or directory
+exit=1
+
+$ bin/fm-spawn.sh lab-g5 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-sonnet-5-5 --effort medium
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+bin/fm-spawn.sh: line 3216: cd: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere: No such file or directory
+exit=1
+
+== malformed gauge ==
+$ bin/fm-spawn.sh lab-g6 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+error: config/effort-gauge must name one of low medium high xhigh max ultra, got 'bogus'
+exit=1
+
+== adversarial: stale quota-axi reading (stub on PATH) must not disable the gauge ==
+$ env PATH=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/fakebin:/Users/olivier/.antigravity/antigravity/bin:/Users/olivier/.local/bin:/Users/olivier/.opencode/bin:/Users/olivier/.antigravity/antigravity/bin:/opt/homebrew/Caskroom/miniforge/base/bin:/opt/homebrew/Caskroom/miniforge/base/condabin:/Users/olivier/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Library/TeX/texbin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/olivier/.local/bin:/Users/olivier/go/bin:/Users/olivier/.cargo/bin:/Users/olivier/bin:/usr/local/sbin:/Users/olivier/Library/Application Support/JetBrains/Toolbox/scripts:/Users/olivier/.local/bin:/Users/olivier/.local/bin bin/fm-spawn.sh lab-g7 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; refusing an Opus launch at 'low'
+exit=1
+
+== adversarial: hung quota-axi with FM_EFFORT_GAUGE_TIMEOUT=2 must refuse, not hang ==
+$ env PATH=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/fakebin:/Users/olivier/.antigravity/antigravity/bin:/Users/olivier/.local/bin:/Users/olivier/.opencode/bin:/Users/olivier/.antigravity/antigravity/bin:/opt/homebrew/Caskroom/miniforge/base/bin:/opt/homebrew/Caskroom/miniforge/base/condabin:/Users/olivier/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Library/TeX/texbin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/olivier/.local/bin:/Users/olivier/go/bin:/Users/olivier/.cargo/bin:/Users/olivier/bin:/usr/local/sbin:/Users/olivier/Library/Application Support/JetBrains/Toolbox/scripts:/Users/olivier/.local/bin:/Users/olivier/.local/bin FM_EFFORT_GAUGE_TIMEOUT=2 bin/fm-spawn.sh lab-g8 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs/nowhere --scout --harness claude --model claude-opus-5-5 --effort low
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.dwm0Vs
+error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; refusing an Opus launch at 'low'
+exit=1
+
+== lab state after refusals (no task records expected) ==

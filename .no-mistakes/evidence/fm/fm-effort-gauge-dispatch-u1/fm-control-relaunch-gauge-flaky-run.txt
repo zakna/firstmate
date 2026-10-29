@@ -1,0 +1,6 @@
+not ok - the refusal must name the gauge (missing: 'above the effort gauge 'low'')
+--- output ---
+error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; refusing an Opus launch at 'max'
+rc=1
+
+[exited with code 0]

@@ -1,0 +1,4 @@
+ok - validate-model-effort table
+ok - fm-spawn refuses Sonnet at high effort
+ok - validate-effort-gauge
+ok - fm-spawn applies the effort gauge
