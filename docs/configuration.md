@@ -1116,7 +1116,7 @@ Firstmate cannot see which part of a worker's life uses the resource, so the num
 The optional local, gitignored `config/effort-gauge` holds one effort level: the full effort for Claude Opus workers.
 When it exists, `bin/fm-spawn.sh` reads the pinned worker account's Claude weekly runway from `quota-axi` on every spawn with an explicit Opus `--effort` and refuses an effort above the gauge: the file's level while the runway reaches its reset, one level lower when `quota-axi` projects exhaustion first.
 An exhausted runway or a stale, unreadable, or timed-out reading refuses too; lowering `--effort` is the only remedy, and a spawn without `--effort` is not gated.
-A relaunch is gated only when its effort differs from the task's recorded `effort=` meta, or none is recorded, and [`bin/fm-harness.sh`](../bin/fm-harness.sh) `validate-effort-gauge` owns the rule.
+A relaunch is gated only when its effort differs from the task's recorded `effort=` meta, or none is recorded; `bin/fm-control.sh relaunch` checks it once, before stopping the old agent, and [`bin/fm-harness.sh`](../bin/fm-harness.sh) `validate-effort-gauge` owns the rule.
 
 ## Crew dispatch profiles (config/crew-dispatch.json)
 

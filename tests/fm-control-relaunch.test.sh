@@ -792,6 +792,28 @@ SH
   pass "fm-control relaunch: the effort gauge gates only a relaunch that changes the recorded effort"
 }
 
+test_relaunch_reads_the_effort_gauge_once_before_the_stop() {
+  local dir out rc
+  dir=$(new_case gauge-once rl7)
+  add_ship_task "$dir" rl7 claude
+  sed 's/^model=default$/model=claude-opus-5-5/; s/^effort=default$/effort=high/' \
+    "$dir/home/state/rl7.meta" > "$dir/home/state/rl7.meta.tmp"
+  mv "$dir/home/state/rl7.meta.tmp" "$dir/home/state/rl7.meta"
+  mkdir -p "$dir/home/config"
+  echo xhigh > "$dir/home/config/effort-gauge"
+  cat > "$dir/fakebin/quota-axi" <<'SH'
+#!/usr/bin/env bash
+[ ! -e "$FM_FAKE_DIR/quota-read" ] || exit 1
+: > "$FM_FAKE_DIR/quota-read"
+printf '{"providers":[{"provider":"claude","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"through_reset"}}]}}]}\n'
+SH
+  chmod +x "$dir/fakebin/quota-axi"
+  out=$(run_control "$dir" rl7 relaunch --model claude-opus-5-5 --effort xhigh --note "raising effort"); rc=$?
+  expect_code 0 "$rc" "a relaunch whose pre-stop gauge check passed must not re-read quota after the stop"$'\n'"$out"
+  [ "$(meta_field "$dir" rl7 effort)" = xhigh ] || fail "the new effort should be recorded"
+  pass "fm-control relaunch: the effort gauge is read once, before the old agent stops"
+}
+
 test_harness_switch_resolves_a_prefixed_recorded_harness() {
   local dir out rc auth
   dir=$(new_case prefixcontrol rl32)
@@ -2720,6 +2742,7 @@ test_relaunch_requires_a_note_for_a_ship_task
 test_harness_switch_moves_the_record_and_clears_prior_wiring
 test_harness_switch_does_not_carry_the_old_profile_axes
 test_relaunch_gates_only_a_changed_opus_effort
+test_relaunch_reads_the_effort_gauge_once_before_the_stop
 test_harness_switch_resolves_a_prefixed_recorded_harness
 test_prefixed_recorded_harness_requires_explicit_replacement
 test_same_harness_relaunch_keeps_the_profile_axes
