@@ -489,6 +489,12 @@ jobs:
           export PATH
           command -v tasks-axi >/dev/null || { echo "::error::tasks-axi is required for the stock Bash regressions"; exit 1; }
 
+          agy_output=$(/bin/bash tests/fm-agy-harness.test.sh)
+          printf '%s\n' "$agy_output" | grep -q '^ok - fm-composer-lib: an idle agy composer reads empty only on its whole proof' || {
+            echo "::error::stock Bash did not run the idle agy composer fixture"
+            exit 1
+          }
+
           snapshot_output=$(/bin/bash tests/fm-fleet-snapshot-view.test.sh)
           printf '%s\n' "$snapshot_output"
           snapshot_count=$(printf '%s\n' "$snapshot_output" | grep -c '^ok - ')

@@ -1785,6 +1785,16 @@ fm_composer_dialog_sink_release() {
   fi
 }
 
+_fm_composer_agy_rule_row() {  # <row> -> 1 when a solid rule at least 8 columns wide
+  local row=$1
+  row="${row#"${row%%[![:space:]]*}"}"
+  row="${row%"${row##*[![:space:]]}"}"
+  if [ -n "$row" ] && [ -z "${row//─/}" ]; then
+    case "$row" in *────────*) printf 1; return 0 ;; esac
+  fi
+  printf 0
+}
+
 # _fm_composer_agy_idle_empty: 0 when the screen is an idle agy composer with
 # nothing typed. agy draws a borderless bare `>` row between two solid rules,
 # with its idle status row (`? for shortcuts`, the busy row's `esc to cancel`
@@ -1795,30 +1805,30 @@ fm_composer_dialog_sink_release() {
 # foreground run (SGR 38;5;241) covering all of it, readable only on a styled
 # capture. Captured live on agy 1.2.0, 2026-10-28.
 _fm_composer_agy_idle_empty() {  # <screen> <plain> <styled> <cursor-row>
-  local screen=$1 plain=$2 styled=$3 cy=${4:-} line i=0 last=-1 status=-1 glyph=-1 prev
-  local -a rows=() nb=()
-  mapfile -t rows <<<"$plain"
-  for line in "${rows[@]}"; do
+  local screen=$1 plain=$2 styled=$3 cy=${4:-} line i=0 last=-1 status=-1 glyph=-1
+  local rows=() nb=()
+  while IFS= read -r line; do
+    rows[i]=$line
     line="${line#"${line%%[![:space:]]*}"}"
-    [ -z "$line" ] || nb+=("$i")
+    [ -z "$line" ] || nb[${#nb[@]}]=$i
     i=$((i + 1))
-  done
+  done <<<"$plain"
   last=$((${#nb[@]} - 1))
-  [ "$last" -ge 1 ] || return 1
+  [ "$last" -ge 2 ] || return 1
   status=${nb[$last]}
   case "${rows[$status]#"${rows[$status]%%[![:space:]]*}"}" in
     '? for shortcuts'|'? for shortcuts '*) ;;
     *) return 1 ;;
   esac
-  prev=$((last - 1))
-  line=${rows[${nb[$prev]}]}
+  # The whole composer is the single row between two solid rules, the closing
+  # one directly above the status row. A multiline draft puts more rows between
+  # them, so a trailing `>` line of such a draft never qualifies.
+  [ "$(_fm_composer_agy_rule_row "${rows[$((status - 1))]-}")" = 1 ] || return 1
+  glyph=$((status - 2))
+  [ "$glyph" -ge 1 ] || return 1
+  [ "$(_fm_composer_agy_rule_row "${rows[$((glyph - 1))]-}")" = 1 ] || return 1
+  line=${rows[$glyph]}
   line="${line#"${line%%[![:space:]]*}"}"
-  if [ "${line//─/}" = "" ] && [ "${#line}" -ge 8 ] && [ "$prev" -ge 1 ]; then
-    prev=$((prev - 1))
-    line=${rows[${nb[$prev]}]}
-    line="${line#"${line%%[![:space:]]*}"}"
-  fi
-  glyph=${nb[$prev]}
   case "$line" in '>'|'> '*) ;; *) return 1 ;; esac
   [ -z "$cy" ] || [ "$cy" = "$glyph" ] || return 1
   line=${line#>}
