@@ -192,7 +192,7 @@ test_collects_every_source_in_the_window() {
   for absent in OLD-REASON OPEN-REASON OPEN-FINDING STEER-OLD STEER-UNLANDED STEER-EARLIER-LANDING PROPOSAL-OLD PROPOSAL-APPROVED PROPOSAL-APPROVED-OLD PROPOSAL-WORDPART PROPOSAL-NO-RECORD task-plain-hold; do
     assert_no_grep "$absent" "$json" "$absent is outside the window or was fixed"
   done
-  assert_grep 'Landed set: tickets merged through a no-mistakes pipeline run only.' "$md" 'markdown states the landed-set boundary'
+  assert_grep 'Landed set: backlog Done entries that record a landing in the window, plus tickets merged through a no-mistakes pipeline run.' "$md" 'markdown states the landed-set boundary'
   assert_grep '| finding | 5 |' "$md" 'markdown counts records by source'
   assert_grep '| warning | 3 |' "$md" 'markdown counts findings by severity'
   assert_grep '| a.sh | 2 |' "$md" 'markdown counts records by file'
@@ -240,6 +240,107 @@ SQL
   ' "$dir/feedback.json" >/dev/null \
     || fail "reused branch evidence was misattributed: $(jq -c .records "$dir/feedback.json")"
   pass 'reused branch attempts retain their landing identities'
+}
+
+test_backlog_done_entries_define_the_landed_set() {
+  local dir="$TMP_ROOT/backlog-landed" fakebin
+  mkdir -p "$dir/home/data" "$dir/home/state/task-direct.inbox" "$dir/home/state/task-forced.inbox" \
+    "$dir/home/state/task-captain.inbox" "$dir/home/state/task-local.inbox"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  printf '%s' '[{"user":{"login":"dan","type":"User"},"body":"DIRECT-PR-COMMENT","created_at":"2026-09-21T10:00:00Z"}]' \
+    > "$dir/pages/_repos_o_app_issues_11_comments.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_reviews.json"
+  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_comments.json"
+  cat > "$dir/home/data/backlog.md" <<'MD'
+# Backlog
+
+## Done
+- [x] task-local - Local only landing (repo: app) (kind: ship) (done 2026-09-21)
+  local main
+- [x] task-direct - Direct PR https://github.com/o/app/pull/11 (repo: app) (kind: ship) (merged 2026-09-21)
+- [x] task-forced - Discarded PR https://github.com/o/app/pull/12 (repo: app) (kind: ship) (done 2026-09-21)
+- [x] task-captain - Captain call https://github.com/o/app/pull/13 (repo: app) (kind: captain) (merged 2026-09-21)
+- [x] task-baddate - Bad close date https://github.com/o/app/pull/14 (repo: app) (kind: ship) (merged 2026-13-01)
+- [x] task-scout - A scout report data/task-scout/report.md (repo: app) (kind: scout) (reported 2026-09-21)
+MD
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-DIRECT\n' > "$dir/home/state/task-direct.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-FORCED\n' > "$dir/home/state/task-forced.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-CAPTAIN\n' > "$dir/home/state/task-captain.inbox/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-LOCAL\n' > "$dir/home/state/task-local.inbox/001.msg"
+  mkdir -p "$dir/home/state/task-scout.inbox"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-SCOUT\n' > "$dir/home/state/task-scout.inbox/001.msg"
+  for n in 12 13 14; do
+    printf '%s' '[{"user":{"login":"dan","type":"User"},"body":"NOT-LANDED-COMMENT","created_at":"2026-09-21T10:00:00Z"}]' \
+      > "$dir/pages/_repos_o_app_issues_${n}_comments.json"
+    printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_${n}_reviews.json"
+    printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_${n}_comments.json"
+  done
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  TZ=America/Los_Angeles PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on backlog-defined landings'
+  jq -e '
+    ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
+      == "https://github.com/o/app/pull/11")
+    and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-LOCAL"])
+    and ([.records[] | select(.source == "review-comment" and .text == "NOT-LANDED-COMMENT")] | length == 0)
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "landed set ignored backlog Done entries: $(jq -c .records "$dir/feedback.json")"
+  assert_grep 'Landed set: backlog Done entries' "$dir/feedback.md" 'markdown states the backlog-derived landed set'
+  pass 'backlog Done entries define the landed set, including local-only steers and direct-PR comments'
+}
+
+test_archived_steering_of_cleaned_tasks_is_read() {
+  local dir="$TMP_ROOT/archived-steering" fakebin
+  mkdir -p "$dir/home/data/task-a/steering/handled"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  make_backlog "$dir/home"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nARCHIVED-HANDLED\n' > "$dir/home/data/task-a/steering/handled/001.msg"
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-23T08:00:00Z\n--\nARCHIVED-PENDING\n' > "$dir/home/data/task-a/steering/002.msg"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on archived steering'
+  jq -e '
+    ([.records[] | select(.source == "steer") | .text] | sort == ["ARCHIVED-HANDLED", "ARCHIVED-PENDING"])
+    and ([.records[] | select(.source == "steer")] | all(.ticket == "https://github.com/o/app/pull/7"))
+    and ([.inputs[] | select(.name == "steers")][0].status == "read")
+  ' "$dir/feedback.json" >/dev/null \
+    || fail "archived steering was not collected: $(jq -c . "$dir/feedback.json")"
+  # A task whose inbox is still live and already archived is reported once.
+  make_inbox "$dir/home"
+  mkdir -p "$dir/home/data/task-a/steering/handled"
+  cp "$dir/home/state/task-a.inbox/handled/001.msg" "$dir/home/data/task-a/steering/handled/001.msg"
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback2" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on overlapping steering'
+  jq -e '[.records[] | select(.source == "steer" and (.text | startswith("STEER-NEW")))] | length == 1' \
+    "$dir/feedback2.json" >/dev/null \
+    || fail "steer present in both inbox and archive was duplicated: $(jq -c '[.records[] | select(.source == "steer")]' "$dir/feedback2.json")"
+  pass 'steering archived under data/<id>/steering is collected once'
+}
+
+test_gitlab_merge_request_landing_keeps_its_steers() {
+  local dir="$TMP_ROOT/gitlab-landing" fakebin mr=https://gitlab.example/team/app/-/merge_requests/7
+  mkdir -p "$dir/home/data" "$dir/home/state/task-gl.inbox"
+  make_db "$dir/state.sqlite"
+  make_pages "$dir/pages"
+  cat > "$dir/home/data/backlog.md" <<MD
+# Backlog
+
+- [x] task-gl - Merged on GitLab $mr (repo: app) (kind: ship) (merged 2026-09-21)
+MD
+  printf 'schema=fm-task-inbox.v1\nat=2026-09-22T08:00:00Z\n--\nSTEER-GITLAB\n' > "$dir/home/state/task-gl.inbox/001.msg"
+  fakebin=$(make_fakebin "$dir" "$dir/pages")
+  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
+    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
+    || fail 'collector failed on a GitLab landing'
+  jq -e --arg mr "$mr" '[.records[] | select(.source == "steer" and .text == "STEER-GITLAB")][0].ticket == $mr' \
+    "$dir/feedback.json" >/dev/null \
+    || fail "a merged GitLab delivery lost its steering records: $(jq -c '[.records[] | select(.source == "steer")]' "$dir/feedback.json")"
+  pass 'a merged GitLab merge request keeps its steering records'
 }
 
 test_empty_forge_pages_are_successful() {
@@ -513,6 +614,8 @@ test_usage_errors() {
 
 failures=0
 for test_name in test_collects_every_source_in_the_window test_reused_branch_keeps_landing_identity \
+  test_backlog_done_entries_define_the_landed_set test_archived_steering_of_cleaned_tasks_is_read \
+  test_gitlab_merge_request_landing_keeps_its_steers \
   test_empty_forge_pages_are_successful test_malformed_forge_wrapper_is_reported \
   test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
