@@ -333,10 +333,10 @@ case "$READY_RC" in
 esac
 if [ -n "$PR_HEAD" ]; then
   # The parent sees only its channel, so the same signals go there, keyed to the
-  # task; an identical repeat is absorbed and a changed head or count appends.
+  # task; only a repeat of the latest such line is absorbed.
   SIGNAL_LINE="note [key=child-pr-review-$ID]: child $ID review comments: ${REVIEW_COMMENTS:-unknown} inline on head $PR_HEAD; bot findings: ${BOT_FINDINGS:-unknown} unaddressed; bot review on head: ${BOT_REVIEW:-unknown}"
   SIGNAL_RC=0
-  fm_parent_channel_report "$FM_HOME" "$STATE" "$SIGNAL_LINE" || SIGNAL_RC=$?
+  fm_parent_channel_report_latest "$FM_HOME" "$STATE" "child-pr-review-$ID" "$SIGNAL_LINE" || SIGNAL_RC=$?
   case "$SIGNAL_RC" in
     0|1) ;;
     *) printf 'actionable: the review signals for %s did not reach the parent channel (rc=%s)\n' "$URL" "$SIGNAL_RC" >&2 ;;

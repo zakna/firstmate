@@ -175,3 +175,30 @@ fm_parent_channel_report() {  # <home> <state> <line>
   [ "$rc" -eq 0 ] || return "$rc"
   fm_parent_channel_append_once "$destination" "$(status_stamp_line "$line")" || return 4
 }
+
+# Publish <line> unless it equals the LATEST line already on the channel that
+# carries <key> ("[key=<key>]"). A value that returns to an earlier one is a new
+# report; only an immediate repeat is absorbed. Same return codes as
+# fm_parent_channel_report.
+fm_parent_channel_report_latest() {  # <home> <state> <key> <line>
+  local home=$1 state=$2 key=$3 line=$4 destination rc=0 last="" cur wanted untimed
+  destination=$(fm_parent_channel_destination "$home" "$state") || rc=$?
+  [ "$rc" -eq 0 ] || return "$rc"
+  if [ -f "$destination" ] && [ ! -L "$destination" ]; then
+    while IFS= read -r cur || [ -n "$cur" ]; do
+      case "$cur" in *"[key=$key]"*) last=$cur ;; esac
+    done < "$destination"
+    if [ -n "$last" ]; then
+      _fm_status_untimed "$line" wanted
+      _fm_status_untimed "$last" untimed
+      [ "$untimed" != "$wanted" ] || return 0
+    fi
+  fi
+  # Not append_once: it would absorb a line equal to any earlier one.
+  if [ -e "$destination" ] || [ -L "$destination" ]; then
+    [ -f "$destination" ] && [ ! -L "$destination" ] || return 4
+  else
+    mkdir -p "$(dirname "$destination")" || return 4
+  fi
+  printf '%s\n' "$(status_stamp_line "$line")" >> "$destination" || return 4
+}
