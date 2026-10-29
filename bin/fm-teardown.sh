@@ -1232,13 +1232,13 @@ remote_secondmate_teardown() {
   if [ "$FORCE" != --force ]; then
     secondmate_unresolved_pending_replies_refuse || return 1
   fi
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
+  remote_steering_archive || return 1
   "$SCRIPT_DIR/fm-procevent-remote-reply.sh" retire-quiesce-locked "$ID" "$FORCE" >/dev/null 2>&1 || {
     echo "REFUSED: remote secondmate $ID still has an unhandled captured reply" >&2
     return 1
   }
   "$FM_ROOT/bin/fm-guard.sh" || true
-  teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
-  remote_steering_archive || return 1
   if [ "$FORCE" = --force ]; then
     if out=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh retire "$ID" --force < /dev/null 2>&1); then rc=0; else rc=$?; fi
   else

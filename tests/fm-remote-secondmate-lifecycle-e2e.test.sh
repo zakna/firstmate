@@ -1578,6 +1578,8 @@ for old_root_force in "" --force; do
   assert_present "$REMOTE_HOME/.fm-secondmate-home" "an old remote code root refusal removed the remote home"
   assert_present "$PARENT/state/ios.meta" "an old remote code root refusal removed parent metadata"
   assert_grep '- ios ' "$PARENT/data/secondmates.md" "an old remote code root refusal removed the registry route"
+  assert_present "$PARENT/state/procevent/remote-reply-ios.source" \
+    "an old remote code root refusal retired the live secondmate's reply source"
 done
 retired_wake_corr=$(FM_HOME="$PARENT" bash -c '
   . "$1"
