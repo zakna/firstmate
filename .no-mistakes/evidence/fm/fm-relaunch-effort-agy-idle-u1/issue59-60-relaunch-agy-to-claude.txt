@@ -1,0 +1,18 @@
+$ fm-control.sh ag1 relaunch --harness claude --effort medium --note "lab switch"
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+relaunched ag1 harness=claude from=agy model=default effort=medium backend=tmux endpoint=fmlab:fm-ag1 worktree=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1/wt
+exit=0
+--- meta after:
+window=fmlab:fm-ag1
+harness=claude
+model=default
+effort=medium
+--- pane command: 2.1.312

@@ -1,0 +1,17 @@
+--- pane tail with a typed draft:
+
+──────────────────────────────────────────────────────────────────────────────────────────
+> half-typed captain draft
+──────────────────────────────────────────────────────────────────────────────────────────
+                                                                                          
+
+composer_state=unknown
+busy_classify=unknown agy-regex
+$ fm-control.sh ag1 relaunch --effort medium --note "lab"   # same harness, draft in composer
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1
+error: task ag1's composer state is 'unknown', not proven empty; refusing to type the /quit exit command because it could concatenate onto existing text. Clear the composer, then retry 'relaunch'
+error: relaunch of ag1 failed while stopping the old agent, which is still running; its original instructions were restored
+exit=1
+--- pane command: agy
+--- composer still holds draft:
+1

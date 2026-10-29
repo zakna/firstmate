@@ -1,0 +1,7 @@
+$ fm-control.sh ag1 relaunch --harness claude --note "lab switch"   # recorded effort=medium, no --effort
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1
+error: relaunching ag1 from agy onto claude would drop its recorded effort 'medium' for the new harness's own default; pass --effort <level> to choose one for claude (or --effort default to accept that default)
+exit=1
+--- meta diff after refusal:
+(meta unchanged)
+--- pane command after refusal: agy

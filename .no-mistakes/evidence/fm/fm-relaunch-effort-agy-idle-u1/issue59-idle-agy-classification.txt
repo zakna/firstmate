@@ -1,0 +1,12 @@
+Live idle agy 1.4.9 pane (fmlab:fm-ag1, ghost hint "Accept-edits mode ..." shown), read through product libs on lab tmux socket:
+== target (6b297d1)
+composer_state=empty
+busy_classify=idle agy-regex
+fm-crew-state.sh ag1 (status log "blocked: waiting on a captain answer"):
+state: blocked · source: status-log · waiting on a captain answer
+== base (09bc38b), same pane
+composer_state=unknown
+busy_classify=unknown agy-regex
+fm-crew-state.sh ag1:
+state: unknown · source: pane · harness state unavailable (unknown agy-regex)
+After typing then clearing a draft (C-u), the pane showed a bare ">" without ghost hint: target read composer_state=empty, busy_classify=idle agy-regex.

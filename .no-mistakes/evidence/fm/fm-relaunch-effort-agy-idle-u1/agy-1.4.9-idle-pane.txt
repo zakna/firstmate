@@ -1,0 +1,45 @@
+HOME="/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1/agyhome" agy --prompt-interactive "Add 12345 and 67890. Reply with exactly the sum and not
+hing else" --model gemini-3.8-flash-low --effort low --dangerously-skip-permissions
+(base) Oliviers-MacBook-Pro:wt olivier$ HOME="/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.Tihlb1/agyhome" agy --prompt-interactive "Add 12345 and 6
+7890. Reply with exactly the sum and nothing else" --model gemini-3.8-flash-low --effort low --dangerously-skip-permissions
+
+      ▄▀▀▄        Antigravity CLI 1.4.9
+     ▀▀▀▀▀▀       olivier.vanheuverzwijn@gmail.com (Google AI Plus)
+    ▀▀▀▀▀▀▀▀      Gemini 3.8 Flash (Low)
+   ▄▀▀    ▀▀▄     /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-lab.Tihlb1/wt
+  ▄▀▀      ▀▀▄
+
+────────────────────────────────────────────────────────────
+> Add 12345 and 67890. Reply with exactly the sum and nothing else
+
+  80235
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> Accept-edits mode: file edits auto-approved (shift+tab to cycle)
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+? for shortcuts                                                                                                            accept-edits · Gemini 3.8 Flash · low
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+$ fm-control.sh ag1 relaunch --harness agy --note "back"   # now claude with effort=medium, no --effort
+error: relaunching ag1 from claude onto agy would drop its recorded effort 'medium' for the new harness's own default; pass --effort <level> to choose one for agy (or --effort default to accept that default)
+exit=1
+--- harness still: harness=claude, pane: 2.1.312
