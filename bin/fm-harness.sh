@@ -33,7 +33,8 @@
 #                                        reaches its reset, one step lower when
 #                                        quota-axi projects exhaustion first. The
 #                                        runway is read fresh on every call; an
-#                                        unreadable or stale reading refuses too.
+#                                        exhausted runway, or an unreadable, stale,
+#                                        or timed-out reading, refuses too.
 #                                        A non-empty reason overrides, printing the
 #                                        gauge on stderr. Absent config, other
 #                                        harnesses and models, and empty effort pass
@@ -95,6 +96,10 @@ CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
 . "$SCRIPT_DIR/fm-cursor-lib.sh"
 # shellcheck source=bin/fm-gemini-lib.sh
 . "$SCRIPT_DIR/fm-gemini-lib.sh"
+# shellcheck source=bin/fm-timeout-lib.sh
+. "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-quota-axi-lib.sh
+. "$SCRIPT_DIR/fm-quota-axi-lib.sh"
 
 # Print the harness named by a verified environment marker, or nothing when no
 # marker is present. Markers only report what the environment CLAIMS; detect_own
@@ -606,16 +611,27 @@ validate_effort_gauge() {
   want=-1
   for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$effort" ] && want=$i; done
   [ "$want" -ge 0 ] || return 0
-  snap=$(quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
-  gauge=$(printf '%s' "$snap" | jq -r '
-    .providers[]? | select(.provider == "claude") |
-    if .state.stale == true or .state.status != "fresh" then "unreadable"
-    else ([.quotaSemantics.effectiveAvailability[]? | select(.scope == "all_models")] | first | .runway.status // "unreadable") end' 2>/dev/null | head -1)
+  snap=$(fm_run_timed 30 quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
+  gauge=$(printf '%s' "$snap" | jq -r --arg model "$model" "$FM_QUOTA_ROW_JQ"'
+    quota_row(.; "claude"; quota_lane("claude"; $model)) |
+    if . == null or .state.stale == true or .state.status != "fresh" then "unreadable"
+    else ([.quotaSemantics.effectiveAvailability[]? | select(.scope == "all_models")] | first | .runway.status // "unreadable") end' 2>/dev/null) || gauge=
   case "$gauge" in
     through_reset) ;;
     projected_exhaustion) [ "$rank" -eq 0 ] || rank=$((rank - 1)) ;;
+    exhausted_now)
+      if [ -n "$reason" ]; then
+        echo "warning: Claude weekly quota is exhausted now; launching '$effort' by override: $reason" >&2
+        return 0
+      fi
+      echo "error: Claude weekly quota is exhausted now; pass --effort-gauge-override <reason> to launch at '$effort' anyway" >&2
+      return 1
+      ;;
     *)
-      [ -z "$reason" ] || return 0
+      if [ -n "$reason" ]; then
+        echo "warning: effort gauge cannot read a fresh Claude weekly runway from quota-axi; launching '$effort' by override: $reason" >&2
+        return 0
+      fi
       echo "error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; pass --effort-gauge-override <reason> to launch at '$effort' anyway" >&2
       return 1
       ;;

@@ -59,6 +59,10 @@ mkdir -p "$GAUGE_BIN"
 cat > "$GAUGE_BIN/quota-axi" <<'SH'
 #!/usr/bin/env bash
 [ "${FM_FAKE_QUOTA_FAIL:-0}" = 0 ] || exit 1
+if [ "${FM_FAKE_QUOTA_SCHEMA6:-0}" = 1 ]; then
+  printf '{"schemaVersion":6,"providers":[{"provider":"claude","accountKey":"other","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"through_reset"}}]}},{"provider":"claude","accountKey":"default","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"%s"}}]}}]}\n' "${FM_FAKE_QUOTA_RUNWAY:-through_reset}"
+  exit 0
+fi
 printf '{"providers":[{"provider":"claude","state":{"status":"%s","stale":%s},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"%s"}}]}}]}\n' \
   "${FM_FAKE_QUOTA_STATE:-fresh}" "${FM_FAKE_QUOTA_STALE:-false}" "${FM_FAKE_QUOTA_RUNWAY:-through_reset}"
 SH
@@ -81,6 +85,12 @@ case "$out" in *"by override: quota is for a one-off audit"*) ;; *) fail "overri
 out=$(FM_FAKE_QUOTA_STALE=true gauge low) && fail "stale reading must refuse"
 case "$out" in *"cannot read a fresh Claude weekly runway"*) ;; *) fail "stale refusal message: $out" ;; esac
 out=$(FM_FAKE_QUOTA_FAIL=1 gauge low) && fail "unreadable quota must refuse"
+out=$(FM_FAKE_QUOTA_RUNWAY=exhausted_now gauge low) && fail "exhausted runway must refuse"
+case "$out" in *"exhausted now"*) ;; *) fail "exhausted refusal message: $out" ;; esac
+out=$(FM_FAKE_QUOTA_STALE=true gauge low "stale is fine today") || fail "override must pass a stale reading: $out"
+case "$out" in *"by override: stale is fine today"*) ;; *) fail "stale override must print why: $out" ;; esac
+out=$(FM_FAKE_QUOTA_SCHEMA6=1 FM_FAKE_QUOTA_RUNWAY=projected_exhaustion gauge medium) && fail "schema 6 must bind the default Claude row"
+case "$out" in *"gauge 'low'"*) ;; *) fail "schema 6 refusal lacks low: $out" ;; esac
 out=$(FM_FAKE_QUOTA_FAIL=1 gauge low "no quota-axi here") || fail "override must pass unreadable quota: $out"
 out=$(PATH="$GAUGE_BIN:$PATH" FM_CONFIG_OVERRIDE="$GAUGE_CFG" FM_FAKE_QUOTA_RUNWAY=projected_exhaustion bash "$HARNESS" validate-effort-gauge claude claude-sonnet-5-5 medium 2>&1) || fail "gauge covers Opus only: $out"
 pass "validate-effort-gauge"

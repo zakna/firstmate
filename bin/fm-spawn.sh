@@ -2561,11 +2561,6 @@ fi
 # A Sonnet or Haiku model above its allowed effort is refused before any
 # provisioning (bin/fm-harness.sh validate-model-effort owns the limits).
 "$SCRIPT_DIR/fm-harness.sh" validate-model-effort "$HARNESS" "$MODEL" "$EFFORT" || exit 1
-# config/effort-gauge caps a fresh Claude Opus spawn by the current weekly runway
-# (bin/fm-harness.sh validate-effort-gauge owns the rule); a relaunch keeps the
-# effort its worker started with.
-[ "$RELAUNCH" -eq 1 ] ||
-  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" "$EFFORT_GAUGE_OVERRIDE" || exit 1
 # Ultra is an explicit native capability, never a Pi thinking-level alias.
 # Validate the fully resolved profile before worktree or endpoint provisioning.
 if [ "$EFFORT" = ultra ]; then
@@ -2611,6 +2606,11 @@ if [ -n "$WORKER_ACCOUNT" ] && [ "$HARNESS" = claude ]; then
     unset CLAUDE_CONFIG_DIR
   fi
 fi
+# config/effort-gauge caps a fresh Claude Opus spawn by the pinned worker
+# account's weekly runway (bin/fm-harness.sh validate-effort-gauge owns the
+# rule); a relaunch keeps the effort its worker started with.
+[ "$RELAUNCH" -eq 1 ] ||
+  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" "$EFFORT_GAUGE_OVERRIDE" || exit 1
 
 secondmate_registry_value() {
   secondmate_registry_field "$DATA/secondmates.md" "$1" "$2"
