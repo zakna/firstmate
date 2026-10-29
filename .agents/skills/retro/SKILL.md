@@ -27,7 +27,7 @@ The worker that writes the retro follows everything from "Worker procedure" on.
 2. Dispatch a scout on the ticket's project through the ordinary scout intake.
    The retro always runs in a fresh worker, never the one that delivered the ticket, because the delivering worker cannot see its own blind spots and the supervisor's own errors are in scope.
    Give the scout a task id that contains `retro`, so later retros can find this one.
-3. In the scout instructions, name the project, the ticket id, its pull request or landing commit, the delivering task's id, and the absolute path of this file, and tell the worker to follow "Worker procedure".
+3. In the scout instructions, name the project, the ticket id, its pull request or landing commit (for a local-only landing, the `landed_commit=` and `landed_base=` lines in the delivering task's `data/<id>/meta.txt`), the delivering task's id, and the absolute path of this file, and tell the worker to follow "Worker procedure".
    Add nothing that this file already states.
    The scout reads this home's defect-class register at `${FM_HOME:?}/data/retro-defect-classes.md` through "Worker procedure", so the instructions do not restate it.
 4. When the scout reports, handle it as any finished investigation.
