@@ -331,6 +331,15 @@ case "$READY_RC" in
   *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
 esac
 if [ -n "$PR_HEAD" ]; then
+  # The parent sees only its channel, so the same signals go there, keyed to the
+  # task; an identical repeat is absorbed and a changed head or count appends.
+  SIGNAL_LINE="note [key=child-pr-review-$ID]: child $ID review comments: ${REVIEW_COMMENTS:-unknown} inline on head $PR_HEAD; bot findings: ${BOT_FINDINGS:-unknown} unaddressed; bot review on head: ${BOT_REVIEW:-unknown}"
+  SIGNAL_RC=0
+  fm_parent_channel_report "$FM_HOME" "$STATE" "$SIGNAL_LINE" || SIGNAL_RC=$?
+  case "$SIGNAL_RC" in
+    0|1) ;;
+    *) printf 'actionable: the review signals for %s did not reach the parent channel (rc=%s)\n' "$URL" "$SIGNAL_RC" >&2 ;;
+  esac
   printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
   printf 'bot findings: %s unaddressed\n' "${BOT_FINDINGS:-unknown}"
   printf 'bot review on head: %s\n' "${BOT_REVIEW:-unknown}"

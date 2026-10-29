@@ -18,7 +18,9 @@
 #                                    ledger line, on every watcher poll, plus
 #                                    the silent-ledger inactive-outcome fallback
 #   - bin/fm-pr-check.sh             a registered PR-ready line carrying the
-#                                    canonical URL
+#                                    canonical URL, then a keyed note with the
+#                                    head's review-comment, bot-finding and
+#                                    bot-review answers
 #   - bin/fm-captain-hold.sh         a task held for the captain and its answer
 #   - bin/fm-merge-outcome-lib.sh    a merged PR
 #   - bin/fm-teardown.sh             the child's final ledger line, refusing to
