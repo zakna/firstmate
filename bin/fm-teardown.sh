@@ -11,6 +11,10 @@
 # names. A copy that fails refuses with its concrete reason before any removal,
 # and --force does not lift that refusal; teardown_archive_task_records owns
 # when it runs and teardown_archive_record owns the rule for an existing copy.
+# A forced secondmate cleanup keeps each descendant's records under the owning
+# secondmate's data/<id>/descendants/<child>/ and validates every such archive
+# before removing anything; a remote secondmate's steering messages are read
+# from its host and kept under data/<id>/steering/ before its home is retired.
 # With config/seat-memory present, a ship or scout's data/<id>/decisions.md is
 # also indexed under its seats (bin/fm-seat-lib.sh owns that record).
 # An endpoint whose close could not do its job REFUSES before any record naming
@@ -1171,6 +1175,34 @@ remote_outbox_cleanup() {
   )
 }
 
+# Keep the steering records that exist only in the remote home: read them from
+# the remote route's steering listing and archive them under data/<id>/steering/
+# exactly as local records are. Runs before the remote home is retired, so an
+# unreachable or unwritable archive refuses while the remote home is intact.
+remote_steering_archive() {
+  local out kind name payload dir sub tmp
+  out=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh steering "$ID" < /dev/null 2>&1) || {
+    [ -z "$out" ] || printf '%s\n' "$out" >&2
+    echo "error: teardown refused: could not read the remote steering records of $ID; nothing was removed" >&2
+    return 1
+  }
+  dir="$DATA/$ID"
+  while read -r kind name payload; do
+    case "$kind" in pending) sub= ;; handled) sub=handled/ ;; *) continue ;; esac
+    case "$name" in ''|*[!A-Za-z0-9._-]*) echo "error: teardown refused: remote steering record name '$name' is not archivable; nothing was removed" >&2; return 1 ;; esac
+    tmp=$(mktemp "${TMPDIR:-/tmp}/fm-remote-steering.XXXXXX") || return 1
+    if ! printf '%s' "$payload" | base64 -d > "$tmp" 2>/dev/null \
+      || ! teardown_archive_dir "$dir" || ! teardown_archive_dir "$dir/steering" || ! teardown_archive_dir "$dir/steering/$sub" \
+      || ! teardown_archive_record "$tmp" "$dir/steering/$sub$name" \
+      || { [ -n "$sub" ] && ! rm -f -- "$dir/steering/$name"; }; then
+      rm -f -- "$tmp"
+      echo "error: teardown refused: remote steering record $name could not be kept in $dir/steering/$sub; nothing was removed" >&2
+      return 1
+    fi
+    rm -f -- "$tmp"
+  done <<< "$out"
+}
+
 remote_secondmate_teardown() {
   local remote_host remote_root remote_home kind route_host route_root route_home out rc tmp
   remote_host=$(fm_meta_get "$META" remote_host)
@@ -1202,6 +1234,7 @@ remote_secondmate_teardown() {
   }
   "$FM_ROOT/bin/fm-guard.sh" || true
   teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
+  remote_steering_archive || return 1
   if [ "$FORCE" = --force ]; then
     if out=$("$SCRIPT_DIR/fm-on.sh" "$ID" fm-remote-secondmate-control.sh retire "$ID" --force < /dev/null 2>&1); then rc=0; else rc=$?; fi
   else
@@ -1234,11 +1267,14 @@ remote_secondmate_teardown() {
     || { echo "error: remote pending-reply cleanup failed; preserving the local route for retry" >&2; return 1; }
   handoff_wake_retire \
     || { echo "error: remote receiver wake cleanup failed; preserving the local route for retry" >&2; return 1; }
+  # The final archive refresh runs while the route still exists, so a failure
+  # here leaves a retry possible instead of stranding the retired secondmate.
+  teardown_archive_task_records "$STATE" "$DATA" "$ID" \
+    || { echo "error: remote home retired but its records could not be refreshed; preserving the local route for retry" >&2; return 1; }
   tmp="$SECONDMATE_REG.tmp.$$"
   grep -vE "^- $ID( |$)" "$SECONDMATE_REG" > "$tmp" || true
   mv -f -- "$tmp" "$SECONDMATE_REG"
   [ ! -e "$CONFIG/fleet-ledger" ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE FM_CONFIG_OVERRIDE=$CONFIG "$SCRIPT_DIR/fm-fleet-ledger.sh" cleaned_up "$ID" || true
-  teardown_archive_task_records "$STATE" "$DATA" "$ID" || return 1
   status_retire_presentation_task "$STATE" "$ID" || return 1
   fm_backlog_atomic_transition remove "$STATE/$ID.meta" "task record" "$STATE" || return 1
   rm -f -- "$STATE/$ID.turn-ended" "$STATE/$ID.progress" \
@@ -3426,14 +3462,43 @@ endpoint_close_refusal() {  # <subject> <backend> <target> <honors-force>
   return 1
 }
 
-cleanup_firstmate_home_children() {
-  local home=$1 sub_state child_meta child_id child_t child_wt child_proj child_kind child_home child_backend child_orca_worktree_id child_return_rc child_busy_gen child_owner_rc child_pool_slot
+# Where a descendant's task records are kept: equal task ids are legal across
+# isolated homes, so each home's children archive under the data directory of
+# the secondmate that owns that home, never into one flat data/<id>.
+descendant_archive_root() {  # <owner archive data dir> <owner secondmate id>
+  printf '%s/%s/descendants\n' "$1" "$2"
+}
+
+# Create or refresh every archive forced cleanup will need, recursively, before
+# the destructive loop starts, so an archive that cannot be written refuses
+# while every endpoint, worktree and record is still intact.
+preflight_descendant_archives() {  # <home> <archive root>
+  local home=$1 root=$2 sub_state child_meta child_id child_kind child_home child_wt
   sub_state="$home/state"
   [ -d "$sub_state" ] || return 0
   for child_meta in "$sub_state"/*.meta; do
     [ -e "$child_meta" ] || continue
     child_id=$(basename "$child_meta" .meta)
-    teardown_archive_task_records "$sub_state" "$DATA" "$child_id" || return 1
+    teardown_archive_task_records "$sub_state" "$root" "$child_id" || return 1
+    child_kind=$(meta_value "$child_meta" kind)
+    [ "$child_kind" = secondmate ] || continue
+    child_wt=$(meta_value "$child_meta" worktree)
+    child_home=$(meta_value "$child_meta" home)
+    [ -n "$child_home" ] || child_home=$child_wt
+    if [ -n "$child_home" ] && [ -d "$child_home" ]; then
+      preflight_descendant_archives "$child_home" "$(descendant_archive_root "$root" "$child_id")" || return 1
+    fi
+  done
+}
+
+cleanup_firstmate_home_children() {  # <home> <archive root>
+  local home=$1 archive_root=$2 sub_state child_meta child_id child_t child_wt child_proj child_kind child_home child_backend child_orca_worktree_id child_return_rc child_busy_gen child_owner_rc child_pool_slot
+  sub_state="$home/state"
+  [ -d "$sub_state" ] || return 0
+  for child_meta in "$sub_state"/*.meta; do
+    [ -e "$child_meta" ] || continue
+    child_id=$(basename "$child_meta" .meta)
+    teardown_archive_task_records "$sub_state" "$archive_root" "$child_id" || return 1
     child_wt=$(meta_value "$child_meta" worktree)
     child_proj=$(meta_value "$child_meta" project)
     child_kind=$(meta_value "$child_meta" kind)
@@ -3476,7 +3541,7 @@ cleanup_firstmate_home_children() {
       child_home=$(meta_value "$child_meta" home)
       [ -n "$child_home" ] || child_home=$child_wt
       if [ -n "$child_home" ] && [ -d "$child_home" ]; then
-        cleanup_firstmate_home_children "$child_home" || return $?
+        cleanup_firstmate_home_children "$child_home" "$(descendant_archive_root "$archive_root" "$child_id")" || return $?
         remove_firstmate_home "$child_home" "child firstmate home" "$child_id" || return $?
       fi
     elif [ "$child_backend" = orca ]; then
@@ -3531,7 +3596,7 @@ cleanup_firstmate_home_children() {
       child_busy_gen=$(cat "$sub_state/$child_id.busy-gen" 2>/dev/null || true)
     fi
     retire_busy_state "$sub_state" "$child_id" "$child_busy_gen" || return 1
-    teardown_archive_task_records "$sub_state" "$DATA" "$child_id" || return 1
+    teardown_archive_task_records "$sub_state" "$archive_root" "$child_id" || return 1
     status_retire_presentation_task "$sub_state" "$child_id" || return 1
     fm_wake_queue_prune_task "$sub_state" "$child_id" "$child_t" 2>/dev/null || true
     fm_backlog_atomic_transition remove "$sub_state/$child_id.meta" "task record" "$sub_state" || return 1
@@ -3609,7 +3674,9 @@ fi
 
 if [ "$KIND" = secondmate ] && [ "$FORCE" = "--force" ]; then
   teardown_archive_task_records "$STATE" "$DATA" "$ID" || exit 1
-  cleanup_firstmate_home_children "$HOME_PATH" || exit $?
+  FORCED_ARCHIVE_ROOT=$(descendant_archive_root "$DATA" "$ID")
+  preflight_descendant_archives "$HOME_PATH" "$FORCED_ARCHIVE_ROOT" || exit 1
+  cleanup_firstmate_home_children "$HOME_PATH" "$FORCED_ARCHIVE_ROOT" || exit $?
 fi
 
 if [ "$KIND" = scout ] && [ "$FORCE" != "--force" ]; then

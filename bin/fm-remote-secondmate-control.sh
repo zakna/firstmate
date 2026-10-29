@@ -13,6 +13,7 @@
 #   fm-remote-secondmate-control.sh sync <id> [<parent-commit>]
 #   fm-remote-secondmate-control.sh update <id>
 #   fm-remote-secondmate-control.sh retire <id> [--force]
+#   fm-remote-secondmate-control.sh steering <id>
 #
 # Remote placement ends here, but the second-mate agent always runs on the
 # Herdr backend in the dedicated fm-remote session, so launch refuses any other
@@ -71,7 +72,7 @@ REMOTE_HERDR_SESSION=fm-remote
 . "$SCRIPT_DIR/fm-task-inbox-lib.sh"
 
 die() { printf 'error: %s\n' "$1" >&2; exit 1; }
-usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 validate_id() { case "$1" in ''|*[!A-Za-z0-9._-]*) die "invalid secondmate id: $1" ;; esac; }
 
 validate_home() { # <id> [allow-absent]
@@ -414,6 +415,24 @@ cmd_update() {
   cmd_sync "$id"
 }
 
+# Print every steering record this secondmate's host-local inbox holds, one line
+# each: "<pending|handled> <file name> <base64 of the record>". Retirement removes
+# the whole home, so the parent reads this first and keeps the records under its
+# own data/<id>/steering/ (bin/fm-teardown.sh owns the archive).
+cmd_steering() {
+  local id=$1 sub src name
+  validate_id "$id"
+  validate_home "$id"
+  for sub in "" handled/; do
+    for src in "$CONTROL_STATE/$id.inbox/$sub"*.msg; do
+      [ -f "$src" ] && [ ! -L "$src" ] || continue
+      name=$(basename "$src")
+      case "$name" in *[!A-Za-z0-9._-]*) die "steering record name is not archivable: $name" ;; esac
+      printf '%s %s %s\n' "$([ -n "$sub" ] && echo handled || echo pending)" "$name" "$(base64 < "$src" | tr -d '\n')"
+    done
+  done
+}
+
 cmd_retire() {
   local id=$1 force=${2:-} rc
   validate_id "$id"
@@ -451,6 +470,7 @@ case "${1:-}" in
   sync) shift; [ "$#" -ge 1 ] && [ "$#" -le 2 ] || usage; cmd_sync "$@" ;;
   update) shift; [ "$#" -eq 1 ] || usage; cmd_update "$@" ;;
   retire) shift; [ "$#" -ge 1 ] && [ "$#" -le 2 ] || usage; cmd_retire "$@" ;;
+  steering) shift; [ "$#" -eq 1 ] || usage; cmd_steering "$1" ;;
   ''|-h|--help|help) usage ;;
   *) die "unknown command: $1" ;;
 esac
