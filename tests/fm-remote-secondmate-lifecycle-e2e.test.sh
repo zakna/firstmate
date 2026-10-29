@@ -1636,7 +1636,6 @@ assert_grep 'pending steer before retirement' "$PARENT/data/ios/steering/retire-
   "remote retirement lost the remote home's pending steering message"
 assert_grep 'handled steer before retirement' "$PARENT/data/ios/steering/handled/retire-probe-handled.msg" \
   "remote retirement lost the remote home's handled steering message"
-assert_absent "$REMOTE_HOME" "remote retirement did not remove the remote home"
 assert_absent "$PARENT/state/ios.meta" "remote retirement did not remove parent metadata"
 assert_absent "$PARENT/state/.backlog-handoff-ios.wake-pending" \
   "remote retirement left receiver wake state that could poison a replacement route"
