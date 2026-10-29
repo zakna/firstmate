@@ -786,6 +786,7 @@ SH
   [ "$rc" -ne 0 ] || fail "a relaunch that raises Opus effort above the gauge must refuse"$'\n'"$out"
   assert_contains "$out" "above the effort gauge 'low'" "the refusal must name the gauge"
   [ "$(meta_field "$dir" rl6 effort)" = xhigh ] || fail "a refused relaunch must leave the recorded effort alone"
+  assert_no_grep "/exit" "$dir/fake/literal" "a gauge refusal must happen before the running agent is stopped"
   out=$(run_control "$dir" rl6 relaunch --model claude-opus-5-5 --effort xhigh --note "same effort"); rc=$?
   expect_code 0 "$rc" "a relaunch keeping the recorded effort is not gated"$'\n'"$out"
   pass "fm-control relaunch: the effort gauge gates only a relaunch that changes the recorded effort"
