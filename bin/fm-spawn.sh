@@ -543,6 +543,7 @@
 # consumers can distinguish a replacement worker that reuses the same task id.
 # A claude launch also records claude_root=, the configuration root it runs
 # under, which a later relaunch's predecessor recap reads its transcript from.
+# A default root under HOME is made true for the pane by launching with that HOME.
 # With config/seat-memory present, a templated claude ship or scout launch also
 # starts with --session-id and records it as claude_session_id=, so the task
 # record names its conversation; a relaunch keeps earlier ids in
@@ -5709,6 +5710,16 @@ if [ -n "$WORKER_ACCOUNT" ]; then
   esac
 elif [ "$HARNESS" = claude ] && [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
   LAUNCH="CLAUDE_CONFIG_DIR=$(shell_quote "$CLAUDE_CONFIG_DIR") $LAUNCH"
+fi
+# A claude worker whose root resolves to the default under HOME (the same
+# branch that records claude_root=$HOME/.claude) also gets that HOME, so the
+# pane's transcript store is the one the record names even when the pane's
+# daemon runs under another HOME. A raw command that sets its own root keeps it.
+if [ "$HARNESS" = claude ] && [ -n "${HOME:-}" ] && [ -z "${CLAUDE_CONFIG_DIR:-}" ] \
+  && { [ "$RAW_LAUNCH" = 0 ] || ! raw_claude_config_dir "$RAW_COMMAND" >/dev/null; }; then
+  case "$HOME" in
+  /*) LAUNCH="HOME=$(shell_quote "$HOME") $LAUNCH" ;;
+  esac
 fi
 if [ "$KIND" = secondmate ]; then
   sq_home=$(shell_quote "$PROJ_ABS")
