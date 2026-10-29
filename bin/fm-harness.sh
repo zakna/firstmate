@@ -610,7 +610,7 @@ validate_effort_gauge() {
   want=-1
   for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$effort" ] && want=$i; done
   [ "$want" -ge 0 ] || return 0
-  snap=$(fm_run_timed 30 quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
+  snap=$(fm_run_timed "${FM_EFFORT_GAUGE_TIMEOUT:-30}" quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
   gauge=$(printf '%s' "$snap" | jq -r --arg model "$model" "$FM_QUOTA_ROW_JQ"'
     quota_row(.; "claude"; quota_lane("claude"; $model)) |
     if . == null or .state.stale == true or .state.status != "fresh" then "unreadable"
