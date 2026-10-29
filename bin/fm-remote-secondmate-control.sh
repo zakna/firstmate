@@ -420,9 +420,11 @@ cmd_update() {
 # the whole home, so the parent reads this first and keeps the records under its
 # own data/<id>/steering/ (bin/fm-teardown.sh owns the archive).
 cmd_steering() {
-  local id=$1 sub src name
+  local id=$1 sub src name rc=0
   validate_id "$id"
-  validate_home "$id"
+  # An already-retired home has nothing left to read; a retry still proceeds.
+  validate_home "$id" yes || rc=$?
+  [ "$rc" -ne 2 ] || return 0
   for sub in "" handled/; do
     for src in "$CONTROL_STATE/$id.inbox/$sub"*.msg; do
       [ -f "$src" ] && [ ! -L "$src" ] || continue
