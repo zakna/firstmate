@@ -325,12 +325,6 @@ PR_MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)
 PR_YOLO=$(grep '^yolo=' "$META" | tail -1 | cut -d= -f2- || true)
 [ -z "$PR_MODE" ] || READY_LINE="$READY_LINE mode=$(fm_parent_channel_clean_note "$PR_MODE")"
 [ -z "$PR_YOLO" ] || READY_LINE="$READY_LINE yolo=$(fm_parent_channel_clean_note "$PR_YOLO")"
-READY_RC=0
-fm_parent_channel_report "$FM_HOME" "$STATE" "$READY_LINE" || READY_RC=$?
-case "$READY_RC" in
-  0|1) ;;
-  *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
-esac
 if [ -n "$PR_HEAD" ]; then
   # The parent sees only its channel, so the same signals go there, keyed to the
   # task; only a repeat of the latest such line is absorbed.
@@ -341,6 +335,14 @@ if [ -n "$PR_HEAD" ]; then
     0|1) ;;
     *) printf 'actionable: the review signals for %s did not reach the parent channel (rc=%s)\n' "$URL" "$SIGNAL_RC" >&2 ;;
   esac
+fi
+READY_RC=0
+fm_parent_channel_report "$FM_HOME" "$STATE" "$READY_LINE" || READY_RC=$?
+case "$READY_RC" in
+  0|1) ;;
+  *) printf 'actionable: PR %s is registered but its ready line did not reach the parent channel (rc=%s)\n' "$URL" "$READY_RC" >&2 ;;
+esac
+if [ -n "$PR_HEAD" ]; then
   printf 'review comments: %s inline on head %s\n' "${REVIEW_COMMENTS:-unknown}" "$PR_HEAD"
   printf 'bot findings: %s unaddressed\n' "${BOT_FINDINGS:-unknown}"
   printf 'bot review on head: %s\n' "${BOT_REVIEW:-unknown}"

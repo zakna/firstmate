@@ -729,6 +729,8 @@ test_review_signals_reach_the_parent_channel_from_a_secondmate_home() {
     || fail "the review-comment count never reached the parent channel: $(cat "$replies")"
   grep -qF 'bot findings:' "$replies" || fail "the bot-finding count never reached the parent channel"
   grep -qF 'bot review on head:' "$replies" || fail "the bot-review answer never reached the parent channel"
+  tail -1 "$replies" | grep -q '^done \[key=child-pr-task-a\].*: child task-a PR ready' \
+    || fail "the first PR-ready line is not the channel's newest event: $(cat "$replies")"
 
   FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$head\"}]]" \
     run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
