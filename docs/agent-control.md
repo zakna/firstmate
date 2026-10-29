@@ -82,6 +82,7 @@ A relaunch does take one session reference when the endpoint's own runtime recor
    A recorded non-default effort is never dropped silently: a harness change without `--effort` refuses before the checkpoint, and `--effort default` accepts the new harness's own default.
    A Claude or Pi replacement must also pass the home's [worker account pin](configuration.md#worker-account-pin-configclaude-account-configpi-account), so a pin that no longer resolves or is signed out refuses before the old agent stops.
    Ship and scout replacements also pass the [worker tool exclusion checks](configuration.md#worker-tool-exclusions-configcrew-exclude-tools) at this step.
+   A Claude Opus replacement whose effort differs from the recorded one must also pass the [effort gauge](configuration.md#effort-gauge-configeffort-gauge) here.
 2. **Safe checkpoint.**
    The recorded worktree must exist and be a worktree root; its head and dirty state are recorded.
    For a `kind=secondmate` task, the home's identity marker must match and its child records must be readable, so a relaunch can never strand child work behind an unreadable home.
