@@ -22,7 +22,7 @@ CREATE TABLE step_rounds (id TEXT PRIMARY KEY, step_result_id TEXT, round INTEGE
   created_at INTEGER);
 INSERT INTO repos VALUES ('r1', 'https://github.com/o/app.git');
 INSERT INTO runs VALUES
-  ('landed-1', 'r1', 'fm/a', 'cancelled', 'https://github.com/o/app/pull/7', 'none', NULL, $IN, $IN),
+  ('landed-1', 'r1', 'fm/a', 'cancelled', NULL, 'none', NULL, $IN, $IN),
   ('landed-2', 'r1', 'fm/a', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $IN, $IN),
   ('old', 'r1', 'fm/old', 'completed', 'https://github.com/o/app/pull/2', 'merged', $OLD, $OLD, $OLD),
   ('open', 'r1', 'fm/open', 'running', 'https://github.com/o/app/pull/9', 'open', $IN, $IN, $IN);
