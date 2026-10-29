@@ -918,7 +918,7 @@ fm_busy_agy_tail_idle() {
       if (NR < 2) exit 1
       if (l[NR] !~ /^[[:space:]]*\? for shortcuts([[:space:]]|$)/) exit 1
       i = NR - 1
-      if (l[i] ~ /^[[:space:]]*(─){8,}[[:space:]]*$/) i--
+      if (l[i] ~ /^[[:space:]]*(─)+[[:space:]]*$/ && index(l[i], "────────")) i--
       exit !(i >= 1 && l[i] ~ /^[[:space:]]*>([[:space:]]|$)/)
     }'
 }
