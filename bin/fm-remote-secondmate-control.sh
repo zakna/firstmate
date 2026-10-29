@@ -76,13 +76,13 @@ usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 validate_id() { case "$1" in ''|*[!A-Za-z0-9._-]*) die "invalid secondmate id: $1" ;; esac; }
 
 validate_home() { # <id> [allow-absent]
-  local id=$1 allow_absent=${2:-no} marker
+  local id=$1 allow_absent=${2:-no} marker nondir
   if [ ! -e "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] && [ "$allow_absent" = yes ]; then return 2; fi
   # Sourcing the shared libraries recreates an empty state directory under a
   # removed home, so a home holding only directories is also already retired;
   # those empty directories are removed so the home is absent again.
   if [ "$allow_absent" = yes ] && [ -d "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] \
-    && [ -z "$(find "$TARGET_HOME" -mindepth 1 ! -type d 2>/dev/null | head -n 1)" ]; then
+    && nondir=$(find "$TARGET_HOME" -mindepth 1 ! -type d -print -quit 2>/dev/null) && [ -z "$nondir" ]; then
     find "$TARGET_HOME" -depth -type d -empty -delete 2>/dev/null || true
     return 2
   fi
