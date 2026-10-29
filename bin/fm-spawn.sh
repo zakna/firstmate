@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Spawn a direct report: a crewmate in a treehouse or Orca worktree, or a
 # secondmate in its isolated firstmate home.
-# Usage: fm-spawn.sh <task-id> <project-dir> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off> [--branch-prefix <prefix>] [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--effort-gauge-override <reason>] [--backend <name>] [--herdr-resume-lock-wait]
+# Usage: fm-spawn.sh <task-id> <project-dir> --mode <no-mistakes|direct-PR|local-only> --yolo <on|off> [--branch-prefix <prefix>] [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] [--herdr-resume-lock-wait]
 #        fm-spawn.sh <task-id> <project-dir> --scout [--base-branch <branch>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] [--herdr-resume-lock-wait]
 #        fm-spawn.sh <task-id> [<firstmate-home>] [--harness <name>|harness|launch-command] [--model <name>] [--effort <level>] [--backend <name>] --secondmate
 #   --mode and --yolo are this task's delivery contract, REQUIRED for every ship
@@ -766,7 +766,6 @@ RELAUNCH=0
 # Absent/unset keeps upstream refuse-on-contention. See header.
 HERDR_RESUME_LOCK_WAIT=0
 POS=()
-EFFORT_GAUGE_OVERRIDE=
 want_value=
 for a in "$@"; do
   if [ -n "$want_value" ]; then
@@ -789,7 +788,6 @@ for a in "$@"; do
       EFFORT=$a
       EFFORT_SET=1
       ;;
-    effort_gauge_override) EFFORT_GAUGE_OVERRIDE=$a ;;
     backend)
       BACKEND_ARG=$a
       BACKEND_SET=1
@@ -843,8 +841,6 @@ for a in "$@"; do
     MODEL=${a#--model=}
     MODEL_SET=1
     ;;
-  --effort-gauge-override) want_value=effort_gauge_override ;;
-  --effort-gauge-override=*) EFFORT_GAUGE_OVERRIDE=${a#--effort-gauge-override=} ;;
   --effort) want_value=effort ;;
   --effort=*)
     EFFORT=${a#--effort=}
@@ -2606,11 +2602,13 @@ if [ -n "$WORKER_ACCOUNT" ] && [ "$HARNESS" = claude ]; then
     unset CLAUDE_CONFIG_DIR
   fi
 fi
-# config/effort-gauge caps a fresh Claude Opus spawn by the pinned worker
+# config/effort-gauge caps an explicit Claude Opus --effort by the pinned worker
 # account's weekly runway (bin/fm-harness.sh validate-effort-gauge owns the
-# rule); a relaunch keeps the effort its worker started with.
-[ "$RELAUNCH" -eq 1 ] ||
-  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" "$EFFORT_GAUGE_OVERRIDE" || exit 1
+# rule). A relaunch is gated only when its effort differs from the task's
+# recorded effort= meta, or none is recorded.
+if [ "$RELAUNCH" -eq 0 ] || [ "$(fm_meta_get "$RELAUNCH_META" effort)" != "$EFFORT" ]; then
+  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" || exit 1
+fi
 
 secondmate_registry_value() {
   secondmate_registry_field "$DATA/secondmates.md" "$1" "$2"

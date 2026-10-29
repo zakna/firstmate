@@ -768,6 +768,29 @@ test_harness_switch_does_not_carry_the_old_profile_axes() {
   pass "fm-control relaunch: a harness switch refuses to drop a recorded effort unless --effort is named"
 }
 
+test_relaunch_gates_only_a_changed_opus_effort() {
+  local dir out rc
+  dir=$(new_case gauge rl6)
+  add_ship_task "$dir" rl6 claude
+  sed 's/^model=default$/model=claude-opus-5-5/; s/^effort=default$/effort=xhigh/' \
+    "$dir/home/state/rl6.meta" > "$dir/home/state/rl6.meta.tmp"
+  mv "$dir/home/state/rl6.meta.tmp" "$dir/home/state/rl6.meta"
+  mkdir -p "$dir/home/config"
+  echo low > "$dir/home/config/effort-gauge"
+  cat > "$dir/fakebin/quota-axi" <<'SH'
+#!/usr/bin/env bash
+printf '{"providers":[{"provider":"claude","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"through_reset"}}]}}]}\n'
+SH
+  chmod +x "$dir/fakebin/quota-axi"
+  out=$(run_control "$dir" rl6 relaunch --model claude-opus-5-5 --effort max --note "raising effort"); rc=$?
+  [ "$rc" -ne 0 ] || fail "a relaunch that raises Opus effort above the gauge must refuse"$'\n'"$out"
+  assert_contains "$out" "above the effort gauge 'low'" "the refusal must name the gauge"
+  [ "$(meta_field "$dir" rl6 effort)" = xhigh ] || fail "a refused relaunch must leave the recorded effort alone"
+  out=$(run_control "$dir" rl6 relaunch --model claude-opus-5-5 --effort xhigh --note "same effort"); rc=$?
+  expect_code 0 "$rc" "a relaunch keeping the recorded effort is not gated"$'\n'"$out"
+  pass "fm-control relaunch: the effort gauge gates only a relaunch that changes the recorded effort"
+}
+
 test_harness_switch_resolves_a_prefixed_recorded_harness() {
   local dir out rc auth
   dir=$(new_case prefixcontrol rl32)
@@ -2695,6 +2718,7 @@ test_relaunch_appends_the_progress_note_to_the_instructions
 test_relaunch_requires_a_note_for_a_ship_task
 test_harness_switch_moves_the_record_and_clears_prior_wiring
 test_harness_switch_does_not_carry_the_old_profile_axes
+test_relaunch_gates_only_a_changed_opus_effort
 test_harness_switch_resolves_a_prefixed_recorded_harness
 test_prefixed_recorded_harness_requires_explicit_replacement
 test_same_harness_relaunch_keeps_the_profile_axes
