@@ -1,0 +1,15 @@
+## Scenario (adversarial): record write fails after the merge -> merge still lands, loud warning, record untouched
+main before: c854f84
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+mktemp: injected failure
+warning: merged, but could not record the landed commit f4b5c2166778c898e8acdfcd87c8deccdfe6bef1 in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/state/demo-local-landing-e1.meta
+merged fm/demo-local-landing-e1 into local main (c854f84 -> f4b5c21) in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+exit=0
+main after: f4b5c21
+record unchanged (no partial/ghost write) -> PASS
+no leftover temp files or held locks -> PASS
+
+## Scenario (adversarial): record removed (teardown) before landing -> no ghost record is published
+error: no meta for task demo-local-landing-e1 at /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/state/demo-local-landing-e1.meta
+exit=1
+no state/demo-local-landing-e1.meta created -> PASS

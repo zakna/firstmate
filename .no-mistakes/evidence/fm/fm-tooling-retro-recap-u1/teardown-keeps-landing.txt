@@ -1,0 +1,31 @@
+## Scenario: teardown keeps landed_commit/landed_base in data/<id>/meta.txt (where /retro reads them)
+--- state/demo-local-landing-e1.meta before teardown:
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+mode=local-only
+branch=fm/demo-local-landing-e1
+spawn_gen=1
+landed_commit=c854f843410888f8f831c28fdfddf8e1539ff28d
+landed_base=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+window=labs:fm-demo-local-landing-e1
+endpoint_task_id=demo-local-landing-e1
+worktree=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/wt
+kind=ship
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge
+A new version of treehouse is available: v2.3.0 → v3.1.7
+Run "treehouse update" to update
+
+worktree /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/nm-lab-merge/wt is not managed by treehouse
+error: treehouse return failed for worktree /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/wt; teardown aborted
+exit=1
+--- state/demo-local-landing-e1.meta exists after teardown? yes
+--- data/demo-local-landing-e1/meta.txt after teardown:
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+mode=local-only
+branch=fm/demo-local-landing-e1
+spawn_gen=1
+landed_commit=c854f843410888f8f831c28fdfddf8e1539ff28d
+landed_base=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+window=labs:fm-demo-local-landing-e1
+endpoint_task_id=demo-local-landing-e1
+worktree=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/wt
+kind=ship

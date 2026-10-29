@@ -1,0 +1,11 @@
+## Scenario: a second landing replaces (not duplicates) landed_* lines
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+merged fm/demo-local-landing-e1 into local main (fa2a3e4 -> c854f84) in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+mode=local-only
+branch=fm/demo-local-landing-e1
+spawn_gen=1
+landed_commit=c854f843410888f8f831c28fdfddf8e1539ff28d
+landed_base=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+landed_commit lines: 1 (expected 1, value c854f843410888f8f831c28fdfddf8e1539ff28d)
+

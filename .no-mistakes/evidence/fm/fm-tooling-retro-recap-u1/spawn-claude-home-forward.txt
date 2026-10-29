@@ -1,0 +1,35 @@
+## Scenario: claude worker launched from a tmux server whose HOME differs runs under the HOME its claude_root names (zakna/fm-tooling#58)
+spawning process HOME: /Users/olivier
+lab tmux server global env: HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-spawn/daemon-home
+pane shell (pid 57398) HOME: HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-spawn/daemon-home
+--- task record:
+window=primary:fm-lab-home-fwd-s1
+harness=claude
+kind=scout
+claude_root=/Users/olivier/.claude
+pane child 57563: treehouse get  HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-spawn/daemon-home
+--- transcript store named by claude_root ($claude_root/projects/<worktree-slug>):
+8f72ab63-f960-45c7-a19b-623453e7f542
+8f72ab63-f960-45c7-a19b-623453e7f542.jsonl
+--- transcript store under the daemon HOME (should not exist):
+ls: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-spawn/daemon-home/.claude/projects: No such file or directory
+--- worker's own report:
+# lab-home-fwd-s1 report
+
+**What I did:** ran `echo $HOME` once in the task worktree, as the spec asked. I took no other actions.
+
+**Output:**
+--- pane capture:
+ ▐▛███▛█   Claude Code v2.1.312
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/nm-lab-spawn/daemon-home/.treehouse/demo-eae44c/1/demo
+❯ : Firstmate operational input waiting: read '/private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/nm-lab-spawn/state/operational-inbox/1793310834-80e4d26b5c0b93a8.msg' and handle its contents
+  as Firstmate operational input.
+  Thought for 7s, read 1 file, ran 2 shell commands
+⏺ HOME is /Users/olivier. I ran echo $HOME once, wrote the result to report.md, and added a done line to the status file.
+  I skipped the captain-hold-lifecycle completion gate that the brief asks for before done. The task said to take no other actions, so I followed that over the brief's general checklist.
+✻ Sautéed for 17s · done 10:54 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle)

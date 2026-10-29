@@ -1,0 +1,35 @@
+## Scenario: local-only landing records landed_commit/landed_base (bin/fm-merge-local.sh, lab FM_HOME)
+base=573bcca3aa52f1de296181f332bc4bd854e564dc fix=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+$ FM_HOME=$LAB bin/fm-merge-local.sh demo-local-landing-e1
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+merged fm/demo-local-landing-e1 into local main (573bcca -> fa2a3e4) in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+exit=0
+--- state/demo-local-landing-e1.meta after first merge:
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+mode=local-only
+branch=fm/demo-local-landing-e1
+spawn_gen=1
+landed_commit=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+landed_base=573bcca3aa52f1de296181f332bc4bd854e564dc
+-rw-------@ 1 olivier  staff  253 Oct 29 22:49 /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/state/demo-local-landing-e1.meta
+
+## Scenario: rerun (no-op ff) keeps original landed_base
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+merged fm/demo-local-landing-e1 into local main (fa2a3e4 -> fa2a3e4) in /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+exit=0
+--- state/demo-local-landing-e1.meta after rerun:
+project=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//nm-lab-merge/projects/demo
+mode=local-only
+branch=fm/demo-local-landing-e1
+spawn_gen=1
+landed_commit=fa2a3e4089c143390441fa47372dbd65d5dc8e9d
+landed_base=573bcca3aa52f1de296181f332bc4bd854e564dc
+CHECK: landed_commit=fix and landed_base=base preserved -> PASS
+--- /retro range: git log landed_base..landed_commit
+fa2a3e4 change
