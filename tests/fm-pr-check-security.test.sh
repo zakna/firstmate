@@ -793,6 +793,8 @@ test_bot_review_on_head_is_reported() {
     "$(bot_review_payload "" "{\"author\":{\"login\":\"vercel\"},\"body\":\"Latest commit: 0123456\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
   bot_review_case refused "Copilot was not able to review the head" \
     "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a could-not-review opening is followed by real findings" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review 1 of 3 files. Finding: foo() skips the auth check.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case yes "a review on the head summarizes a rate limit change" \
     "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"This adds a rate limit to the login endpoint.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case unknown "the newest commit is not the recorded head" \
