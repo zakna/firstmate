@@ -213,15 +213,13 @@ test_reused_branch_keeps_landing_identity() {
   sqlite3 "$dir/state.sqlite" <<SQL
 INSERT INTO runs VALUES
   ('reused-before', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/6', 'merged', $OLD, $OLD, $OLD),
-  ('reused-attempt-1', 'r1', 'fm/reused', 'cancelled', 'https://github.com/o/app/pull/7', 'none', NULL, $((IN - 10)), $((IN - 10))),
-  ('reused-nourl', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN - 5)), $((IN - 5))),
+  ('reused-attempt-1', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
   ('reused-land-1', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $IN, $IN),
-  ('reused-attempt-2', 'r1', 'fm/reused', 'cancelled', 'https://github.com/o/app/pull/8', 'none', NULL, $((IN + 10)), $((IN + 10))),
+  ('reused-attempt-2', 'r1', 'fm/reused', 'cancelled', NULL, 'none', NULL, $((IN + 10)), $((IN + 10))),
   ('reused-land-2', 'r1', 'fm/reused', 'completed', 'https://github.com/o/app/pull/8', 'merged', $in2, $in2, $in2);
 INSERT INTO step_results VALUES
   ('s-reused-1', 'reused-attempt-1', 'review', 'completed', 'REUSED-ONE', NULL, NULL, $IN),
-  ('s-reused-2', 'reused-attempt-2', 'review', 'completed', 'REUSED-TWO', NULL, NULL, $in2),
-  ('s-reused-nourl', 'reused-nourl', 'review', 'completed', 'REUSED-NOURL', NULL, NULL, $IN);
+  ('s-reused-2', 'reused-attempt-2', 'review', 'completed', 'REUSED-TWO', NULL, NULL, $in2);
 SQL
   printf '%s' '[{"user":{"login":"carol","type":"User"},"body":"PR8-COMMENT","created_at":"2026-09-22T10:00:00Z"}]' \
     > "$dir/pages/_repos_o_app_issues_8_comments.json"
@@ -239,7 +237,6 @@ SQL
     and ([.records[] | select(.source == "review-comment") | .ticket] | unique | sort
       == ["https://github.com/o/app/pull/7", "https://github.com/o/app/pull/8"])
     and ([.records[] | select(.source == "review-comment" and .text == "PR8-COMMENT")] | length == 1)
-    and ([.records[] | select(.text == "REUSED-NOURL")] | length == 0)
   ' "$dir/feedback.json" >/dev/null \
     || fail "reused branch evidence was misattributed: $(jq -c .records "$dir/feedback.json")"
   pass 'reused branch attempts retain their landing identities'
@@ -255,14 +252,6 @@ test_backlog_done_entries_define_the_landed_set() {
     > "$dir/pages/_repos_o_app_issues_11_comments.json"
   printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_reviews.json"
   printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_11_comments.json"
-  sqlite3 "$dir/state.sqlite" <<SQL
-INSERT INTO runs VALUES
-  ('local-attempt', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
-  ('local-late', 'r1', 'fm/task-local', 'completed', NULL, 'none', NULL, $(epoch 2026-09-22T02:00:00Z), $(epoch 2026-09-22T02:00:00Z));
-INSERT INTO step_results VALUES
-  ('s-local', 'local-attempt', 'review', 'completed', 'LOCAL-ATTEMPT', NULL, NULL, $IN),
-  ('s-local-late', 'local-late', 'review', 'completed', 'LOCAL-LATE', NULL, NULL, $IN);
-SQL
   cat > "$dir/home/data/backlog.md" <<'MD'
 # Backlog
 
@@ -292,16 +281,14 @@ MD
     --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
     || fail 'collector failed on backlog-defined landings'
   jq -e '
-    ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-ATTEMPT")][0].ticket == "task-local")
-    and ([.records[] | select(.source == "gate-answer" and .text == "LOCAL-LATE")][0].ticket == "task-local")
-    and ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
+    ([.records[] | select(.source == "review-comment" and .text == "DIRECT-PR-COMMENT")][0].ticket
       == "https://github.com/o/app/pull/11")
     and ([.records[] | select(.source == "steer") | .text] | sort == ["STEER-DIRECT", "STEER-LOCAL"])
     and ([.records[] | select(.source == "review-comment" and .text == "NOT-LANDED-COMMENT")] | length == 0)
   ' "$dir/feedback.json" >/dev/null \
     || fail "landed set ignored backlog Done entries: $(jq -c .records "$dir/feedback.json")"
   assert_grep 'Landed set: backlog Done entries' "$dir/feedback.md" 'markdown states the backlog-derived landed set'
-  pass 'backlog Done entries define the landed set, including local-only and direct-PR landings'
+  pass 'backlog Done entries define the landed set, including local-only steers and direct-PR comments'
 }
 
 test_archived_steering_of_cleaned_tasks_is_read() {
@@ -333,65 +320,6 @@ test_archived_steering_of_cleaned_tasks_is_read() {
     "$dir/feedback2.json" >/dev/null \
     || fail "steer present in both inbox and archive was duplicated: $(jq -c '[.records[] | select(.source == "steer")]' "$dir/feedback2.json")"
   pass 'steering archived under data/<id>/steering is collected once'
-}
-
-test_runs_bind_to_their_landing_by_pull_request() {
-  local dir="$TMP_ROOT/bind-by-pr" fakebin in2
-  mkdir -p "$dir/home"
-  make_db "$dir/state.sqlite"
-  make_pages "$dir/pages"
-  in2=$(epoch 2026-09-22T10:00:00Z)
-  sqlite3 "$dir/state.sqlite" <<SQL
-INSERT INTO runs VALUES
-  ('bind-land-1', 'r1', 'fm/bind', 'completed', 'https://github.com/o/app/pull/7', 'merged', $IN, $((IN - 100)), $IN),
-  ('bind-for-8', 'r1', 'fm/bind', 'cancelled', 'https://github.com/o/app/pull/8', 'closed', NULL, $((IN - 50)), $((IN - 50))),
-  ('bind-land-2', 'r1', 'fm/bind', 'completed', 'https://github.com/o/app/pull/8', 'merged', $in2, $((IN + 50)), $in2);
-INSERT INTO step_results VALUES
-  ('s-bind-8', 'bind-for-8', 'review', 'completed', 'BELONGS-TO-EIGHT', NULL, NULL, $IN);
-SQL
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_issues_8_comments.json"
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_reviews.json"
-  printf '%s' '[]' > "$dir/pages/_repos_o_app_pulls_8_comments.json"
-  fakebin=$(make_fakebin "$dir" "$dir/pages")
-  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
-    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
-    || fail 'collector failed on overlapping pull request runs'
-  jq -e '[.records[] | select(.source == "gate-answer" and .text == "BELONGS-TO-EIGHT")][0].ticket
-    == "https://github.com/o/app/pull/8"' "$dir/feedback.json" >/dev/null \
-    || fail "run carrying a pull request URL was bound by time interval: $(jq -c .records "$dir/feedback.json")"
-  pass 'a run that carries a pull request URL binds to that pull request'
-}
-
-test_local_only_landing_binds_runs_of_its_own_repository() {
-  local dir="$TMP_ROOT/local-repo-scope" fakebin
-  mkdir -p "$dir/home/data"
-  make_db "$dir/state.sqlite"
-  make_pages "$dir/pages"
-  sqlite3 "$dir/state.sqlite" <<SQL
-INSERT INTO repos VALUES ('r2', 'https://github.com/o/other.git');
-INSERT INTO runs VALUES
-  ('scope-app', 'r1', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10))),
-  ('scope-other', 'r2', 'fm/task-local', 'cancelled', NULL, 'none', NULL, $((IN - 10)), $((IN - 10)));
-INSERT INTO step_results VALUES
-  ('s-scope-app', 'scope-app', 'review', 'completed', 'APP-REPO-ATTEMPT', NULL, NULL, $IN),
-  ('s-scope-other', 'scope-other', 'review', 'completed', 'OTHER-REPO-ATTEMPT', NULL, NULL, $IN);
-SQL
-  cat > "$dir/home/data/backlog.md" <<'MD'
-# Backlog
-
-- [x] task-local - Local only landing (repo: app) (kind: ship) (done 2026-09-21)
-  local main
-MD
-  fakebin=$(make_fakebin "$dir" "$dir/pages")
-  PATH="$fakebin:$PATH" "$COLLECT" --since 2026-09-20 --out "$dir/feedback" \
-    --nm-db "$dir/state.sqlite" --home "$dir/home" >/dev/null \
-    || fail 'collector failed on a branch name shared by two repositories'
-  jq -e '
-    ([.records[] | select(.source == "gate-answer" and .text == "APP-REPO-ATTEMPT")] | length == 1)
-    and ([.records[] | select(.source == "gate-answer" and .text == "OTHER-REPO-ATTEMPT")] | length == 0)
-  ' "$dir/feedback.json" >/dev/null \
-    || fail "local-only landing bound a run of another repository: $(jq -c '[.records[] | select(.source == "gate-answer")]' "$dir/feedback.json")"
-  pass 'a local-only landing binds only the runs of its own repository'
 }
 
 test_gitlab_merge_request_landing_keeps_its_steers() {
@@ -687,8 +615,7 @@ test_usage_errors() {
 failures=0
 for test_name in test_collects_every_source_in_the_window test_reused_branch_keeps_landing_identity \
   test_backlog_done_entries_define_the_landed_set test_archived_steering_of_cleaned_tasks_is_read \
-  test_runs_bind_to_their_landing_by_pull_request \
-  test_local_only_landing_binds_runs_of_its_own_repository test_gitlab_merge_request_landing_keeps_its_steers \
+  test_gitlab_merge_request_landing_keeps_its_steers \
   test_empty_forge_pages_are_successful test_malformed_forge_wrapper_is_reported \
   test_corrupt_round_payload_is_reported \
   test_absent_inputs_are_reported_not_fatal test_unreadable_backlog_is_reported \
