@@ -234,7 +234,7 @@ pass "$VERSION: Escape aborts the running tool and the host stays alive"
 
 # 3. A crash mid side-effecting tool never runs that call again, and
 # 5. relaunch through fm-control reopens the same store and resumes the run.
-"$ROOT/bin/fm-send.sh" "$ID" "Runtime crash verification: run exactly this shell command once: echo start >> '$WT/side.txt'; sleep 15 . If that command is reported as interrupted, do not run it again; instead run exactly: echo INTERRUPTED > '$WT/crash.txt' and stop." > "$LAB/send4.log" 2>&1 || fail 'could not steer crash probe'
+"$ROOT/bin/fm-send.sh" "$ID" "Runtime crash verification: run exactly this shell command once: echo start >> '$WT/side.txt'; sleep 15 . Never run it a second time, whatever its result." > "$LAB/send4.log" 2>&1 || fail 'could not steer crash probe'
 wait_file "$WT/side.txt"
 before=$(entries)
 pid=$(host_pid)
@@ -252,10 +252,14 @@ for _ in $(seq 1 120); do
 done
 bells=$(sqlite3 "file:$STORE/conversation.sqlite?mode=ro" "select count(*) from entries where record like '%Firstmate instruction waiting%'")
 [ "$bells" = 0 ] || fail 'the relaunch recap handed doorbell lines to the model'
-wait_file "$WT/crash.txt"
 wait_idle
 [ "$(grep -c start "$WT/side.txt")" = 1 ] || fail "the interrupted side-effecting call ran $(grep -c start "$WT/side.txt") times"
 [ "$(entries)" -gt "$before" ] || fail 'the relaunch did not continue the same conversation'
+# The reopened conversation accepts new work. This steer comes after the
+# relaunch, so it cannot be satisfied by the earlier interrupt's result.
+"$ROOT/bin/fm-send.sh" "$ID" "Runtime relaunch verification: run exactly this shell command once: echo INTERRUPTED > '$WT/crash.txt' . Then stop." > "$LAB/send4b.log" 2>&1 || fail 'could not steer the relaunched worker'
+wait_file "$WT/crash.txt"
+wait_idle
 [ "$(sed -n 's/^harness=//p' "$H/state/$ID.meta")" = pi-durable ] || fail 'relaunch changed the recorded harness'
 pass "$VERSION: crash mid-tool is not replayed; relaunch reopens the same store ($before -> $(entries) entries)"
 
