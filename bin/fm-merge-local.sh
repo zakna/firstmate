@@ -15,7 +15,7 @@
 # The task's existing per-task control lock serializes the captain-hold check
 # through that fast-forward. A still-held or unreadable row refuses before the
 # merge, so a captain approval must be recorded as an `answer --release` before
-# this entrypoint is invoked. The lock ends when the fast-forward returns;
+# this entrypoint is invoked. The lock ends once the landing is recorded;
 # docs/captain-hold-lifecycle.md owns the accepted merge-to-cleanup residual.
 # Usage: fm-merge-local.sh <task-id>
 set -eu
@@ -138,36 +138,40 @@ case "$hold_status" in
     exit 1
     ;;
 esac
-merge_status=0
-git -C "$PROJ" merge --ff-only "$BRANCH" >/dev/null || merge_status=$?
-fm_lock_release "$MERGE_CONTROL_LOCK" || true
-MERGE_CONTROL_LOCK=
-[ "$merge_status" -eq 0 ] || exit "$merge_status"
-after=$(git -C "$PROJ" rev-parse --short "$DEFAULT")
-after_full=$(git -C "$PROJ" rev-parse "$DEFAULT")
 # Cleanup closes a local-only Done entry with only `local main`, so the landed
-# commit and the commit it landed onto are recorded here; teardown keeps the
-# record as data/<id>/meta.txt, which is where /retro looks them up. The merge
-# is already done, so a failed write warns instead of failing the landing.
+# commit and the commit it landed onto are recorded here, still under the
+# control lock so teardown cannot archive the record mid-write; teardown keeps
+# the record as data/<id>/meta.txt, which is where /retro looks them up. The
+# merge is already done, so a failed write warns instead of failing the landing.
 record_landing() {
-  local lock tmp line status=0
+  local lock tmp status=0
   lock=$(fm_meta_lock_path "$META") || return 1
   fm_lock_acquire_wait "$lock" || return 1
-  tmp=$(mktemp "$STATE/.fm-merge-local.XXXXXX") || status=1
-  if [ "$status" -eq 0 ]; then
-    {
-      while IFS= read -r line || [ -n "$line" ]; do
-        case "$line" in landed_commit=*|landed_base=*) continue ;; esac
-        printf '%s\n' "$line"
-      done < "$META"
-      printf 'landed_commit=%s\nlanded_base=%s\n' "$after_full" "$before_full"
-    } > "$tmp" && chmod 0600 "$tmp" && mv -f -- "$tmp" "$META" || status=1
+  if ! fm_backlog_record_present "$META" "task record" "$STATE" \
+    || ! tmp=$(mktemp "$STATE/.fm-merge-local.XXXXXX"); then
+    fm_lock_release "$lock" || true
+    return 1
   fi
-  [ "$status" -eq 0 ] || { [ -z "$tmp" ] || rm -f -- "$tmp"; }
+  if ! { grep -vE '^landed_(commit|base)=' "$META" || [ "$?" -eq 1 ]; } > "$tmp" \
+    || ! printf 'landed_commit=%s\nlanded_base=%s\n' "$after_full" "$before_full" >> "$tmp" \
+    || ! chmod 0600 "$tmp" \
+    || ! fm_backlog_atomic_transition publish "$tmp" "$META" "task record" "$STATE"; then
+    status=1
+    rm -f -- "$tmp"
+  fi
   fm_lock_release "$lock" || status=1
   return "$status"
 }
-record_landing || echo "warning: merged, but could not record the landed commit $after_full in $META" >&2
+merge_status=0
+git -C "$PROJ" merge --ff-only "$BRANCH" >/dev/null || merge_status=$?
+if [ "$merge_status" -eq 0 ]; then
+  after=$(git -C "$PROJ" rev-parse --short "$DEFAULT")
+  after_full=$(git -C "$PROJ" rev-parse "$DEFAULT")
+  record_landing || echo "warning: merged, but could not record the landed commit $after_full in $META" >&2
+fi
+fm_lock_release "$MERGE_CONTROL_LOCK" || true
+MERGE_CONTROL_LOCK=
+[ "$merge_status" -eq 0 ] || exit "$merge_status"
 # Opt-in fleet activity ledger (docs/fleet-ledger.md); off costs one file test.
 [ ! -e "${FM_CONFIG_OVERRIDE:-$FM_HOME/config}/fleet-ledger" ] || FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE "$SCRIPT_DIR/fm-fleet-ledger.sh" merged "$ID" local || true
 echo "merged $BRANCH into local $DEFAULT ($before -> $after) in $PROJ"
