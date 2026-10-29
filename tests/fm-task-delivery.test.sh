@@ -542,7 +542,11 @@ test_local_merge_records_the_landed_commit() {
     || fail "local merge for the landed-commit fixture should succeed"
   assert_grep "landed_commit=$fix" "$meta" "local merge did not record the landed commit"
   assert_grep "landed_base=$base" "$meta" "local merge did not record the commit it landed onto"
-  pass "fm-merge-local: the landed commit and its base reach the task record"
+  FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$MERGE_LOCAL" "$id" >/dev/null \
+    || fail "a repeated local merge of an already-landed branch should succeed"
+  assert_grep "landed_commit=$fix" "$meta" "a repeated local merge lost the landed commit"
+  assert_grep "landed_base=$base" "$meta" "a repeated local merge overwrote the commit it landed onto"
+  pass "fm-merge-local: the landed commit and its base reach the task record and survive a rerun"
 }
 
 test_local_merge_uses_the_recorded_ship_branch() {

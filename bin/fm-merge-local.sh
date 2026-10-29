@@ -167,7 +167,7 @@ git -C "$PROJ" merge --ff-only "$BRANCH" >/dev/null || merge_status=$?
 if [ "$merge_status" -eq 0 ]; then
   after=$(git -C "$PROJ" rev-parse --short "$DEFAULT")
   after_full=$(git -C "$PROJ" rev-parse "$DEFAULT")
-  record_landing || echo "warning: merged, but could not record the landed commit $after_full in $META" >&2
+  [ "$after_full" = "$before_full" ] || record_landing || echo "warning: merged, but could not record the landed commit $after_full in $META" >&2
 fi
 fm_lock_release "$MERGE_CONTROL_LOCK" || true
 MERGE_CONTROL_LOCK=
