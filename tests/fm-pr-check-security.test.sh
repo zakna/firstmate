@@ -710,6 +710,48 @@ test_review_comments_on_recorded_head_are_counted() {
   pass "registration counts inline review comments on the exact recorded head"
 }
 
+# In a secondmate home the parent sees only the parent channel, so the pre-merge
+# review signals that registration prints locally must reach it too: at first
+# registration and again, for a new head, at merge-time re-registration.
+test_review_signals_reach_the_parent_channel_from_a_secondmate_home() {
+  local dir head other replies
+  dir=$(make_case review-signals-upward)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  seed_secondmate_home "$dir"
+  replies="$dir/home/state/parent-replies.status"
+  head=0123456789abcdef0123456789abcdef01234567
+  other=89abcdef0123456789abcdef0123456789abcdef
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration in a secondmate home failed: $(cat "$dir/stderr")"
+  grep -qF "review comments: 2 inline on head $head" "$replies" \
+    || fail "the review-comment count never reached the parent channel: $(cat "$replies")"
+  grep -qF 'bot findings:' "$replies" || fail "the bot-finding count never reached the parent channel"
+  grep -qF 'bot review on head:' "$replies" || fail "the bot-review answer never reached the parent channel"
+
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration in a secondmate home failed: $(cat "$dir/stderr")"
+  [ "$(grep -cF "review comments: 2 inline on head $head" "$replies")" -eq 1 ] \
+    || fail "an unchanged re-registration told the parent the same signals twice"
+
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration on a new head failed: $(cat "$dir/stderr")"
+  grep -qF "review comments: 0 inline on head $other" "$replies" \
+    || fail "the new head's review-comment count never reached the parent channel: $(cat "$replies")"
+
+  dir=$(make_case review-signals-main-home)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE='[[]]' \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration in a main home failed: $(cat "$dir/stderr")"
+  [ ! -e "$dir/home/state/parent-replies.status" ] || fail "a main home wrote a parent channel"
+  pass "registration forwards the review signals through the parent channel from a secondmate home only"
+}
+
 # Registration counts the bot findings nobody has addressed, on any head: a
 # finding fixed on an earlier head is still counted until its thread is resolved
 # or the PR author replies naming a fix commit; a question, a reply naming no
@@ -3786,6 +3828,7 @@ test_valid_recording_and_merge_derivation
 test_review_comments_on_recorded_head_are_counted
 test_unaddressed_bot_findings_are_counted
 test_bot_review_on_head_is_reported
+test_review_signals_reach_the_parent_channel_from_a_secondmate_home
 test_rejected_metacharacter_bytes_are_inert
 test_static_poll_contract
 test_atomic_interruption_leaves_no_partial_artifact
