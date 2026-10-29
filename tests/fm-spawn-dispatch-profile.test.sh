@@ -1512,6 +1512,26 @@ test_claude_omits_config_dir_prefix_when_unset() {
   pass "claude omits the config-dir prefix when firstmate runs with the single-store default"
 }
 
+# The recorded default root is $HOME/.claude of the spawning process, but the
+# pane comes from a long-lived daemon with its own HOME, so the launch must
+# carry that HOME for the record and the worker's transcript store to agree.
+test_claude_default_root_launch_forwards_recorded_home() {
+  local rec id out status launch
+  id=profile-claude-homefwd-z19
+  rec=$(make_spawn_case profile-claude-homefwd claude "$id")
+  read_case_record "$rec"
+
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR")
+  status=$?
+  expect_code 0 "$status" "claude spawn without CLAUDE_CONFIG_DIR should succeed"
+  launch=$(cat "$LAUNCH_LOG")
+  assert_grep "claude_root=$HOME_DIR/user-home/.claude" "$HOME_DIR/state/$id.meta" \
+    "the default root is recorded under the spawning HOME"
+  assert_contains "$launch" "HOME='$HOME_DIR/user-home' " \
+    "the claude launch must carry the HOME its recorded default root was derived from"
+  pass "claude default-root launch forwards the HOME its claude_root record names"
+}
+
 test_non_claude_harness_ignores_config_dir() {
   local rec id out status launch
   id=profile-codex-nocfgdir-z19
@@ -2246,6 +2266,7 @@ test_claude_forwards_firstmate_config_dir_when_set
 test_lavish_server_address_is_exported_to_worker_launch
 test_lavish_absent_config_preserves_destination_ambient
 test_claude_omits_config_dir_prefix_when_unset
+test_claude_default_root_launch_forwards_recorded_home
 test_claude_permission_mode_bypass_matches_absent_launch
 test_claude_permission_mode_auto_swaps_only_the_permission_flag
 test_claude_permission_mode_auto_reaches_scout_launch
