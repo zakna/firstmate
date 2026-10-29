@@ -84,8 +84,9 @@
 # as pending before any wake. A review bot's event carries reviewer=bot: it is
 # an untrusted finding to verify, never an instruction or a verdict. A bot
 # review whose whole body is the one-sentence notice "<name> was unable to
-# review" or "Copilot wasn't able to review" only says it could not review and is
-# ignored; a review that continues past that sentence is kept. Review bots: Copilot
+# review" or "Copilot wasn't able to review", with only <details> blocks after
+# it, only says it could not review and is ignored; a review that continues past
+# that sentence is kept. Review bots: Copilot
 # and copilot-pull-request-reviewer[bot] (GitHub Copilot inline comments and
 # reviews), chatgpt-codex-connector[bot] (Codex). poll appends ordinary durable check wakes through fm-wake-lib
 # and emits only newly durable signals for the authenticated check to surface.
@@ -297,7 +298,7 @@ observe() { # canonical GitHub URL -> normalized JSON
             | map((._signal != "comment" and (.user.login | IN("Copilot","copilot-pull-request-reviewer[bot]","chatgpt-codex-connector[bot]"))) as $bot
               | select(.user.login != $c.user.login
                 and ((.author_association | IN("OWNER","MEMBER","COLLABORATOR"))
-                  or ($bot and ((._signal == "review" and (.body // "" | test("^\\s*(\\S+ was unable to review|Copilot wasn\u0027t able to review)[^.\\n]*\\.?\\s*$"; "i"))) | not))))
+                  or ($bot and ((._signal == "review" and (.body // "" | gsub("<details>(.|\\n)*?</details>"; "") | test("^\\s*(\\S+ was unable to review|Copilot wasn\u0027t able to review)([^.\\n]|\\.(?=\\S))*\\.?\\s*$"; "i"))) | not))))
               | {token:((._signal + ":") + (.id|tostring) + ":" + (.updated_at // .submitted_at // "") + ":" + (.state // "")),
                  type:._signal,source:.html_url,head:.commit_id,
                  author:.user.login,body:(.body // "" | .[:500])}
