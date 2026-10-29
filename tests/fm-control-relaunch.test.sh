@@ -756,12 +756,16 @@ test_harness_switch_does_not_carry_the_old_profile_axes() {
   mv "$dir/home/state/rl5.meta.tmp" "$dir/home/state/rl5.meta"
   printf 'codex' > "$dir/fake/becomes"
   out=$(run_control "$dir" rl5 relaunch --harness codex --note "switching runtime"); rc=$?
-  expect_code 0 "$rc" "a harness switch should succeed"$'\n'"$out"
+  [ "$rc" -ne 0 ] || fail "a harness switch must refuse when it would drop a recorded effort"$'\n'"$out"
+  assert_contains "$out" "--effort" "the refusal must name the flag that resolves it"
+  [ "$(meta_field "$dir" rl5 harness)" = claude ] || fail "a refused switch must leave the recorded harness alone"
+  out=$(run_control "$dir" rl5 relaunch --harness codex --effort low --note "switching runtime"); rc=$?
+  expect_code 0 "$rc" "a harness switch naming its effort should succeed"$'\n'"$out"
   [ "$(meta_field "$dir" rl5 model)" = default ] \
     || fail "a model chosen for the old harness must not carry to a different one"
-  [ "$(meta_field "$dir" rl5 effort)" = default ] \
-    || fail "an effort chosen for the old harness must not carry to a different one"
-  pass "fm-control relaunch: a harness switch resets model and effort unless they are named too"
+  [ "$(meta_field "$dir" rl5 effort)" = low ] \
+    || fail "the explicit effort should be recorded for the new harness"
+  pass "fm-control relaunch: a harness switch refuses to drop a recorded effort unless --effort is named"
 }
 
 test_harness_switch_resolves_a_prefixed_recorded_harness() {
@@ -1234,12 +1238,15 @@ test_explicit_secondmate_harness_ignores_configured_profile_axes() {
   printf '%s' "$dir/smhome" > "$dir/fake/cwd"
   printf 'codex' > "$dir/fake/becomes"
   out=$(run_control "$dir" sm4 relaunch --harness codex); rc=$?
-  expect_code 0 "$rc" "an explicit secondmate harness should relaunch"$'\n'"$out"
+  [ "$rc" -ne 0 ] || fail "a secondmate harness switch must refuse when it would drop a recorded effort"$'\n'"$out"
+  assert_contains "$out" "--effort" "the refusal must name the flag that resolves it"
+  out=$(run_control "$dir" sm4 relaunch --harness codex --effort low); rc=$?
+  expect_code 0 "$rc" "an explicit secondmate harness with its effort should relaunch"$'\n'"$out"
   [ "$(meta_field "$dir" sm4 model)" = default ] \
     || fail "an explicit secondmate harness must not inherit the configured model"
-  [ "$(meta_field "$dir" sm4 effort)" = default ] \
-    || fail "an explicit secondmate harness must not inherit the configured effort"
-  pass "fm-control relaunch: explicit secondmate harness resets unnamed profile axes"
+  [ "$(meta_field "$dir" sm4 effort)" = low ] \
+    || fail "the explicit effort should be recorded"
+  pass "fm-control relaunch: explicit secondmate harness needs its effort named"
 }
 
 test_ship_relaunch_ignores_the_crew_harness_config() {

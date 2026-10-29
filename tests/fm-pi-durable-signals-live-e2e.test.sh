@@ -284,7 +284,7 @@ pass "$VERSION: /quit stops the host"
 
 # 10. Rollback: relaunching on the ordinary Pi adapter keeps the store.
 if command -v pi >/dev/null 2>&1; then
-  "$ROOT/bin/fm-control.sh" "$ID" relaunch --harness pi --note "Rollback check only: reply OK and stop." > "$LAB/rollback.log" 2>&1 \
+  "$ROOT/bin/fm-control.sh" "$ID" relaunch --harness pi --effort high --note "Rollback check only: reply OK and stop." > "$LAB/rollback.log" 2>&1 \
     || fail "rollback relaunch failed: $(cat "$LAB/rollback.log")"
   [ "$(sed -n 's/^harness=//p' "$H/state/$ID.meta")" = pi ] || fail 'rollback did not record the pi harness'
   [ -s "$STORE/conversation.sqlite" ] || fail 'rollback removed the pilot store'

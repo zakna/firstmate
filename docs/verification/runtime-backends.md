@@ -2654,7 +2654,7 @@ The model was local Ollama `qwen-fast` behind an `openai-completions` provider i
 | Exit | `bin/fm-control.sh <id> exit` delivered Escape then `/quit`, and the pane's agent stopped; while the worker was retrying a dead endpoint, the first exit was refused with composer state `unknown` during the host's interrupt redraw, nothing was typed, and a retry stopped the host (a known pilot limitation the live guard allows one retry for) |
 | Compat flags | none of the recorded chat-completions request bodies carried a `developer` role or `reasoning_effort`, matching the provider's `supportsDeveloperRole:false` and `supportsReasoningEffort:false` |
 | Store | `state/<id>.pi-durable/` was mode 0700 with 0600 files; a launch naming `openai-codex` or `github-copilot`, an undeclared model, or `--thinking` was refused before any store existed; teardown removes the store and does not archive it, as `tests/fm-teardown.test.sh` pins |
-| Rollback | `bin/fm-control.sh <id> relaunch --harness pi` moved the task to the ordinary Pi adapter and left the pilot store and the task worktree in place |
+| Rollback | `bin/fm-control.sh <id> relaunch --harness pi` (now `--effort <level>` too, since a recorded effort no longer drops silently across a harness change) moved the task to the ordinary Pi adapter and left the pilot store and the task worktree in place |
 
 Two host behaviours came from this run.
 `qwen-fast` sometimes returns its whole closing reply in the reasoning field, so the host renders a final message that has only reasoning content.

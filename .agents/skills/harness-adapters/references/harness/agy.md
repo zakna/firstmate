@@ -21,7 +21,7 @@ Verified as a CREWMATE and SCOUT adapter only; `../../../../../bin/fm-spawn.sh` 
 | Resume | `--continue` and `--conversation` exist but carry no verified pane-resume contract; use deterministic relaunch. |
 | Model | `--model <id>` with the bare catalog id from `agy models` (for example `gemini-3.8-flash-high`); `bin/fm-spawn.sh` refuses a requested id a reachable listing omits. The listing is a remote fetch, so the probe runs stdin-detached under the shared hard bound and an unreachable or hung listing launches unvalidated with a notice. |
 | Effort | `--effort low\|medium\|high`; `xhigh` and `max` stay in task metadata under the record-and-omit contract. |
-| Composer | Borderless bare `>` row, which the shared classifier reads as `unknown` under the dead-shell rule, never `empty`; steering confirms delivery through native agent-state and the delivery footer instead, the cursor precedent. |
+| Composer | Borderless bare `>` row between two rules, with `? for shortcuts` as the last screen row; the shared classifier reads `empty` only on that status-row proof (plus the cursor on the glyph row when known, and an empty remainder or agy's `38;5;241` ghost hint on a styled capture), and `unknown` for a bare `>` without it, per the dead-shell rule. |
 
 ## Trust, and where the decision persists
 
@@ -45,7 +45,7 @@ agy is deliberately absent from the session-lock name vocabulary in `../../../..
 ## Worker busy state and turn end
 
 `../../../../../bin/fm-spawn.sh` arms no busy generation for agy and writes no sidecar, exactly because no writer could ever clear a seeded record.
-`fm_busy_agy_tail_busy` matches the pinned `esc to cancel` status row alone, hardcoded with no environment override, and `fm_busy_classify` reports `unknown agy-regex` rather than idle when it is absent, because a long turn can scroll the marker out of the captured tail.
+`fm_busy_agy_tail_busy` matches the pinned `esc to cancel` status row alone, hardcoded with no environment override, and `fm_busy_classify` reports `unknown agy-regex` rather than idle when it is absent, because a long turn can scroll the marker out of the captured tail; it reports `idle agy-regex` only when the last row is `? for shortcuts` directly under a `>` composer row (`fm_busy_agy_tail_idle`).
 Teardown removes nothing agy-specific because the spawn leaves nothing behind.
 
 ## Primary integration

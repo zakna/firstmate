@@ -788,7 +788,7 @@ Its private worker config disables Claude Code imports (including the captain's 
 Nothing migrates to it: a home selects it only through `config/crew-harness`, a dispatch profile, or a per-spawn `--harness pi-durable`, always with an explicit `--model <provider>/<id>` naming an `openai-completions` provider in the Pi `models.json`.
 Each home needs its own pinned install before the first spawn, created with `bin/fm-pi-durable.sh install` under `state/pi-durable-runtime/`; [`fm-pi-durable.sh`](../bin/fm-pi-durable.sh) owns the install, check, and Node floor.
 Each task's conversation store is `state/<id>.pi-durable/`, owner-only, kept across relaunches including a rollback to `pi`, and removed by teardown with the task's other state.
-Rolling back is a relaunch onto the ordinary adapter, for example `fm-control.sh <id> relaunch --harness pi`; [its adapter reference](../.agents/skills/harness-adapters/references/harness/pi-durable.md) owns the lifecycle, recovery, and provider limits.
+Rolling back is a relaunch onto the ordinary adapter, for example `fm-control.sh <id> relaunch --harness pi --effort <level>`, where a task with a recorded effort must name one; [its adapter reference](../.agents/skills/harness-adapters/references/harness/pi-durable.md) owns the lifecycle, recovery, and provider limits.
 
 ### Verification and primary supervision
 

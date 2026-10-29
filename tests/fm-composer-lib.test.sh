@@ -1242,6 +1242,7 @@ test_dialog_note_skips_the_match_when_no_sink_is_set() {
   pass "a dialog note without a sink skips the match, and release leaves a caller RETURN trap"
 }
 
+
 test_quoted_exit_picker_text_is_not_a_dialog() {
   local screen out rc sink enters
   screen=$(quoted_exit_picker_screen)
