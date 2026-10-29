@@ -1111,6 +1111,13 @@ A malformed or unreadable file refuses every fresh ship or scout spawn until it 
 Firstmate cannot see which part of a worker's life uses the resource, so the number bounds whole workers from launch to handoff, and the tightest resource every worker needs should decide it.
 [`bin/fm-project-capacity-lib.sh`](../bin/fm-project-capacity-lib.sh) owns the file format, what holds a place, and why concurrent spawns cannot both take the last one.
 
+## Effort gauge (config/effort-gauge)
+
+The optional local, gitignored `config/effort-gauge` holds one effort level: the full effort for Claude Opus workers.
+When it exists, `bin/fm-spawn.sh` reads the pinned worker account's Claude weekly runway from `quota-axi` on every spawn with an explicit Opus `--effort` and refuses an effort above the gauge: the file's level while the runway reaches its reset, one level lower when `quota-axi` projects exhaustion first.
+An exhausted runway or a stale, unreadable, or timed-out reading refuses too; lowering `--effort` is the only remedy, and a spawn without `--effort` is not gated.
+A relaunch is gated only when its effort differs from the task's recorded `effort=` meta, or none is recorded; `bin/fm-control.sh relaunch` checks it once, before stopping the old agent, and [`bin/fm-harness.sh`](../bin/fm-harness.sh) `validate-effort-gauge` owns the rule.
+
 ## Crew dispatch profiles (config/crew-dispatch.json)
 
 `config/crew-dispatch.json` is an optional local, gitignored file containing natural-language rules that firstmate reads before dispatching a crewmate or scout.
@@ -2414,6 +2421,7 @@ FM_TASK_INBOX_GRACE_SECS=90   # seconds an unhandled steering-inbox message may 
 FM_TASK_INBOX_RING_MAX=3      # watcher delivery attempts without an acknowledgement before the task surfaces as a stale wake for recovery
 FM_TASK_INBOX_BUSY_MAX=2      # consecutive busy-deferred due polls before a stuck-busy stale wake; 1..999999999, at most 9 decimal digits, otherwise 2; policy: bin/fm-task-inbox-lib.sh
 FM_CHECK_TIMEOUT=30     # seconds allowed per slow check script
+FM_EFFORT_GAUGE_TIMEOUT=30   # seconds bounding the quota-axi runway read behind config/effort-gauge; a read that hits the bound refuses the launch
 FM_MAIL_CHECK_BUDGET=15   # seconds allowed for one standing mail poll; valid 5..25, cut to fit FM_CHECK_TIMEOUT
 FM_MAIL_POLL_MAX_WAKES=20   # per-poll wake cap for a mail poll; valid 1..200, keeps a flood from flooding firstmate
 FM_MAIL_TIMEOUT=20   # mail-plane IMAP/SMTP socket timeout in seconds; invalid or non-positive values become 20

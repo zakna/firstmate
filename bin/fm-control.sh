@@ -1100,10 +1100,25 @@ resolve_relaunch_profile() {
   # The launch owner applies this home's worker account pin too, but only after
   # the old agent has been stopped, so a pin that no longer resolves or is
   # signed out must refuse here, while nothing has changed yet.
-  local account_model=$TARGET_MODEL
+  local account_model=$TARGET_MODEL account account_root
+  local -a gauge_env=(env)
   [ "$account_model" != default ] || account_model=
-  fm_worker_account_select "$TARGET_HARNESS" "${FM_CONFIG_OVERRIDE:-$FM_HOME/config}" \
-    "$account_model" "$TARGET_HARNESS" >/dev/null || return 1
+  account=$(fm_worker_account_select "$TARGET_HARNESS" "${FM_CONFIG_OVERRIDE:-$FM_HOME/config}" \
+    "$account_model" "$TARGET_HARNESS") || return 1
+  # The launch owner's effort gauge (config/effort-gauge) is checked here as
+  # well, against the pinned account's runway, when the effort changes.
+  if [ "$TARGET_EFFORT" != "$(fm_meta_get "$META" effort)" ]; then
+    if [ -n "$account" ]; then
+      account_root=${account#*$'\t'}
+      account_root=${account_root%%$'\t'*}
+      if [ -n "$account_root" ]; then
+        gauge_env=(env "CLAUDE_CONFIG_DIR=$account_root")
+      else
+        gauge_env=(env -u CLAUDE_CONFIG_DIR)
+      fi
+    fi
+    "${gauge_env[@]}" "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$TARGET_HARNESS" "$TARGET_MODEL" "$TARGET_EFFORT" || return 1
+  fi
   # Likewise config/crew-exclude-tools: a malformed file, or a replacement
   # runtime that cannot hide the listed tools, refuses here, before the old
   # agent stops. Secondmate agents are not covered.

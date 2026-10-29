@@ -260,7 +260,7 @@ run_control() {  # <case-dir> <args...>
     PATH="$dir/fakebin:$PATH" FM_HOME="$dir/home" FM_FAKE_DIR="$dir/fake" \
     HOME="$dir/user-home" CLAUDE_CONFIG_DIR='' \
     FM_SPAWN_NO_GUARD=1 GROK_HOME="$dir/grokhome" \
-    FM_CONTROL_POLL=0.01 FM_CONTROL_EXIT_WAIT=0.05 FM_CONTROL_LAUNCH_WAIT=0.05 \
+    FM_CONTROL_POLL=0.01 FM_CONTROL_EXIT_WAIT=0.05 FM_CONTROL_LAUNCH_WAIT=0.05 FM_EFFORT_GAUGE_TIMEOUT=300 \
     FM_REAL_GIT="${FM_REAL_GIT:-}" FM_FAKE_GIT_FAILURE="${FM_FAKE_GIT_FAILURE:-}" \
     FM_REAL_MV="${FM_REAL_MV:-}" FM_FAKE_COMPLETE_JOURNAL_MV_FAIL="${FM_FAKE_COMPLETE_JOURNAL_MV_FAIL:-}" \
     FM_FAKE_META_PUBLISH_MV_FAIL="${FM_FAKE_META_PUBLISH_MV_FAIL:-}" \
@@ -766,6 +766,52 @@ test_harness_switch_does_not_carry_the_old_profile_axes() {
   [ "$(meta_field "$dir" rl5 effort)" = low ] \
     || fail "the explicit effort should be recorded for the new harness"
   pass "fm-control relaunch: a harness switch refuses to drop a recorded effort unless --effort is named"
+}
+
+test_relaunch_gates_only_a_changed_opus_effort() {
+  local dir out rc
+  dir=$(new_case gauge rl6)
+  add_ship_task "$dir" rl6 claude
+  sed 's/^model=default$/model=claude-opus-5-5/; s/^effort=default$/effort=xhigh/' \
+    "$dir/home/state/rl6.meta" > "$dir/home/state/rl6.meta.tmp"
+  mv "$dir/home/state/rl6.meta.tmp" "$dir/home/state/rl6.meta"
+  mkdir -p "$dir/home/config"
+  echo low > "$dir/home/config/effort-gauge"
+  cat > "$dir/fakebin/quota-axi" <<'SH'
+#!/usr/bin/env bash
+printf '{"providers":[{"provider":"claude","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"through_reset"}}]}}]}\n'
+SH
+  chmod +x "$dir/fakebin/quota-axi"
+  out=$(run_control "$dir" rl6 relaunch --model claude-opus-5-5 --effort max --note "raising effort"); rc=$?
+  [ "$rc" -ne 0 ] || fail "a relaunch that raises Opus effort above the gauge must refuse"$'\n'"$out"
+  assert_contains "$out" "above the effort gauge 'low'" "the refusal must name the gauge"
+  [ "$(meta_field "$dir" rl6 effort)" = xhigh ] || fail "a refused relaunch must leave the recorded effort alone"
+  assert_no_grep "/exit" "$dir/fake/literal" "a gauge refusal must happen before the running agent is stopped"
+  out=$(run_control "$dir" rl6 relaunch --model claude-opus-5-5 --effort xhigh --note "same effort"); rc=$?
+  expect_code 0 "$rc" "a relaunch keeping the recorded effort is not gated"$'\n'"$out"
+  pass "fm-control relaunch: the effort gauge gates only a relaunch that changes the recorded effort"
+}
+
+test_relaunch_reads_the_effort_gauge_once_before_the_stop() {
+  local dir out rc
+  dir=$(new_case gauge-once rl7)
+  add_ship_task "$dir" rl7 claude
+  sed 's/^model=default$/model=claude-opus-5-5/; s/^effort=default$/effort=high/' \
+    "$dir/home/state/rl7.meta" > "$dir/home/state/rl7.meta.tmp"
+  mv "$dir/home/state/rl7.meta.tmp" "$dir/home/state/rl7.meta"
+  mkdir -p "$dir/home/config"
+  echo xhigh > "$dir/home/config/effort-gauge"
+  cat > "$dir/fakebin/quota-axi" <<'SH'
+#!/usr/bin/env bash
+[ ! -e "$FM_FAKE_DIR/quota-read" ] || exit 1
+: > "$FM_FAKE_DIR/quota-read"
+printf '{"providers":[{"provider":"claude","state":{"status":"fresh","stale":false},"quotaSemantics":{"effectiveAvailability":[{"scope":"all_models","runway":{"status":"through_reset"}}]}}]}\n'
+SH
+  chmod +x "$dir/fakebin/quota-axi"
+  out=$(run_control "$dir" rl7 relaunch --model claude-opus-5-5 --effort xhigh --note "raising effort"); rc=$?
+  expect_code 0 "$rc" "a relaunch whose pre-stop gauge check passed must not re-read quota after the stop"$'\n'"$out"
+  [ "$(meta_field "$dir" rl7 effort)" = xhigh ] || fail "the new effort should be recorded"
+  pass "fm-control relaunch: the effort gauge is read once, before the old agent stops"
 }
 
 test_harness_switch_resolves_a_prefixed_recorded_harness() {
@@ -2695,6 +2741,8 @@ test_relaunch_appends_the_progress_note_to_the_instructions
 test_relaunch_requires_a_note_for_a_ship_task
 test_harness_switch_moves_the_record_and_clears_prior_wiring
 test_harness_switch_does_not_carry_the_old_profile_axes
+test_relaunch_gates_only_a_changed_opus_effort
+test_relaunch_reads_the_effort_gauge_once_before_the_stop
 test_harness_switch_resolves_a_prefixed_recorded_harness
 test_prefixed_recorded_harness_requires_explicit_replacement
 test_same_harness_relaunch_keeps_the_profile_axes

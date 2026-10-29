@@ -26,6 +26,18 @@
 #                                        effort or above (allowed maximum low). Other
 #                                        harnesses, models, and an empty or default
 #                                        effort pass.
+#        fm-harness.sh validate-effort-gauge <harness> <model> <effort>
+#                                        When config/effort-gauge names a full Opus
+#                                        effort, refuse a claude Opus launch above the
+#                                        gauge: that effort while the weekly runway
+#                                        reaches its reset, one step lower when
+#                                        quota-axi projects exhaustion first. The
+#                                        runway is read fresh on every call; an
+#                                        exhausted runway, or an unreadable, stale,
+#                                        or timed-out reading, refuses too. Absent
+#                                        config, other harnesses and models, and an
+#                                        empty or unrecognized effort pass
+#                                        (fm-tooling #34).
 #        fm-harness.sh ancestry [<pid>] print "<strength> <harness>" for the nearest
 #                                        harness process at or above <pid> (default this
 #                                        process), or nothing when the walk finds none.
@@ -83,6 +95,10 @@ CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
 . "$SCRIPT_DIR/fm-cursor-lib.sh"
 # shellcheck source=bin/fm-gemini-lib.sh
 . "$SCRIPT_DIR/fm-gemini-lib.sh"
+# shellcheck source=bin/fm-timeout-lib.sh
+. "$SCRIPT_DIR/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-quota-axi-lib.sh
+. "$SCRIPT_DIR/fm-quota-axi-lib.sh"
 
 # Print the harness named by a verified environment marker, or nothing when no
 # marker is present. Markers only report what the environment CLAIMS; detect_own
@@ -579,7 +595,45 @@ validate_model_effort() {
   return 1
 }
 
+# Effort gauge (fm-tooling #34): config/effort-gauge holds the full Opus effort.
+# A projected weekly exhaustion before the reset steps it down one level.
+validate_effort_gauge() {
+  local harness=${1:-} model=${2:-} effort=${3:-} full gauge want snap rank
+  local levels=(low medium high xhigh max ultra) i
+  [ "$harness" = claude ] || return 0
+  case "$(printf '%s' "$model" | tr '[:upper:]' '[:lower:]')" in *opus*) ;; *) return 0 ;; esac
+  [ -r "$CONFIG/effort-gauge" ] || return 0
+  full=$(tr -d '[:space:]' < "$CONFIG/effort-gauge")
+  rank=-1
+  for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$full" ] && rank=$i; done
+  [ "$rank" -ge 0 ] || { echo "error: config/effort-gauge must name one of ${levels[*]}, got '$full'" >&2; return 1; }
+  want=-1
+  for i in "${!levels[@]}"; do [ "${levels[$i]}" = "$effort" ] && want=$i; done
+  [ "$want" -ge 0 ] || return 0
+  snap=$(fm_run_timed "${FM_EFFORT_GAUGE_TIMEOUT:-30}" quota-axi --provider claude --json 2>/dev/null </dev/null) || snap=
+  gauge=$(printf '%s' "$snap" | jq -r --arg model "$model" "$FM_QUOTA_ROW_JQ"'
+    quota_row(.; "claude"; quota_lane("claude"; $model)) |
+    if . == null or .state.stale == true or .state.status != "fresh" then "unreadable"
+    else ([.quotaSemantics.effectiveAvailability[]? | select(.scope == "all_models")] | first | .runway.status // "unreadable") end' 2>/dev/null) || gauge=
+  case "$gauge" in
+    through_reset) ;;
+    projected_exhaustion) [ "$rank" -eq 0 ] || rank=$((rank - 1)) ;;
+    exhausted_now)
+      echo "error: Claude weekly quota is exhausted now; refusing an Opus launch at '$effort'" >&2
+      return 1
+      ;;
+    *)
+      echo "error: effort gauge cannot read a fresh Claude weekly runway from quota-axi; refusing an Opus launch at '$effort'" >&2
+      return 1
+      ;;
+  esac
+  [ "$want" -gt "$rank" ] || return 0
+  echo "error: effort '$effort' is above the effort gauge '${levels[$rank]}' (Claude weekly runway: $gauge); lower --effort" >&2
+  return 1
+}
+
 case "${1:-}" in
+  validate-effort-gauge) shift; validate_effort_gauge "$@" ;;
   validate-model-effort) shift; validate_model_effort "$@" ;;
   effort-ceilings) effort_ceilings_json ;;
   validate-native-effort) shift; validate_native_effort "$@" ;;

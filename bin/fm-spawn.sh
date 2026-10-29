@@ -2602,6 +2602,17 @@ if [ -n "$WORKER_ACCOUNT" ] && [ "$HARNESS" = claude ]; then
     unset CLAUDE_CONFIG_DIR
   fi
 fi
+# config/effort-gauge caps an explicit Claude Opus --effort by the pinned worker
+# account's weekly runway (bin/fm-harness.sh validate-effort-gauge owns the
+# rule). A relaunch is gated only when its effort differs from the task's
+# recorded effort= meta, or none is recorded; the fm-control relaunch
+# transaction already checked it before stopping the old agent.
+if [ "$RELAUNCH" -eq 0 ] || {
+  { [ "$SPAWN_CONTROL_PARENT" != 1 ] || [ -z "${FM_CONTROL_RELAUNCH_TX:-}" ]; } &&
+    [ "$(fm_meta_get "$RELAUNCH_META" effort)" != "$EFFORT" ]
+}; then
+  "$SCRIPT_DIR/fm-harness.sh" validate-effort-gauge "$HARNESS" "$MODEL" "$EFFORT" || exit 1
+fi
 
 secondmate_registry_value() {
   secondmate_registry_field "$DATA/secondmates.md" "$1" "$2"
