@@ -742,6 +742,20 @@ test_review_signals_reach_the_parent_channel_from_a_secondmate_home() {
   grep -qF "review comments: 0 inline on head $other" "$replies" \
     || fail "the new head's review-comment count never reached the parent channel: $(cat "$replies")"
 
+  # A count that goes 2 -> 1 -> 2 on the same head must report the final 2
+  # again: an identical line anywhere in the channel's history is not "latest".
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"},{\"id\":2,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration with two comments on the new head failed: $(cat "$dir/stderr")"
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration with one comment on the new head failed: $(cat "$dir/stderr")"
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"},{\"id\":2,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration back to two comments failed: $(cat "$dir/stderr")"
+  [ "$(grep 'child-pr-review-task-a' "$replies" | tail -1 | grep -cF "review comments: 2 inline on head $other")" -eq 1 ] \
+    || fail "a 2 -> 1 -> 2 sequence on one head dropped the final report: $(grep 'child-pr-review-task-a' "$replies")"
+
   dir=$(make_case review-signals-main-home)
   write_task_meta "$dir"
   ln -s "$REAL_JQ" "$dir/fakebin/jq"
