@@ -256,13 +256,18 @@ case "${FM_FAKE_SSH_MODE:-normal}" in
       printf 'warning: treehouse return left pool slot 3 (/remote/slot-3) dirty or unverified; the pool lost this slot. Remaining paths:\n' >&2
       printf '  ?? left-behind-clone/\n' >&2
       printf 'teardown ios finished its cleanup and removed its task record, but a returned pool slot did not come back clean\n' >&2
-      # Exhausted storage after the remote work: the parent's archive refresh
-      # then finds a directory where the status log belongs.
-      if [ -n "${FM_FAKE_BLOCK_ARCHIVE:-}" ]; then
-        rm -rf "$FM_FAKE_BLOCK_ARCHIVE"
-        mkdir -p "$FM_FAKE_BLOCK_ARCHIVE"
-      fi
       exit 4
+    fi
+    exit "$rc"
+    ;;
+  # The remote retirement really runs, then storage is exhausted: the parent's
+  # final archive refresh finds a directory where the status log belongs.
+  retire-block-archive)
+    rc=0
+    "$FM_FAKE_REMOTE_ENTRYPOINT" "$@" || rc=$?
+    if [ "$rc" -eq 0 ] && [ "$command_name:$_command_action" = fm-remote-secondmate-control.sh:retire ]; then
+      rm -rf "$FM_FAKE_BLOCK_ARCHIVE"
+      mkdir -p "$FM_FAKE_BLOCK_ARCHIVE"
     fi
     exit "$rc"
     ;;
@@ -1590,8 +1595,7 @@ done
 mkdir -p "$PARENT_ROUTE_INBOX/handled"
 printf 'pending steer before retirement\n' > "$PARENT_ROUTE_INBOX/retire-probe-pending.msg"
 printf 'handled steer before retirement\n' > "$PARENT_ROUTE_INBOX/handled/retire-probe-handled.msg"
-FM_FAKE_BLOCK_ARCHIVE="$PARENT/data/ios/status-log.txt" FM_FAKE_SSH_MODE=retire-lost-slot \
-  remote_env "$ROOT/bin/fm-teardown.sh" ios \
+FM_FAKE_SSH_MODE=retire-lost-slot remote_env "$ROOT/bin/fm-teardown.sh" ios \
   > "$TMP_ROOT/teardown-serialized.out" 2> "$TMP_ROOT/teardown-serialized.err" &
 teardown_pid=$!
 sleep 0.2
@@ -1608,30 +1612,20 @@ touch "$TMP_ROOT/handoff.release"
 wait "$handoff_holder_pid" || fail "handoff lock holder failed to release"
 teardown_rc=0
 wait "$teardown_pid" || teardown_rc=$?
-if [ "$teardown_rc" -eq 0 ] || [ "$teardown_rc" -eq 4 ]; then
+if [ "$teardown_rc" -ne 4 ]; then
   printf 'serialized retirement output:\n%s\n%s\n' "$(cat "$TMP_ROOT/teardown-serialized.out")" \
     "$(cat "$TMP_ROOT/teardown-serialized.err")" >&2
-  fail "remote retirement whose final archive refresh failed did not report the failure (exit $teardown_rc)"
+  fail "remote retirement with a lost child slot did not exit 4 (exit $teardown_rc)"
 fi
+assert_grep 'teardown ios complete (remote ' "$TMP_ROOT/teardown-serialized.out" \
+  "remote retirement with a lost child slot did not report its local completion on stdout"
 assert_grep 'pool slot 3 (/remote/slot-3) dirty or unverified; the pool lost this slot' "$TMP_ROOT/teardown-serialized.err" \
   "remote retirement did not forward the remote lost-slot warning"
 assert_grep 'left-behind-clone' "$TMP_ROOT/teardown-serialized.err" \
   "remote retirement did not forward the lost slot's remaining paths"
+assert_no_grep 'teardown ios ' "$TMP_ROOT/teardown-serialized.err" \
+  "remote retirement forwarded remote completion text to stderr"
 assert_absent "$REMOTE_HOME" "remote retirement did not remove the remote home"
-# The route outlives a failed final archive refresh, so a retry is possible.
-assert_grep '- ios ' "$PARENT/data/secondmates.md" \
-  "a failed final archive refresh dropped the registry route before the records were kept"
-assert_present "$PARENT/state/ios.meta" "a failed final archive refresh removed the parent metadata"
-rm -rf "$PARENT/data/ios/status-log.txt"
-teardown_rc=0
-remote_env "$ROOT/bin/fm-teardown.sh" ios \
-  > "$TMP_ROOT/teardown-retry.out" 2> "$TMP_ROOT/teardown-retry.err" || teardown_rc=$?
-if [ "$teardown_rc" -ne 0 ]; then
-  printf 'retry output:\n%s\n%s\n' "$(cat "$TMP_ROOT/teardown-retry.out")" "$(cat "$TMP_ROOT/teardown-retry.err")" >&2
-  fail "retrying a remote retirement after the archive refresh failure did not complete (exit $teardown_rc)"
-fi
-assert_grep 'teardown ios complete (remote ' "$TMP_ROOT/teardown-retry.out" \
-  "retried remote retirement did not report its local completion on stdout"
 assert_grep 'pending steer before retirement' "$PARENT/data/ios/steering/retire-probe-pending.msg" \
   "remote retirement lost the remote home's pending steering message"
 assert_grep 'handled steer before retirement' "$PARENT/data/ios/steering/handled/retire-probe-handled.msg" \
@@ -1654,5 +1648,41 @@ jq -e --arg workspace "$SIBLING_WORKSPACE" --arg pane "$SIBLING_PANE" '
 assert_no_grep 'session stop' "$HERDR_LOG" "remote retirement stopped the shared fm-remote session"
 assert_no_grep 'server stop' "$HERDR_LOG" "remote retirement stopped the shared fm-remote server"
 pass "remote retirement refuses child work, then removes only its own endpoint while a shared-session sibling survives"
+
+# A final archive refresh that fails after the remote home is retired keeps the
+# route, so a retry finishes the retirement instead of stranding it.
+FM_SECONDMATE_CHARTER='Own iOS delivery on the build Mac.' \
+  FM_SECONDMATE_SCOPE='iOS implementation and Xcode validation' \
+  remote_env "$ROOT/bin/fm-remote-home-seed.sh" ios remote-mac "$REMOTE_ROOT" "$REMOTE_HOME" alpha >/dev/null \
+  || fail "could not reseed the remote secondmate for the archive refresh failure"
+remote_env "$ROOT/bin/fm-spawn.sh" ios --secondmate >/dev/null \
+  || fail "could not respawn the remote secondmate for the archive refresh failure"
+resolve_ios_pending
+teardown_rc=0
+FM_FAKE_BLOCK_ARCHIVE="$PARENT/data/ios/status-log.txt" FM_FAKE_SSH_MODE=retire-block-archive \
+  remote_env "$ROOT/bin/fm-teardown.sh" ios \
+  > "$TMP_ROOT/teardown-refresh.out" 2> "$TMP_ROOT/teardown-refresh.err" || teardown_rc=$?
+if [ "$teardown_rc" -eq 0 ]; then
+  printf 'refresh failure output:\n%s\n%s\n' "$(cat "$TMP_ROOT/teardown-refresh.out")" \
+    "$(cat "$TMP_ROOT/teardown-refresh.err")" >&2
+  fail "remote retirement whose final archive refresh failed did not report the failure"
+fi
+assert_absent "$REMOTE_HOME" "remote retirement did not remove the remote home before its final refresh"
+assert_grep '- ios ' "$PARENT/data/secondmates.md" \
+  "a failed final archive refresh dropped the registry route before the records were kept"
+assert_present "$PARENT/state/ios.meta" "a failed final archive refresh removed the parent metadata"
+rm -rf "$PARENT/data/ios/status-log.txt"
+teardown_rc=0
+remote_env "$ROOT/bin/fm-teardown.sh" ios \
+  > "$TMP_ROOT/teardown-retry.out" 2> "$TMP_ROOT/teardown-retry.err" || teardown_rc=$?
+if [ "$teardown_rc" -ne 0 ]; then
+  printf 'retry output:\n%s\n%s\n' "$(cat "$TMP_ROOT/teardown-retry.out")" "$(cat "$TMP_ROOT/teardown-retry.err")" >&2
+  fail "retrying a remote retirement after the archive refresh failure did not complete (exit $teardown_rc)"
+fi
+assert_grep 'teardown ios complete (remote ' "$TMP_ROOT/teardown-retry.out" \
+  "retried remote retirement did not report its local completion on stdout"
+assert_absent "$PARENT/state/ios.meta" "retried remote retirement did not remove parent metadata"
+assert_no_grep '- ios ' "$PARENT/data/secondmates.md" "retried remote retirement did not remove the registry route"
+pass "a failed final archive refresh preserves the remote route until a retry completes"
 
 echo "ALL TESTS PASSED"
