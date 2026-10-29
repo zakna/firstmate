@@ -3493,6 +3493,90 @@ SH
   pass "forced secondmate teardown holds every descendant lifecycle and metadata lock"
 }
 
+configure_secondmate_with_same_id_nested_child() {  # <case-dir>
+  local case_dir=$1 home="$1/secondmate-home" nested_home="$1/secondmate-home/nested-home" nested_wt="$1/nested-child-a-wt"
+  configure_secondmate_with_tmux_children "$case_dir"
+  mkdir -p "$nested_home/state" "$nested_home/data" "$nested_home/config" "$nested_home/projects"
+  printf '%s\n' nested-sm > "$nested_home/.fm-secondmate-home"
+  git -C "$case_dir/project" worktree add -q -b fm/nested-child-a "$nested_wt" main
+  fm_write_meta "$home/state/nested-sm.meta" \
+    "window=firstmate:fm-nested-sm" \
+    "endpoint_task_id=nested-sm" \
+    "worktree=$case_dir/wt" \
+    "project=$case_dir/project" \
+    "kind=secondmate" \
+    "mode=local-only" \
+    "home=$nested_home"
+  fm_write_meta "$nested_home/state/child-a.meta" \
+    "window=firstmate:fm-child-a" \
+    "endpoint_task_id=child-a" \
+    "worktree=$nested_wt" \
+    "project=$case_dir/project" \
+    "kind=ship" \
+    "mode=local-only"
+  printf '%s\n' "done [at=1]: nested child-a finished" > "$nested_home/state/child-a.status"
+}
+
+install_inert_tmux_and_treehouse() {  # <case-dir>
+  local case_dir=$1
+  : > "$case_dir/kill.log"
+  : > "$case_dir/treehouse.log"
+  cat > "$case_dir/fakebin/tmux" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$case_dir/kill.log"
+exit 0
+SH
+  cat > "$case_dir/fakebin/treehouse" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$case_dir/treehouse.log"
+exit 0
+SH
+  chmod +x "$case_dir/fakebin/tmux" "$case_dir/fakebin/treehouse"
+}
+
+test_forced_secondmate_teardown_keeps_same_id_descendant_archives_apart() {
+  local case_dir rc
+  case_dir=$(make_case same-id-descendant-archives)
+  write_meta "$case_dir" local-only secondmate
+  configure_secondmate_with_same_id_nested_child "$case_dir"
+  install_inert_tmux_and_treehouse "$case_dir"
+  rc=0
+  run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 0 "$rc" "same-id-descendant-archives: forced teardown should complete"
+  grep -rqF "done [at=1]: child-a finished" "$case_dir/data" \
+    || fail "same-id-descendant-archives: the direct child's status archive was lost"
+  grep -rqF "done [at=1]: nested child-a finished" "$case_dir/data" \
+    || fail "same-id-descendant-archives: the nested child's status archive was overwritten by the direct child's"
+  pass "forced secondmate teardown archives equal task ids from different homes apart"
+}
+
+test_forced_secondmate_teardown_preflights_descendant_archives_before_removing() {
+  local case_dir home rc child
+  case_dir=$(make_case descendant-archive-preflight)
+  write_meta "$case_dir" local-only secondmate
+  configure_secondmate_with_tmux_children "$case_dir"
+  install_inert_tmux_and_treehouse "$case_dir"
+  home="$case_dir/secondmate-home"
+  # Block child-b's archive wherever a descendant archive could be placed.
+  mkdir -p "$case_dir/data/task-x1/descendants"
+  : > "$case_dir/data/child-b"
+  : > "$case_dir/data/task-x1/descendants/child-b"
+  rc=0
+  run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  [ "$rc" -ne 0 ] || fail "descendant-archive-preflight: teardown ignored an unwritable descendant archive"
+  assert_grep "nothing was removed" "$case_dir/stderr" \
+    "descendant-archive-preflight: refusal did not say nothing was removed"
+  for child in child-a child-b; do
+    [ -e "$home/state/$child.meta" ] && [ -e "$home/state/$child.status" ] && [ -d "$case_dir/$child-wt" ] \
+      || fail "descendant-archive-preflight: $child was removed although teardown reported nothing removed"
+  done
+  [ ! -s "$case_dir/kill.log" ] || fail "descendant-archive-preflight: an endpoint was closed before the archive refusal"
+  [ ! -s "$case_dir/treehouse.log" ] || fail "descendant-archive-preflight: a worktree was returned before the archive refusal"
+  [ -d "$home" ] && [ -e "$case_dir/state/task-x1.meta" ] \
+    || fail "descendant-archive-preflight: the secondmate home or record was removed"
+  pass "forced secondmate teardown preflights every descendant archive before removing anything"
+}
+
 test_forced_secondmate_herdr_child_retains_records_when_close_unconfirmed() {
   local case_dir home log closed rc
   case_dir=$(make_case herdr-child-unconfirmed-close)
@@ -5289,6 +5373,8 @@ test_herdr_flat_teardown_preflight_refuses_before_changes
 test_herdr_teardown_presentation_lock_namespace_is_per_account
 test_forced_secondmate_herdr_child_preflight_refuses_before_changes
 test_forced_secondmate_teardown_holds_descendant_lifecycle_locks
+test_forced_secondmate_teardown_keeps_same_id_descendant_archives_apart
+test_forced_secondmate_teardown_preflights_descendant_archives_before_removing
 test_forced_secondmate_herdr_child_retains_records_when_close_unconfirmed
 test_forced_teardown_retains_nested_secondmate_home_when_grandchild_close_unconfirmed
 test_herdr_projection_teardown_retires_journal_only_after_confirmed_close
