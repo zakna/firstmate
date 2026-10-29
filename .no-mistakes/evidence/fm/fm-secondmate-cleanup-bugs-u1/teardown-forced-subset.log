@@ -1,0 +1,4 @@
+ok - forced secondmate teardown holds every descendant lifecycle and metadata lock
+ok - forced secondmate teardown archives equal task ids from different homes apart
+ok - forced secondmate teardown preflights every descendant archive before removing anything
+ok - forced teardown retains a nested secondmate home and its grandchild's Herdr identity when the grandchild close is unconfirmed

@@ -1,0 +1,8 @@
+not ok - same-id-descendant-archives: the direct child's status archive was lost
+rc=1
+error: unknown command: steering
+error: remote home is not a seeded secondmate home
+not ok - an absent home was not reported as already retired
+rc=1
+not ok - descendant-archive-preflight: child-a was removed although teardown reported nothing removed
+rc=1
