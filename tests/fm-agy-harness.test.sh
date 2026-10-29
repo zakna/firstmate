@@ -218,7 +218,7 @@ esc to cancel')
 }
 
 test_agy_idle_composer_reads_empty_only_on_the_whole_proof() {
-  local styled plain rule caps_tmux caps_styled caps_plain out screen
+  local styled plain herdr rule caps_tmux caps_styled caps_plain out screen
   styled=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.ansi")
   plain=$(cat "$ROOT/tests/captures/agy-1.2.0-idle-ghost.plain")
   caps_tmux=$'styled=1\ncursor=1\nidentity=1\nrows=0'
@@ -237,6 +237,11 @@ test_agy_idle_composer_reads_empty_only_on_the_whole_proof() {
   want "agy idle (styled)" empty "$caps_styled" "$styled"
   want "agy idle (tmux, cursor on the glyph row)" empty "$caps_tmux" "$styled" 14
   want "agy idle with the cursor elsewhere" unknown "$caps_tmux" "$styled" 3
+  herdr=${styled//$'\033[39m'/$'\033[0m'}
+  herdr=${herdr//$'\033[38;5;'/$'\033[0m\033[38;5;'}
+  want "agy idle (Herdr reset encoding)" empty "$caps_styled" "$herdr"
+  screen=${herdr/$'auto-approved (shift+tab to cycle)\033[0m'/$'auto-approved (shift+tab to cycle)\033[0m typed'}
+  want "agy typed text after the ghost hint (Herdr encoding)" unknown "$caps_styled" "$screen"
   want "agy plain capture cannot tell its ghost hint from typed text" unknown "$caps_plain" "$plain"
   want "agy plain capture with an empty composer" empty "$caps_plain" "$(agy_screen '>')"
   want "agy typed text is never read empty" unknown "$caps_styled" "$(agy_screen '> hello there')"

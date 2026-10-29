@@ -1803,7 +1803,7 @@ _fm_composer_agy_rule_row() {  # <row> -> 1 when a solid rule at least 8 columns
 # the identity proof and the cursor, when known, must sit on the glyph row.
 # The row's remainder must be empty, or agy's ghost hint: a 256-colour
 # foreground run (SGR 38;5;241) covering all of it, readable only on a styled
-# capture. Captured live on agy 1.2.0, 2026-10-28.
+# capture whichever reset (tmux `39`, Herdr `0`) closes each run. Captured live on agy 1.2.0, 2026-10-28.
 _fm_composer_agy_idle_empty() {  # <screen> <plain> <styled> <cursor-row>
   local screen=$1 plain=$2 styled=$3 cy=${4:-} line i=0 last=-1 status=-1 glyph=-1
   local rows=() nb=()
@@ -1835,16 +1835,29 @@ _fm_composer_agy_idle_empty() {  # <screen> <plain> <styled> <cursor-row>
   line="${line#"${line%%[![:space:]]*}"}"
   [ -z "$line" ] && return 0
   [ "$styled" = 1 ] || return 1
-  local raw
+  local raw sgr ghost=0
   raw=$(_fm_composer_screen_row "$glyph" "$screen")
-  raw=${raw#*$'\033[39m'}
-  case "$raw" in
-    ' '$'\033[38;5;241m'*$'\033[39m') ;;
-    *) return 1 ;;
-  esac
-  raw=${raw#' '$'\033[38;5;241m'}
-  raw=${raw%$'\033[39m'}
-  case "$raw" in *$'\033'*) return 1 ;; esac
+  raw=${raw#*>}
+  while [ -n "$raw" ]; do
+    case "$raw" in
+      $'\033['*)
+        sgr=${raw#$'\033['}
+        sgr=${sgr%%m*}
+        case "$sgr" in *[!0-9\;]*) return 1 ;; esac
+        raw=${raw#$'\033['"$sgr"m}
+        case ";$sgr;" in
+          *';38;5;241;'*) ghost=1 ;;
+          *) ghost=0 ;;
+        esac
+        ;;
+      $'\033'*) return 1 ;;
+      [[:space:]]*) raw=${raw#?} ;;
+      *)
+        [ "$ghost" = 1 ] || return 1
+        raw=${raw#?}
+        ;;
+    esac
+  done
   return 0
 }
 
