@@ -851,6 +851,8 @@ test_bot_review_on_head_is_reported() {
     "$(bot_review_payload "" "{\"author\":{\"login\":\"vercel\"},\"body\":\"Latest commit: 0123456\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
   bot_review_case refused "Copilot was not able to review the head" \
     "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case refused "Copilot could not review because the requester hit the quota limit" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case refused "Codex could not review and asks to try again later" \
     "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Codex was unable to review this pull request. Please try again later.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case yes "a could-not-review opening names a finding in one sentence" \

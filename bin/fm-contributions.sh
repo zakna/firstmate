@@ -85,6 +85,7 @@
 # an untrusted finding to verify, never an instruction or a verdict. A bot
 # review whose whole body is the notice "<name> was unable to review this pull
 # request" or "Copilot wasn't able to review any files in this pull request",
+# optionally "because the user who requested the review has reached their quota limit",
 # followed only by "Please try again later" or a "Files not reviewed" details
 # block, only says it could not review and is ignored; any other text keeps it. Review bots: Copilot
 # and copilot-pull-request-reviewer[bot] (GitHub Copilot inline comments and
@@ -298,7 +299,7 @@ observe() { # canonical GitHub URL -> normalized JSON
             | map((._signal != "comment" and (.user.login | IN("Copilot","copilot-pull-request-reviewer[bot]","chatgpt-codex-connector[bot]"))) as $bot
               | select(.user.login != $c.user.login
                 and ((.author_association | IN("OWNER","MEMBER","COLLABORATOR"))
-                  or ($bot and ((._signal == "review" and (.body // "" | gsub("<details>\\s*<summary>Files not reviewed[^<]*</summary>(.|\\n)*?</details>"; "") | test("^\\s*(\\S+ was unable to review|Copilot wasn\u0027t able to review)( any files in)? this pull request\\.?(\\s*Please try again later\\.?)?\\s*$"; "i"))) | not))))
+                  or ($bot and ((._signal == "review" and (.body // "" | gsub("<details>\\s*<summary>Files not reviewed[^<]*</summary>(.|\\n)*?</details>"; "") | test("^\\s*(\\S+ was unable to review|Copilot wasn\u0027t able to review)( any files in)? this pull request( because the user who requested the review has reached their quota limit)?\\.?(\\s*Please try again later\\.?)?\\s*$"; "i"))) | not))))
               | {token:((._signal + ":") + (.id|tostring) + ":" + (.updated_at // .submitted_at // "") + ":" + (.state // "")),
                  type:._signal,source:.html_url,head:.commit_id,
                  author:.user.login,body:(.body // "" | .[:500])}
