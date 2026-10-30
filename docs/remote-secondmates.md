@@ -672,8 +672,12 @@ It refuses while any of these holds:
 - The remote home has child work.
 - The primary has an unfinished backlog outbox.
 - A routed reply remains unresolved.
+- The host's code root predates the remote steering archive; run `bin/fm-update.sh` to bring it current, then retry. `--force` does not lift this.
 
-It closes only the retiring secondmate's panes or `2ndmate-<id>` workspace in `fm-remote`.
+Before the remote home is removed, its pending and handled steering records are kept under the primary's `data/<id>/steering/`.
+A failed final archive refresh after the remote home is retired keeps the route so a retry can finish.
+
+Retirement closes only the retiring secondmate's panes or `2ndmate-<id>` workspace in `fm-remote`.
 It never stops the shared session or removes a sibling secondmate's workspace or panes.
 SSH exit 255 preserves both the route and local records because completion is unknown.
 `--force` remains the explicit discard path and requires the same captain authority as local secondmate discard.

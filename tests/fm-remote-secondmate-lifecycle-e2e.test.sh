@@ -260,6 +260,26 @@ case "${FM_FAKE_SSH_MODE:-normal}" in
     fi
     exit "$rc"
     ;;
+  # The remote retirement really runs, then storage is exhausted: the parent's
+  # final archive refresh finds a directory where the task metadata copy belongs.
+  retire-block-archive)
+    rc=0
+    "$FM_FAKE_REMOTE_ENTRYPOINT" "$@" || rc=$?
+    if [ "$rc" -eq 0 ] && [ "$command_name:$_command_action" = fm-remote-secondmate-control.sh:retire ]; then
+      rm -rf "$FM_FAKE_BLOCK_ARCHIVE"
+      mkdir -p "$FM_FAKE_BLOCK_ARCHIVE"
+    fi
+    exit "$rc"
+    ;;
+  # A remote code root older than the steering listing answers as its control
+  # plane does for any command it does not know.
+  old-code-root)
+    if [ "$command_name:$_command_action" = fm-remote-secondmate-control.sh:steering ]; then
+      printf 'error: unknown command: steering\n' >&2
+      exit 1
+    fi
+    exec "$FM_FAKE_REMOTE_ENTRYPOINT" "$@"
+    ;;
   *) exec "$FM_FAKE_REMOTE_ENTRYPOINT" "$@" ;;
 esac
 SH
@@ -1456,6 +1476,45 @@ assert_present "$PARENT/state/ios.meta" "unreachable readiness removed the paren
 assert_grep '- ios ' "$PARENT/data/secondmates.md" "unreachable readiness removed the registry route"
 pass "unreachable no-ledger remote state remains explicit with no local respawn or failover"
 
+# A final archive refresh that fails after the remote home is retired keeps the
+# route, and a retry against the already-retired home finishes the retirement.
+publish_healthy_watcher_identity "$PARENT/state" "$PARENT" "$REMOTE_ROOT/bin/fm-watch.sh"
+resolve_ios_pending
+teardown_rc=0
+FM_FAKE_BLOCK_ARCHIVE="$PARENT/data/ios/meta.txt" FM_FAKE_SSH_MODE=retire-block-archive \
+  remote_env "$ROOT/bin/fm-teardown.sh" ios > "$TMP_ROOT/teardown-refresh.out" 2>&1 || teardown_rc=$?
+if [ "$teardown_rc" -eq 0 ]; then
+  printf 'refresh failure output:\n%s\n' "$(cat "$TMP_ROOT/teardown-refresh.out")" >&2
+  fail "remote retirement whose final archive refresh failed did not report the failure"
+fi
+assert_grep 'records could not be refreshed; preserving the local route for retry' "$TMP_ROOT/teardown-refresh.out" \
+  "a failed final archive refresh did not say the route was kept for retry"
+assert_absent "$REMOTE_HOME" "remote retirement did not remove the remote home before its final refresh"
+assert_grep '- ios ' "$PARENT/data/secondmates.md" \
+  "a failed final archive refresh dropped the registry route before the records were kept"
+assert_present "$PARENT/state/ios.meta" "a failed final archive refresh removed the parent metadata"
+rm -rf "$PARENT/data/ios/meta.txt"
+teardown_rc=0
+remote_env "$ROOT/bin/fm-teardown.sh" ios > "$TMP_ROOT/teardown-retry.out" 2> "$TMP_ROOT/teardown-retry.err" \
+  || teardown_rc=$?
+if [ "$teardown_rc" -ne 0 ]; then
+  printf 'retry output:\n%s\n%s\n' "$(cat "$TMP_ROOT/teardown-retry.out")" "$(cat "$TMP_ROOT/teardown-retry.err")" >&2
+  fail "retrying a remote retirement after the archive refresh failure did not complete (exit $teardown_rc)"
+fi
+assert_grep 'teardown ios complete (remote ' "$TMP_ROOT/teardown-retry.out" \
+  "retried remote retirement did not report its local completion on stdout"
+assert_present "$PARENT/data/ios/meta.txt" "retried remote retirement did not keep the task metadata copy"
+assert_absent "$REMOTE_HOME" "retried remote retirement left a remote home shell behind"
+assert_absent "$PARENT/state/ios.meta" "retried remote retirement did not remove parent metadata"
+assert_no_grep '- ios ' "$PARENT/data/secondmates.md" "retried remote retirement did not remove the registry route"
+FM_SECONDMATE_CHARTER='Own iOS delivery on the build Mac.' \
+  FM_SECONDMATE_SCOPE='iOS implementation and Xcode validation' \
+  remote_env "$ROOT/bin/fm-remote-home-seed.sh" ios remote-mac "$REMOTE_ROOT" "$REMOTE_HOME" alpha >/dev/null \
+  || fail "the retired remote home could not be reseeded at the same path"
+remote_env "$ROOT/bin/fm-spawn.sh" ios --secondmate >/dev/null \
+  || fail "the reseeded remote secondmate could not be respawned"
+pass "a failed final archive refresh keeps the remote route until a retry completes the retirement"
+
 # Retirement delegates its safety check to the remote home. An in-flight child
 # record refuses cleanup and preserves both machines' durable routes.
 # A sibling remote secondmate workspace shares fm-remote and must survive every
@@ -1507,6 +1566,21 @@ assert_present "$REMOTE_HOME" "unsafe pending-replies retirement removed the rem
 assert_present "$TMP_ROOT/external-pending/escape" "unsafe retirement removed an external pending reply"
 rm -f "$PARENT/state/pending-replies"
 mv "$PARENT/state/pending-replies.safe" "$PARENT/state/pending-replies"
+# A remote code root older than the steering archive refuses with the update
+# that fixes it, forced or not, and keeps both machines' routes.
+for old_root_force in "" --force; do
+  if FM_FAKE_SSH_MODE=old-code-root remote_env "$ROOT/bin/fm-teardown.sh" ios ${old_root_force:+"$old_root_force"} \
+    > "$TMP_ROOT/teardown-old-root.out" 2>&1; then
+    fail "remote retirement${old_root_force:+ with $old_root_force} skipped the steering archive of an old code root"
+  fi
+  assert_grep 'predates the steering archive; run bin/fm-update.sh' "$TMP_ROOT/teardown-old-root.out" \
+    "an old remote code root refusal did not name the update that fixes it"
+  assert_present "$REMOTE_HOME/.fm-secondmate-home" "an old remote code root refusal removed the remote home"
+  assert_present "$PARENT/state/ios.meta" "an old remote code root refusal removed parent metadata"
+  assert_grep '- ios ' "$PARENT/data/secondmates.md" "an old remote code root refusal removed the registry route"
+  assert_present "$PARENT/state/procevent/remote-reply-ios.source" \
+    "an old remote code root refusal retired the live secondmate's reply source"
+done
 retired_wake_corr=$(FM_HOME="$PARENT" bash -c '
   . "$1"
   fm_pending_reply_create "$2" "$2/state" ios "New routed work is in your backlog."
@@ -1580,6 +1654,10 @@ while [ ! -f "$TMP_ROOT/launch.entered" ]; do
   [ "$launch_wait" -le 6000 ] || fail "remote respawn never reached its blocked launch"
   sleep 0.02
 done
+# Steering the remote secondmate received lives only in the remote home.
+mkdir -p "$PARENT_ROUTE_INBOX/handled"
+printf 'pending steer before retirement\n' > "$PARENT_ROUTE_INBOX/retire-probe-pending.msg"
+printf 'handled steer before retirement\n' > "$PARENT_ROUTE_INBOX/handled/retire-probe-handled.msg"
 FM_FAKE_SSH_MODE=retire-lost-slot remote_env "$ROOT/bin/fm-teardown.sh" ios \
   > "$TMP_ROOT/teardown-serialized.out" 2> "$TMP_ROOT/teardown-serialized.err" &
 teardown_pid=$!
@@ -1611,6 +1689,10 @@ assert_grep 'left-behind-clone' "$TMP_ROOT/teardown-serialized.err" \
 assert_no_grep 'teardown ios ' "$TMP_ROOT/teardown-serialized.err" \
   "remote retirement forwarded remote completion text to stderr"
 assert_absent "$REMOTE_HOME" "remote retirement did not remove the remote home"
+assert_grep 'pending steer before retirement' "$PARENT/data/ios/steering/retire-probe-pending.msg" \
+  "remote retirement lost the remote home's pending steering message"
+assert_grep 'handled steer before retirement' "$PARENT/data/ios/steering/handled/retire-probe-handled.msg" \
+  "remote retirement lost the remote home's handled steering message"
 assert_absent "$PARENT/state/ios.meta" "remote retirement did not remove parent metadata"
 assert_absent "$PARENT/state/.backlog-handoff-ios.wake-pending" \
   "remote retirement left receiver wake state that could poison a replacement route"
