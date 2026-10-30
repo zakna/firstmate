@@ -1,0 +1,10 @@
+$ [base @ d4cf5107] FM_HOME=<lab> fm-pr-check.sh t7base https://github.com/zakna/firstmate/pull/7
+review comments: 0 inline on head 61a615639ba1157c3be92369f196218d9d038cc3
+bot findings: 0 unaddressed
+bot review on head: no
+armed: state/t7base.check.sh
+$ [branch @ bf6cbd4d] FM_HOME=<lab> fm-pr-check.sh t7branch https://github.com/zakna/firstmate/pull/7
+review comments: 0 inline on head 61a615639ba1157c3be92369f196218d9d038cc3
+bot findings: 0 unaddressed
+bot review on head: no
+armed: state/t7branch.check.sh

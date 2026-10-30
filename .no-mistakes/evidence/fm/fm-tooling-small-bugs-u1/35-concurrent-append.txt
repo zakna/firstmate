@@ -1,0 +1,11 @@
+# Two supervisors append 300 lessons each concurrently using the SKILL.md command form:
+#   printf '%s\n' '<line>' >> data/recovery-lessons.md   (each ' written as '\'')
+lines:      600 (expected 600)
+distinct:      600
+literal backticks/$/quote preserved in all: 600
+sample:
+2026-10-30 | `fm-send` returned rc=4 for A1 | $FM_HOME unset, it's stale | re-export
+2026-10-30 | `fm-send` returned rc=4 for A2 | $FM_HOME unset, it's stale | re-export
+
+# Contrast: old read-modify-write (cat; append; write back) under the same concurrency
+rmw lines:      300 (expected 600)

@@ -1,0 +1,8 @@
+$ FM_HOME=<main lab home, no secondmate marker> bin/fm-pr-check.sh task-live https://github.com/zakna/firstmate/pull/100
+review comments: 1 inline on head 71b664bf812a49212c4a2a0ef0148e66058b4b18
+bot findings: 1 unaddressed
+bot review on head: yes
+armed: state/task-live.check.sh
+rc=0
+--- parent-replies.status present?
+ls: /var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab.kQLYeK/state/parent-replies.status: No such file or directory

@@ -1,0 +1,26 @@
+=== BASE d4cf5107: register zakna/firstmate#7 then fm-contributions poll + pending
+review comments: 0 inline on head 61a615639ba1157c3be92369f196218d9d038cc3
+bot findings: 0 unaddressed
+bot review on head: no
+armed: state/t7.check.sh
+$ fm-contributions.sh pending
+[]
+
+=== BRANCH bf6cbd4d: same PR, same steps
+$ fm-contributions.sh pending
+[
+  {
+    "token": "review:5324017671:2026-09-26T01:31:11Z:COMMENTED",
+    "type": "review",
+    "source": "https://github.com/zakna/firstmate/pull/7#pullrequestreview-5324017671",
+    "head": null,
+    "author": "copilot-pull-request-reviewer[bot]",
+    "body": "Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.",
+    "reviewer": "bot",
+    "task": "t7branch",
+    "url": "https://github.com/zakna/firstmate/pull/7"
+  }
+]
+
+--- real review body on GitHub:
+copilot-pull-request-reviewer[bot]: Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.

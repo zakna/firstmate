@@ -1,0 +1,13 @@
+=== BRANCH d0e91e08: register zakna/firstmate#7 (real Copilot quota-limit notice) then poll + pending
+$ FM_HOME=<lab> bin/fm-pr-check.sh t7 https://github.com/zakna/firstmate/pull/7
+review comments: 0 inline on head 61a615639ba1157c3be92369f196218d9d038cc3
+bot findings: 0 unaddressed
+bot review on head: no
+armed: state/t7.check.sh
+$ fm-contributions.sh poll
+$ fm-contributions.sh pending
+[]
+--- observed record reviews (proves the review was read, then filtered):
+{"url":"https://github.com/zakna/firstmate/pull/7","error":null,"reviews":"[{\"id\":5324017671,\"node_id\":\"PRR_kwDOUsBBLM8AAAABPVYQBw\",\"user\":{\"login\":\"copilot-pull-request-reviewer[bot]\",\"id\":175728472,\"node_id\":\"BOT_kgDOCnlnWA\",\"avatar_url\":\"https://avatars.githubusercontent.com/in/946600?v=4\",\"gravatar_id\":\"\",\"url\":\"https://api.github.com/users/copilot-pull-request-reviewe"}
+--- real review body on GitHub:
+copilot-pull-request-reviewer[bot]: Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.

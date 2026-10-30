@@ -1,0 +1,17 @@
+=== BRANCH d0e91e08, remote-route secondmate lab home
+$ FM_HOME=<secondmate lab> bin/fm-pr-check.sh task-live https://github.com/zakna/firstmate/pull/100   # run 1
+review comments: 1 inline on head 71b664bf812a49212c4a2a0ef0148e66058b4b18
+bot findings: 1 unaddressed
+bot review on head: yes
+armed: state/task-live.check.sh
+--- state/parent-replies.status after run 1
+note [key=child-pr-review-task-live] [at=1793318947]: child task-live review comments: 1 inline on head 71b664bf812a49212c4a2a0ef0148e66058b4b18; bot findings: 1 unaddressed; bot review on head: yes
+done [key=child-pr-task-live] [at=1793318947]: child task-live PR ready: https://github.com/zakna/firstmate/pull/100 mode=no-mistakes
+$ FM_HOME=<secondmate lab> bin/fm-pr-check.sh task-live https://github.com/zakna/firstmate/pull/100   # run 2
+review comments: 1 inline on head 71b664bf812a49212c4a2a0ef0148e66058b4b18
+bot findings: 1 unaddressed
+bot review on head: yes
+armed: state/task-live.check.sh
+--- state/parent-replies.status after run 2
+note [key=child-pr-review-task-live] [at=1793318947]: child task-live review comments: 1 inline on head 71b664bf812a49212c4a2a0ef0148e66058b4b18; bot findings: 1 unaddressed; bot review on head: yes
+done [key=child-pr-task-live] [at=1793318947]: child task-live PR ready: https://github.com/zakna/firstmate/pull/100 mode=no-mistakes
