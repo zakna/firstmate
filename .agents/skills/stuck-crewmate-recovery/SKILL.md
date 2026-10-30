@@ -25,8 +25,9 @@ The target window's harness is recorded as `harness=` in `state/<id>.meta`.
 ## Recovery lessons log
 
 Before any other step, read this home's `data/recovery-lessons.md` when it exists, and check whether a recorded symptom matches the current case.
-After each recovery, append one line to it: `<YYYY-MM-DD> | <symptom> | <cause> | <fix>`.
-Create the file on the first lesson, and prune lines whose cause or fix no longer applies to current tooling.
+After each recovery, append one line to it with a single `printf '%s\n' '<line>' >> data/recovery-lessons.md` (single quotes, each `'` in the line written as `'\''`, so backticks and `$` stay literal), never a read-modify-write, so two supervisors recovering at once cannot erase each other's line: `<YYYY-MM-DD> | <symptom> | <cause> | <fix>`.
+Appending creates the file on the first lesson.
+Only the main supervisor prunes lines whose cause or fix no longer applies to current tooling; the attended Pi supervision branch never rewrites the file.
 When a new incident matches a lesson already in the log, add the repeat (date, matching lesson, task id) to that task's backlog note; the retro of that task when it lands takes it as a proposal candidate under the retro gates.
 The log is supervisor-side only: never name it in a brief or steer, and workers never read or write it.
 

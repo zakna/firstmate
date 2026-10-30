@@ -17,8 +17,10 @@
 #   - bin/fm-inactive-reconcile.sh   a direct child's terminal done or failed
 #                                    ledger line, on every watcher poll, plus
 #                                    the silent-ledger inactive-outcome fallback
-#   - bin/fm-pr-check.sh             a registered PR-ready line carrying the
-#                                    canonical URL
+#   - bin/fm-pr-check.sh             a keyed note with the head's
+#                                    review-comment, bot-finding and bot-review
+#                                    answers, then a registered PR-ready line
+#                                    carrying the canonical URL
 #   - bin/fm-captain-hold.sh         a task held for the captain and its answer
 #   - bin/fm-merge-outcome-lib.sh    a merged PR
 #   - bin/fm-teardown.sh             the child's final ledger line, refusing to
@@ -172,4 +174,31 @@ fm_parent_channel_report() {  # <home> <state> <line>
   destination=$(fm_parent_channel_destination "$home" "$state") || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
   fm_parent_channel_append_once "$destination" "$(status_stamp_line "$line")" || return 4
+}
+
+# Publish <line> unless it equals the LATEST line already on the channel that
+# carries <key> ("[key=<key>]"). A value that returns to an earlier one is a new
+# report; only an immediate repeat is absorbed. Same return codes as
+# fm_parent_channel_report.
+fm_parent_channel_report_latest() {  # <home> <state> <key> <line>
+  local home=$1 state=$2 key=$3 line=$4 destination rc=0 last="" cur wanted untimed
+  destination=$(fm_parent_channel_destination "$home" "$state") || rc=$?
+  [ "$rc" -eq 0 ] || return "$rc"
+  if [ -f "$destination" ] && [ ! -L "$destination" ]; then
+    while IFS= read -r cur || [ -n "$cur" ]; do
+      case "$cur" in *"[key=$key]"*) last=$cur ;; esac
+    done < "$destination"
+    if [ -n "$last" ]; then
+      _fm_status_untimed "$line" wanted
+      _fm_status_untimed "$last" untimed
+      [ "$untimed" != "$wanted" ] || return 0
+    fi
+  fi
+  # Not append_once: it would absorb a line equal to any earlier one.
+  if [ -e "$destination" ] || [ -L "$destination" ]; then
+    [ -f "$destination" ] && [ ! -L "$destination" ] || return 4
+  else
+    mkdir -p "$(dirname "$destination")" || return 4
+  fi
+  printf '%s\n' "$(status_stamp_line "$line")" >> "$destination" || return 4
 }

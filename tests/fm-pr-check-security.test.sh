@@ -710,6 +710,64 @@ test_review_comments_on_recorded_head_are_counted() {
   pass "registration counts inline review comments on the exact recorded head"
 }
 
+# In a secondmate home the parent sees only the parent channel, so the pre-merge
+# review signals that registration prints locally must reach it too: at first
+# registration and again, for a new head, at merge-time re-registration.
+test_review_signals_reach_the_parent_channel_from_a_secondmate_home() {
+  local dir head other replies
+  dir=$(make_case review-signals-upward)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  seed_secondmate_home "$dir"
+  replies="$dir/home/state/parent-replies.status"
+  head=0123456789abcdef0123456789abcdef01234567
+  other=89abcdef0123456789abcdef0123456789abcdef
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration in a secondmate home failed: $(cat "$dir/stderr")"
+  grep -qF "review comments: 2 inline on head $head" "$replies" \
+    || fail "the review-comment count never reached the parent channel: $(cat "$replies")"
+  grep -qF 'bot findings:' "$replies" || fail "the bot-finding count never reached the parent channel"
+  grep -qF 'bot review on head:' "$replies" || fail "the bot-review answer never reached the parent channel"
+  tail -1 "$replies" | grep -q '^done \[key=child-pr-task-a\].*: child task-a PR ready' \
+    || fail "the first PR-ready line is not the channel's newest event: $(cat "$replies")"
+
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"},{\"id\":2,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration in a secondmate home failed: $(cat "$dir/stderr")"
+  [ "$(grep -cF "review comments: 2 inline on head $head" "$replies")" -eq 1 ] \
+    || fail "an unchanged re-registration told the parent the same signals twice"
+
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$head\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration on a new head failed: $(cat "$dir/stderr")"
+  grep -qF "review comments: 0 inline on head $other" "$replies" \
+    || fail "the new head's review-comment count never reached the parent channel: $(cat "$replies")"
+
+  # A count that goes 2 -> 1 -> 2 on the same head must report the final 2
+  # again: an identical line anywhere in the channel's history is not "latest".
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"},{\"id\":2,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration with two comments on the new head failed: $(cat "$dir/stderr")"
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration with one comment on the new head failed: $(cat "$dir/stderr")"
+  FM_TEST_GH_HEAD=$other FM_TEST_GH_INLINE="[[{\"id\":1,\"commit_id\":\"$other\"},{\"id\":2,\"commit_id\":\"$other\"}]]" \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "re-registration back to two comments failed: $(cat "$dir/stderr")"
+  [ "$(grep 'child-pr-review-task-a' "$replies" | tail -1 | grep -cF "review comments: 2 inline on head $other")" -eq 1 ] \
+    || fail "a 2 -> 1 -> 2 sequence on one head dropped the final report: $(grep 'child-pr-review-task-a' "$replies")"
+
+  dir=$(make_case review-signals-main-home)
+  write_task_meta "$dir"
+  ln -s "$REAL_JQ" "$dir/fakebin/jq"
+  FM_TEST_GH_HEAD=$head FM_TEST_GH_INLINE='[[]]' \
+    run_check_entry "$dir" task-a https://github.com/o/r/pull/7 > "$dir/stdout" 2> "$dir/stderr" \
+    || fail "registration in a main home failed: $(cat "$dir/stderr")"
+  [ ! -e "$dir/home/state/parent-replies.status" ] || fail "a main home wrote a parent channel"
+  pass "registration forwards the review signals through the parent channel from a secondmate home only"
+}
+
 # Registration counts the bot findings nobody has addressed, on any head: a
 # finding fixed on an earlier head is still counted until its thread is resolved
 # or the PR author replies naming a fix commit; a question, a reply naming no
@@ -793,6 +851,16 @@ test_bot_review_on_head_is_reported() {
     "$(bot_review_payload "" "{\"author\":{\"login\":\"vercel\"},\"body\":\"Latest commit: 0123456\",\"createdAt\":\"2026-10-20T10:05:00Z\"}")"
   bot_review_case refused "Copilot was not able to review the head" \
     "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case refused "Copilot could not review because the requester hit the quota limit" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case refused "Codex could not review and asks to try again later" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Codex was unable to review this pull request. Please try again later.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a could-not-review opening names a finding in one sentence" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review src/auth.ts: login() skips the token check\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case refused "Copilot's notice carries only a files-not-reviewed details block" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review any files in this pull request.\\n\\n<details>\\n<summary>Files not reviewed (1)</summary>\\n\\n* **README.md**: Language not supported\\n</details>\\n\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
+  bot_review_case yes "a could-not-review opening is followed by real findings" \
+    "$(bot_review_payload "{\"author\":{\"login\":\"copilot-pull-request-reviewer\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"Copilot wasn't able to review 1 of 3 files. Finding: foo() skips the auth check.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case yes "a review on the head summarizes a rate limit change" \
     "$(bot_review_payload "{\"author\":{\"login\":\"chatgpt-codex-connector\"},\"commit\":{\"oid\":\"$head\"},\"body\":\"This adds a rate limit to the login endpoint.\",\"submittedAt\":\"2026-10-20T10:05:00Z\"}" "")"
   bot_review_case unknown "the newest commit is not the recorded head" \
@@ -3784,6 +3852,7 @@ test_valid_recording_and_merge_derivation
 test_review_comments_on_recorded_head_are_counted
 test_unaddressed_bot_findings_are_counted
 test_bot_review_on_head_is_reported
+test_review_signals_reach_the_parent_channel_from_a_secondmate_home
 test_rejected_metacharacter_bytes_are_inert
 test_static_poll_contract
 test_atomic_interruption_leaves_no_partial_artifact

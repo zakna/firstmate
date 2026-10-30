@@ -39,8 +39,11 @@
 # chatgpt-codex-connector): "yes" when such a review is on the exact head, or
 # such a comment names a prefix of the head SHA, and it is not a refusal;
 # "refused" when, instead, one dated at or after the head commit opens with a
-# refusal ("You have reached your ... usage limits", "<name> was unable to
-# review", "Copilot wasn't able to review"); "no" otherwise. A failed read, or a newest commit that is not the recorded head,
+# refusal ("You have reached your ... usage limits", or a bare "<name> was
+# unable to review this pull request" / "Copilot wasn't able to review any files
+# in this pull request" notice, optionally "because the user who requested the
+# review has reached their quota limit", followed only by "Please try again later" or a
+# "Files not reviewed" details block; any other text keeps it a review); "no" otherwise. A failed read, or a newest commit that is not the recorded head,
 # prints "unknown". It never refuses arming.
 # The recorded pr= also frees the task's place in a declared project capacity
 # (bin/fm-project-capacity-lib.sh).
@@ -198,7 +201,7 @@ if [ -n "$PR_HEAD" ] && command -v jq >/dev/null 2>&1; then
   if BOT_REVIEW_JSON=$(gh api graphql -f query="$BOT_REVIEW_QUERY" -f owner="${PROJECT_PATH%%/*}" -f name="${PROJECT_PATH#*/}" -F number="$NUMBER" 2>/dev/null) \
     && BOT_REVIEW=$(printf '%s' "$BOT_REVIEW_JSON" | jq -er --arg head "$PR_HEAD" '
       def review_bot: (.author.login // "" | sub("\\[bot\\]$"; "")) | IN("Copilot", "copilot-pull-request-reviewer", "chatgpt-codex-connector");
-      def refusal: (.body // "") | test("^\\s*(You have reached your .* usage limits|\\S+ was unable to review|Copilot wasn\u0027t able to review)"; "i");
+      def refusal: (.body // "") | gsub("<details>\\s*<summary>Files not reviewed[^<]*</summary>(.|\\n)*?</details>"; "") | test("^\\s*(You have reached your .* usage limits|(\\S+ was unable to review|Copilot wasn\u0027t able to review)( any files in)? this pull request( because the user who requested the review has reached their quota limit)?\\.?(\\s*Please try again later\\.?)?\\s*$)"; "i");
       def names_head: [(.body // "") | scan("[0-9a-fA-F]{7,40}")] | any(ascii_downcase as $t | $head | startswith($t));
       .data.repository.pullRequest as $p
       | ($p.commits.nodes[0].commit) as $c
@@ -323,6 +326,17 @@ PR_MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)
 PR_YOLO=$(grep '^yolo=' "$META" | tail -1 | cut -d= -f2- || true)
 [ -z "$PR_MODE" ] || READY_LINE="$READY_LINE mode=$(fm_parent_channel_clean_note "$PR_MODE")"
 [ -z "$PR_YOLO" ] || READY_LINE="$READY_LINE yolo=$(fm_parent_channel_clean_note "$PR_YOLO")"
+if [ -n "$PR_HEAD" ]; then
+  # The parent sees only its channel, so the same signals go there, keyed to the
+  # task; only a repeat of the latest such line is absorbed.
+  SIGNAL_LINE="note [key=child-pr-review-$ID]: child $ID review comments: ${REVIEW_COMMENTS:-unknown} inline on head $PR_HEAD; bot findings: ${BOT_FINDINGS:-unknown} unaddressed; bot review on head: ${BOT_REVIEW:-unknown}"
+  SIGNAL_RC=0
+  fm_parent_channel_report_latest "$FM_HOME" "$STATE" "child-pr-review-$ID" "$SIGNAL_LINE" || SIGNAL_RC=$?
+  case "$SIGNAL_RC" in
+    0|1) ;;
+    *) printf 'actionable: the review signals for %s did not reach the parent channel (rc=%s)\n' "$URL" "$SIGNAL_RC" >&2 ;;
+  esac
+fi
 READY_RC=0
 fm_parent_channel_report "$FM_HOME" "$STATE" "$READY_LINE" || READY_RC=$?
 case "$READY_RC" in
