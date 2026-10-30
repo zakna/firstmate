@@ -1,0 +1,3 @@
+error: record archive target /private/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T/fm-remote-secondmate-e2e.AP5GKw/parent/data/ios/meta.txt is not a regular file
+error: teardown refused: ios's task record could not be kept; nothing was removed
+error: remote home retired but its records could not be refreshed; preserving the local route for retry

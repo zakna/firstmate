@@ -1,0 +1,5 @@
+ok - an absent remote home is already retired
+ok - a home holding only empty directories is already retired and removed
+ok - a home that cannot be fully read is never classified as retired
+ok - an unreadable steering record refuses the listing
+ok - an empty home that cannot be removed is not reported as already retired
