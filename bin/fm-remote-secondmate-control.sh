@@ -84,6 +84,7 @@ validate_home() { # <id> [allow-absent]
   if [ "$allow_absent" = yes ] && [ -d "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] \
     && nondir=$(find "$TARGET_HOME" -mindepth 1 ! -type d -print -quit 2>/dev/null) && [ -z "$nondir" ]; then
     find "$TARGET_HOME" -depth -type d -empty -delete 2>/dev/null || true
+    [ ! -e "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] || die "remote home holds only empty directories that could not be removed; refusing to report it retired"
     return 2
   fi
   [ -d "$TARGET_HOME" ] && [ ! -L "$TARGET_HOME" ] || die "remote secondmate home is unavailable or unsafe"
@@ -428,7 +429,7 @@ cmd_update() {
 # the whole home, so the parent reads this first and keeps the records under its
 # own data/<id>/steering/ (bin/fm-teardown.sh owns the archive).
 cmd_steering() {
-  local id=$1 sub src name rc=0
+  local id=$1 sub src name payload rc=0
   validate_id "$id"
   # An already-retired home has nothing left to read; a retry still proceeds.
   validate_home "$id" yes || rc=$?
@@ -438,7 +439,8 @@ cmd_steering() {
       [ -f "$src" ] && [ ! -L "$src" ] || continue
       name=$(basename "$src")
       case "$name" in *[!A-Za-z0-9._-]*) die "steering record name is not archivable: $name" ;; esac
-      printf '%s %s %s\n' "$([ -n "$sub" ] && echo handled || echo pending)" "$name" "$(base64 < "$src" | tr -d '\n')"
+      payload=$(base64 < "$src") || die "steering record $name could not be read"
+      printf '%s %s %s\n' "$([ -n "$sub" ] && echo handled || echo pending)" "$name" "$(printf '%s' "$payload" | tr -d '\n')"
     done
   done
 }

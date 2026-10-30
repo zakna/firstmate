@@ -3480,6 +3480,9 @@ preflight_descendant_archives() {  # <home> <archive root>
   local home=$1 root=$2 sub_state child_meta child_id child_kind child_home child_wt
   sub_state="$home/state"
   [ -d "$sub_state" ] || return 0
+  # The root is a new path component of its own: a symlink there would carry
+  # every archive into a directory this cleanup may be about to delete.
+  teardown_archive_dir "$root" || return 1
   for child_meta in "$sub_state"/*.meta; do
     [ -e "$child_meta" ] || continue
     child_id=$(basename "$child_meta" .meta)
