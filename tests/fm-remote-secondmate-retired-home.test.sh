@@ -43,3 +43,31 @@ if [ "$(id -u)" -ne 0 ]; then
   [ -f "$HOME_DIR/state/locked/record" ] || fail "a refused retirement removed the unreadable home's contents"
   pass "a home that cannot be fully read is never classified as retired"
 fi
+
+# A seeded home whose steering record cannot be read must refuse the listing,
+# never emit an empty record the parent would archive before retiring the home.
+if [ "$(id -u)" -ne 0 ]; then
+  SEEDED="$TMP/seeded"
+  mkdir -p "$SEEDED/bin" "$SEEDED/state/parent-route/ios.inbox"
+  printf 'ios\n' > "$SEEDED/.fm-secondmate-home"
+  : > "$SEEDED/AGENTS.md"
+  printf 'steer that must not be lost\n' > "$SEEDED/state/parent-route/ios.inbox/001.msg"
+  chmod 000 "$SEEDED/state/parent-route/ios.inbox/001.msg"
+  if out=$(FM_HOME="$SEEDED" "$CONTROL" steering ios 2>/dev/null); then
+    chmod 600 "$SEEDED/state/parent-route/ios.inbox/001.msg"
+    fail "an unreadable steering record was listed with exit 0: $out"
+  fi
+  chmod 600 "$SEEDED/state/parent-route/ios.inbox/001.msg"
+  pass "an unreadable steering record refuses the listing"
+
+  # An empty home shell that cannot be removed is not retired.
+  mkdir -p "$TMP/ro/home/state"
+  chmod 555 "$TMP/ro"
+  if out=$(FM_HOME="$TMP/ro/home" "$CONTROL" retire ios 2>&1); then
+    chmod 755 "$TMP/ro"
+    fail "an empty home that could not be removed was reported retired: $out"
+  fi
+  chmod 755 "$TMP/ro"
+  [ -d "$TMP/ro/home" ] || fail "fixture home vanished"
+  pass "an empty home that cannot be removed is not reported as already retired"
+fi

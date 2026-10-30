@@ -3577,6 +3577,29 @@ test_forced_secondmate_teardown_preflights_descendant_archives_before_removing()
   pass "forced secondmate teardown preflights every descendant archive before removing anything"
 }
 
+test_forced_secondmate_teardown_refuses_symlinked_descendant_archive_root() {
+  local case_dir home rc child
+  case_dir=$(make_case descendant-archive-root-symlink)
+  write_meta "$case_dir" local-only secondmate
+  configure_secondmate_with_tmux_children "$case_dir"
+  install_inert_tmux_and_treehouse "$case_dir"
+  home="$case_dir/secondmate-home"
+  # The new archive root points into the home this cleanup is about to delete.
+  mkdir -p "$case_dir/data/task-x1" "$home/data/arch"
+  ln -s "$home/data/arch" "$case_dir/data/task-x1/descendants"
+  rc=0
+  run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  [ "$rc" -ne 0 ] || fail "symlinked-archive-root: teardown wrote its archives through a symlinked archive root"
+  assert_grep "symlink or not a directory" "$case_dir/stderr" \
+    "symlinked-archive-root: refusal did not name the unsafe archive path"
+  for child in child-a child-b; do
+    [ -e "$home/state/$child.meta" ] && [ -d "$case_dir/$child-wt" ] \
+      || fail "symlinked-archive-root: $child was removed despite the refusal"
+  done
+  [ -d "$home" ] || fail "symlinked-archive-root: the secondmate home was removed"
+  pass "forced secondmate teardown refuses a symlinked descendant archive root before removing anything"
+}
+
 test_forced_secondmate_herdr_child_retains_records_when_close_unconfirmed() {
   local case_dir home log closed rc
   case_dir=$(make_case herdr-child-unconfirmed-close)
@@ -5468,4 +5491,4 @@ test_exec_changed_process_is_still_reaped
 test_process_spawned_during_grace_is_reaped_on_later_pass
 test_persistent_scan_refuses_after_bounded_retries
 test_process_exit_during_identity_lookup_does_not_refuse
-test_run_abort_precedes_process_reap_precedes_worktree_removal
+test_run_abort_precedes_process_reap_precedes_worktree_removaltest_forced_secondmate_teardown_refuses_symlinked_descendant_archive_root\n
