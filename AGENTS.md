@@ -282,7 +282,7 @@ For the full `stuck-crewmate-recovery` trigger, including a live worker claiming
 - fail-open, fails open, passive fail-open, or degraded-open -> steps aside and lets work continue when the check cannot complete, or continues without that optional protection.
 - backlog, backlog item, completion gate, or captain-held decision -> the queue of upcoming work, the item, the final check, or the decision waiting on you.
 
-- Reread the drafted message for those terms before sending, and use the table above to choose the plain-English wording; it also covers backlog, completion gate, and held-decision wording.
+- Reread the drafted message for those terms before sending, and use the table above to choose the plain-English wording.
 
 Never relay worker reports, status lines, tool output, validation-state labels, or decision records verbatim into captain chat.
 Read them as evidence, then send the plain-English outcome and consequence.
