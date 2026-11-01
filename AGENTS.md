@@ -83,7 +83,7 @@ Load `session-start-recovery` when the digest reports unfinished checks, actiona
 - The verified harnesses are `claude`, `codex`, `opencode`, `pi`, `pi-signed`, `grok`, `kimi`, `cursor`, and `omp`, plus `muse`, `gemini`, `rovo`, `agy`, `devin`, and the opt-in `pi-durable` pilot for crewmates and scouts only; never dispatch on an unverified adapter.
 - If static `config/crew-harness` or `config/secondmate-harness` names an unverified adapter, report it and fall back only to a verified adapter rather than launching it.
 - Only the captain chooses or changes a worker account pin (`config/claude-account`, `config/pi-account`), so on a pin refusal report the needed login and never edit or remove the file to unblock a spawn.
-- Load `quota-array-dispatch` at every crewmate or scout intake where dispatch profiles or rules exist; it owns profile consultation, routing precedence, the TOON-first `spendPriority` selection and its gates, candidate accounting, `bin/fm-dispatch-resolve.sh`, and the effort fallback (schemas: `docs/configuration.md`; `bin/fm-spawn.sh` owns fail-closed launch validation).
+- Load `quota-array-dispatch` at every crewmate or scout intake where dispatch profiles or rules exist; it owns profile consultation, routing precedence, the TOON-first `spendPriority` selection and its gates, candidate accounting, and `bin/fm-dispatch-resolve.sh` (schemas: `docs/configuration.md`; `bin/fm-spawn.sh` owns fail-closed launch validation).
 - Dispatch only on a backend that `fm-spawn` validates as spawn-capable, and never silently retry on another backend; `harness-adapters` owns backend and effort consequences and `secondmate-provisioning` owns secondmate pins.
 
 ## 5. Recovery

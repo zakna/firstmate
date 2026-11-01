@@ -121,6 +121,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/backlog-hygiene/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/bearings/SKILL.md",
       "audience": "agent-runtime"
     },
@@ -129,7 +133,15 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/captain-facing-translation/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/captain-hold-lifecycle/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/crewmate-brief-authoring/SKILL.md",
       "audience": "agent-runtime"
     },
     {
@@ -577,11 +589,19 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/ship-intake-resolution/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/ship-landing/SKILL.md",
       "audience": "agent-runtime"
     },
     {
       "path": ".agents/skills/validation-supervision/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/worker-steering/SKILL.md",
       "audience": "agent-runtime"
     }
   ]
