@@ -65,7 +65,7 @@ Conversation and harness-native skill invocation use `../../../bin/fm-send.sh`; 
 Lifecycle actions go through `../../../bin/fm-control.sh <task-id> interrupt|exit|relaunch`, which owns the per-runtime mechanics, verifies each action, and never tears down or discards anything ([`../../../docs/agent-control.md`](../../../docs/agent-control.md)).
 A secondmate's routed reply returns through status or a document pointer, not by firstmate peeking into its chat.
 For the parent-owned correlation, recovery, and escalation contract on marked secondmate requests, see `../../../bin/fm-pending-reply-lib.sh`.
-When the captain adds or changes an ask mid-task, append the captain's words to that brief's `## Captain's intent` and relay those words to the worker; Firstmate build constraints stay in `## Firstmate spec` or the steer.
+When the captain adds or changes an ask mid-task, append the captain's words to a ship or scout brief's `## Captain's intent` and relay those words to the worker; on a secondmate, charter authoring or updates follow `secondmate-provisioning` instead of these task sections. For ship or scout work, Firstmate build constraints stay in `## Firstmate spec` or the steer.
 
 ## Operation-to-reference matrix
 
@@ -82,8 +82,12 @@ A new tool remains undispatchable until the `verify` plan, its harness entry, ev
       "default": ["references/common/dispatch.md", "references/common/model-and-effort.md"],
       "trust-dialog": ["references/common/control-and-recovery.md"]
     },
+    "backend": {"default": ["references/common/dispatch.md"]},
     "trust": {"default": ["references/common/control-and-recovery.md"]},
     "skill": {"default": ["references/common/control-and-recovery.md"]},
+    "steer": {"default": ["references/common/control-and-recovery.md"]},
+    "answer": {"default": ["references/common/control-and-recovery.md"]},
+    "resend": {"default": ["references/common/control-and-recovery.md"]},
     "interrupt": {"default": ["references/common/control-and-recovery.md"]},
     "exit": {"default": ["references/common/control-and-recovery.md"]},
     "resume": {"default": ["references/common/control-and-recovery.md"]},

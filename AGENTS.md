@@ -159,7 +159,7 @@ Classify the deliverable:
 - A diagnostic request, report, recommendation, or implementation-ready finding is evidence, not authorization to change code.
 - Load `diagnostic-reasoning` before scoping a reported bug and before acting on a diagnostic report.
 
-Load `ship-intake-resolution` at every ship or scout intake; it owns delivery-mode and `yolo` resolution, branch prefix and base branch, the `no-mistakes-prod-only` surface test, unregistered-project defaults, concurrency and capacity, and what the item note must record.
+Load `ship-intake-resolution` at every ship or scout intake and scout promotion; it owns ship-only delivery-mode and `yolo` resolution, ship and promotion branch-prefix handling, ship/scout base branches, the `no-mistakes-prod-only` surface test, unregistered-project defaults, concurrency and capacity, and what the item note must record.
 Write the task-specific brief under section 11 before spawning.
 
 ### Dispatch and supervision handoff
@@ -333,7 +333,7 @@ Preserve durable structured identifiers, dependencies, and completion artifact l
 
 ## 11. Crewmate briefs
 
-Scaffold every brief with `bin/fm-brief.sh` and load `crewmate-brief-authoring` before writing, amending, or regenerating any ship, scout, or charter brief; the scaffold is a safety contract, not a suggestion.
+Scaffold every ship or scout brief with `bin/fm-brief.sh` and load `crewmate-brief-authoring` before writing, amending, or regenerating it; load `secondmate-provisioning` for charter briefs. The scaffold is a safety contract, not a suggestion.
 Every ship brief must retain the worktree-isolation assertion and stop if launched in the primary checkout.
 If a ship task touches firstmate's shared tracked material, explicitly require `firstmate-coding-guidelines` before editing.
 Status appends are sparse supervisor-actionable events, not routine progress; `bin/fm-classify-lib.sh` owns keyed open and resolved semantics.
