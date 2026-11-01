@@ -66,10 +66,7 @@ A remote secondmate has no typed text plane, so its text steers remain inbox rec
 For a reply-bearing remote secondmate steer after an unconfirmed delivery, only the exact `FM_PENDING_REPLY_EXISTING_CORR=<id>` resend command printed by `fm-send` is safe because it preserves the request body for remote enqueue deduplication.
 A remote `--fire-and-forget <delivery-id>` steer creates no pending-reply expectation; retry it only with the same caller-supplied delivery id (`../../../bin/fm-send.sh` header).
 When a steer answers an open keyed decision or blocker, pass `fm-send`'s `--resolve-key` so the answer itself closes that decision record at answer time, identically for local and remote workers (contract: `../../../bin/fm-send.sh` header).
-Conversation and local crewmate/scout harness-native skill invocations use `../../../bin/fm-send.sh`; secondmate text follows its marked/inbox path and is not a parser command.
-Never use its key or text paths for interrupt, exit, or other lifecycle control, because routing-marked lifecycle text becomes chat the worker reasons about instead of executing.
-For local tasks, lifecycle actions go through `../../../bin/fm-control.sh <task-id> interrupt|exit|relaunch`, which owns the per-runtime mechanics, verifies each action, and never tears down or discards anything ([`../../../docs/agent-control.md`](../../../docs/agent-control.md)).
-For a remotely placed secondmate, use `../../../bin/fm-remote-secondmate-relaunch.sh` for relaunch and the `secondmate-provisioning` remote recovery path; local interrupt and exit are unavailable.
+`fm-control.sh` owns the per-runtime lifecycle mechanics, verifies each action, and never tears down or discards anything ([`../../../docs/agent-control.md`](../../../docs/agent-control.md)).
 A secondmate's routed reply returns through status or a document pointer, not by firstmate peeking into its chat.
 For the parent-owned correlation, recovery, and escalation contract on marked secondmate requests, see `../../../bin/fm-pending-reply-lib.sh`.
 When the captain adds or changes an ask mid-task, append the captain's words to a ship or scout brief's `## Captain's intent` and relay those words to the worker; on a secondmate, charter authoring or updates follow `secondmate-provisioning` instead of these task sections.
@@ -90,12 +87,8 @@ A new tool remains undispatchable until the `verify` plan, its harness entry, ev
       "default": ["references/common/dispatch.md", "references/common/model-and-effort.md"],
       "trust-dialog": ["references/common/control-and-recovery.md"]
     },
-    "backend": {"default": ["references/common/dispatch.md"]},
     "trust": {"default": ["references/common/control-and-recovery.md"]},
     "skill": {"default": ["references/common/control-and-recovery.md"]},
-    "steer": {"default": ["references/common/control-and-recovery.md"]},
-    "answer": {"default": ["references/common/control-and-recovery.md"]},
-    "resend": {"default": ["references/common/control-and-recovery.md"]},
     "interrupt": {"default": ["references/common/control-and-recovery.md"]},
     "exit": {"default": ["references/common/control-and-recovery.md"]},
     "resume": {"default": ["references/common/control-and-recovery.md"]},
