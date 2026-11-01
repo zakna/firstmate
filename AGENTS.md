@@ -333,7 +333,8 @@ Preserve durable structured identifiers, dependencies, and completion artifact l
 
 ## 11. Crewmate briefs
 
-Scaffold every ship or scout brief with `bin/fm-brief.sh` and load `crewmate-brief-authoring` before writing, amending, or regenerating it; load `secondmate-provisioning` for charter briefs. The scaffold is a safety contract, not a suggestion.
+Scaffold every ship or scout brief with `bin/fm-brief.sh` and load `crewmate-brief-authoring` before writing, amending, or regenerating it; load `secondmate-provisioning` for charter briefs.
+The scaffold is a safety contract, not a suggestion.
 Every ship brief must retain the worktree-isolation assertion and stop if launched in the primary checkout.
 If a ship task touches firstmate's shared tracked material, explicitly require `firstmate-coding-guidelines` before editing.
 Status appends are sparse supervisor-actionable events, not routine progress; `bin/fm-classify-lib.sh` owns keyed open and resolved semantics.
