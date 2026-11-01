@@ -121,19 +121,11 @@
       "audience": "agent-runtime"
     },
     {
-      "path": ".agents/skills/backlog-hygiene/SKILL.md",
-      "audience": "agent-runtime"
-    },
-    {
       "path": ".agents/skills/bearings/SKILL.md",
       "audience": "agent-runtime"
     },
     {
       "path": ".agents/skills/bootstrap-diagnostics/SKILL.md",
-      "audience": "agent-runtime"
-    },
-    {
-      "path": ".agents/skills/captain-facing-translation/SKILL.md",
       "audience": "agent-runtime"
     },
     {
@@ -598,10 +590,6 @@
     },
     {
       "path": ".agents/skills/validation-supervision/SKILL.md",
-      "audience": "agent-runtime"
-    },
-    {
-      "path": ".agents/skills/worker-steering/SKILL.md",
       "audience": "agent-runtime"
     }
   ]

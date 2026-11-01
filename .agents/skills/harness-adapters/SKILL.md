@@ -2,7 +2,7 @@
 name: harness-adapters
 description: >-
   Agent-only reference for firstmate harness operations.
-  Use before spawning or recovering a crewmate or secondmate, handling a trust dialog, sending a harness-specific skill invocation, interrupting or exiting an agent, resuming an exited agent, or verifying a new harness adapter.
+  Use before spawning or recovering a crewmate or secondmate, choosing a runtime backend, handling a trust dialog, sending a harness-specific skill invocation, steering a worker, answering or resending a steer, interrupting or exiting an agent, resuming an exited agent, or verifying a new harness adapter.
   Contains verified facts for claude, codex, opencode, pi, pi-signed, grok, kimi, cursor, gemini, muse, rovo, omp, agy, devin, and the opt-in pi-durable pilot.
 user-invocable: false
 metadata:
@@ -48,6 +48,24 @@ omp publishes no marker of its own; `FM_OMP_HARNESS=omp` is Firstmate's launch m
 `../../../bin/fm-harness.sh secondmate` resolves `config/secondmate-harness` -> `config/crew-harness` -> firstmate's own harness.
 `../../../bin/fm-spawn.sh` re-resolves on every spawn, and an explicit per-spawn argument wins for that spawn.
 A new adapter's verified marker and command name must land in `../../../bin/fm-harness.sh`.
+
+## Runtime backend
+
+`../../../docs/configuration.md` owns runtime-backend schemas, and `../../../bin/fm-spawn.sh` owns launch flags and fail-closed validation.
+Dispatch only on a backend that `fm-spawn` validates as spawn-capable; pass an explicit per-spawn `--backend` only under that exact task's own authority, never as later-task precedent (selection contract: [`../../../docs/configuration.md`](../../../docs/configuration.md) "Runtime backend").
+A missing dependency, authentication failure, unsupported backend, or version refusal is a blocker; never silently retry on another backend.
+`../secondmate-provisioning/SKILL.md` owns secondmate harness pins and inherited local material; this router owns the runtime consequences.
+
+## Steering and lifecycle
+
+Steer a worker with ordinary text through fail-closed `../../../bin/fm-send.sh`: the message becomes a durable record in the task's steering inbox (multi-line text is legal, local and remote alike) and the worker's terminal receives only a constant doorbell line, with the watcher re-ringing an unacknowledged local message and escalating a stuck one (`../../../bin/fm-task-inbox-lib.sh`; `../../../bin/fm-send.sh` owns the typed-plane carve-outs).
+A remote secondmate steer rides the same durable-inbox model through the remote transport; after an unconfirmed delivery, only the exact `FM_PENDING_REPLY_EXISTING_CORR=<id>` resend command printed by `fm-send` is safe because it preserves the request body for remote enqueue deduplication (`../../../bin/fm-send.sh` header).
+When a steer answers an open keyed decision or blocker, pass `fm-send`'s `--resolve-key` so the answer itself closes that decision record at answer time, identically for local and remote workers (contract: `../../../bin/fm-send.sh` header).
+Conversation and harness-native skill invocation use `../../../bin/fm-send.sh`; never use its key or text paths for interrupt, exit, or other lifecycle control, because routing-marked lifecycle text becomes chat the worker reasons about instead of executing.
+Lifecycle actions go through `../../../bin/fm-control.sh <task-id> interrupt|exit|relaunch`, which owns the per-runtime mechanics, verifies each action, and never tears down or discards anything ([`../../../docs/agent-control.md`](../../../docs/agent-control.md)).
+A secondmate's routed reply returns through status or a document pointer, not by firstmate peeking into its chat.
+For the parent-owned correlation, recovery, and escalation contract on marked secondmate requests, see `../../../bin/fm-pending-reply-lib.sh`.
+When the captain adds or changes an ask mid-task, append the captain's words to that brief's `## Captain's intent` and relay those words to the worker; Firstmate build constraints stay in `## Firstmate spec` or the steer.
 
 ## Operation-to-reference matrix
 

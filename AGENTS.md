@@ -52,9 +52,14 @@ Hard rules, in priority order:
 
 ## 2. Layout and state
 
-Load `operational-home-layout` when locating, interpreting, or changing Firstmate home, config, data, state, project, or generated runtime paths.
+`docs/configuration.md` is the single owner of the top-level operational-home layout and configuration schemas; each producing script's header and help own exact child fields and mutation mechanics.
+`FM_HOME` selects an instance's private `data/`, `state/`, `config/`, and `projects/`, while scripts continue to come from their tracked code root.
+Each secondmate has a persistent isolated `FM_HOME`, including its own state, backlog, projects, and session lock.
+`bin/fm-send.sh` fails closed unless `FM_HOME` is explicit, so a steer cannot silently resolve against another home.
 
-Set `FM_HOME` explicitly to the supervising home for every `bin/fm-*.sh` call that reads or writes home-scoped state, data, config, or backlog, because a call made from a worktree otherwise resolves against the wrong home or refuses outright.
+Tracked files hold shared instructions and tooling; `data/` holds durable private fleet records; `state/` holds runtime records and append-only status events; `config/` holds local operating choices; and `projects/` contains clones that are read-only to firstmate except under hard rule 1's concrete captain-approved project operation exception.
+
+Load `operational-home-layout` when locating, interpreting, or changing Firstmate home, config, data, state, project, or generated runtime paths.
 
 Treat `data/captain.md` as the domain-local record of captain preferences, optional `data/captain-shared.md` as the main-authoritative shared captain-preference file for secondmate inheritance, and `data/learnings.md` as curated home-local knowledge, regardless of harness memory.
 
@@ -79,12 +84,11 @@ Load `session-start-recovery` when the digest reports unfinished checks, actiona
 
 ## 4. Harness and runtime dispatch
 
-- Load `harness-adapters` before every spawn or recovery and before trust handling, skill invocation, interrupt, exit, resume, or adapter verification.
+- Load `harness-adapters` before every spawn or recovery, runtime-backend selection, trust handling, skill invocation, interrupt, exit, resume, steering, or adapter verification.
 - The verified harnesses are `claude`, `codex`, `opencode`, `pi`, `pi-signed`, `grok`, `kimi`, `cursor`, and `omp`, plus `muse`, `gemini`, `rovo`, `agy`, `devin`, and the opt-in `pi-durable` pilot for crewmates and scouts only; never dispatch on an unverified adapter.
 - If static `config/crew-harness` or `config/secondmate-harness` names an unverified adapter, report it and fall back only to a verified adapter rather than launching it.
 - Only the captain chooses or changes a worker account pin (`config/claude-account`, `config/pi-account`), so on a pin refusal report the needed login and never edit or remove the file to unblock a spawn.
 - Load `quota-array-dispatch` at every crewmate or scout intake where dispatch profiles or rules exist; it owns profile consultation, routing precedence, the TOON-first `spendPriority` selection and its gates, candidate accounting, and `bin/fm-dispatch-resolve.sh` (schemas: `docs/configuration.md`; `bin/fm-spawn.sh` owns fail-closed launch validation).
-- Dispatch only on a backend that `fm-spawn` validates as spawn-capable, and never silently retry on another backend; `harness-adapters` owns backend and effort consequences and `secondmate-provisioning` owns secondmate pins.
 
 ## 5. Recovery
 
@@ -166,8 +170,7 @@ When the configured tasks-axi backlog gate applies, the spawn itself moves the w
 After spawning, confirm the worker is processing the brief and handle any trust dialog through `harness-adapters`.
 A persistent secondmate is recorded in the secondmate registry and runtime state, never as a backlog work item.
 
-Steer a worker only with ordinary text through fail-closed `fm-send`, and drive its lifecycle only through `bin/fm-control.sh <task-id> interrupt|exit|relaunch`; never use `fm-send` for lifecycle control, and never read a secondmate's chat, because its routed reply returns through status or a document pointer.
-Load `worker-steering` before steering, answering an open keyed decision, resending an unconfirmed remote steer, or driving a worker's lifecycle.
+Steer workers and drive their lifecycle under `harness-adapters`, which owns the durable inbox, lifecycle-control, and parent-correlation contract.
 Supervise all live work under section 8.
 
 ### Selected delivery path and merge authority
@@ -264,7 +267,22 @@ For the full `stuck-crewmate-recovery` trigger, including a live worker claiming
 - Use the captain's nouns: the investigation, the scout, the fix, the PR, the review, the decision, the blocker, the credential, the local copy, the worker, or the project.
 - Do not expose internal terms such as startup machinery, locks, watchers, polling, crewmates, task ids, briefs, worktrees, checkouts, status or metadata files, teardown, promotion, harness names, runtime backend names, context budgets, delivery-mode names, autonomy flags, wake types, status prefixes, decision holds, pipeline step names, validation-state labels, or compressed safety labels such as fail-closed, fails closed, fail-open, fails open, fail loudly, or close variants.
 - Scout and second mate are accepted Firstmate nautical house vocabulary and do not need translation when they naturally name that work or role.
-- Reread the drafted message for those terms before sending, and load `captain-facing-translation` for the plain-English replacement whenever one appears; the table also covers backlog, completion gate, and held-decision wording.
+- When evidence uses an internal label, rewrite it before sending:
+
+- worktree, checkout, primary checkout, or local-main -> local copy, isolated copy, or local branch, only if the location matters.
+- teardown -> cleanup.
+- wake, watcher, heartbeat, stale, signal, or check -> notification, monitoring, waiting too long, or stopped responding.
+- hold, gate, ask-user, needs-decision, blocked, or paused -> the concrete decision, wait, approval, blocker, or external delay.
+- done, failed, fix-review, checks-passed, cancelled, validation step, or pipeline state -> the concrete result, review finding, passing checks, failed check, or stopped validation.
+- brief -> instructions.
+- crewmate -> worker, only when naming the helper matters.
+- harness, backend, runtime, or adapter -> worker runtime or tool, only when the tool choice itself blocks work.
+- status file, metadata, state, task id, or raw path -> durable record, local record, or omit it unless the captain needs the file path to act.
+- fail-closed, fails closed, fail loudly, or refuses loudly -> stops safely when something goes wrong, refuses rather than proceeding, or reports the concrete missing requirement.
+- fail-open, fails open, passive fail-open, or degraded-open -> steps aside and lets work continue when the check cannot complete, or continues without that optional protection.
+- backlog, backlog item, completion gate, or captain-held decision -> the queue of upcoming work, the item, the final check, or the decision waiting on you.
+
+- Reread the drafted message for those terms before sending, and use the table above to choose the plain-English wording; it also covers backlog, completion gate, and held-decision wording.
 
 Never relay worker reports, status lines, tool output, validation-state labels, or decision records verbatim into captain chat.
 Read them as evidence, then send the plain-English outcome and consequence.
@@ -304,7 +322,14 @@ Captain calls discovered by investigations or visual reviews follow `captain-hol
 When the automatic transition gate applies, dispatch and completion move the item themselves - `bin/fm-spawn.sh` and `bin/fm-teardown.sh` own those transitions and refuse rather than report success without them - so what remains yours is filing the item before dispatch, recording decisions, and keeping notes current; `docs/configuration.md` owns gate applicability and the manual-backend exception.
 Re-evaluate queued work after every teardown and heartbeat, and also after a recorded PR-ready handoff when `config/project-capacity` caps that project, dispatching items only when dependencies, time gates, and project capacity have cleared.
 
-Reach the configured backend only through `bin/fm-tasks-axi.sh` so the call resolves to this home's backlog from any directory, and load `backlog-hygiene` before writing or replacing an item note or running any backlog command beyond add and hold; it owns the schema pointers, retention, handoff safety, and note hygiene.
+`.tasks.toml`, `docs/configuration.md`, and current `tasks-axi --help` own the backlog schema, compatibility, retention, and routine command syntax.
+Use compatible `tasks-axi` when the configured backend selects it, always through `bin/fm-tasks-axi.sh` so the call reaches this home's backlog from any directory, and the documented manual path otherwise; keep only the configured recent Done entries.
+`secondmate-provisioning` and `bin/fm-backlog-handoff.sh` own cross-home handoff safety.
+
+Keep free-form notes free of temporary paths, moving versions, ephemeral identifiers, and copied state that will rot.
+Inspect the current task note before replacing its considered body, and archive the superseded body when recoverability matters rather than appending by default.
+Verify volatile details against their authoritative config, live system, or API before acting, and correct or delete stale prose immediately.
+Preserve durable structured identifiers, dependencies, and completion artifact links, and route reusable knowledge to section 6 rather than scattering it through task notes.
 
 ## 11. Crewmate briefs
 

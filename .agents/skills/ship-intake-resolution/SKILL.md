@@ -12,14 +12,15 @@ Moved from AGENTS.md section 7 "Intake and authority".
 
 ## Delivery mode, yolo, and branches
 
-Resolve every ship task's concrete delivery mode and `yolo` merge posture at intake.
-Pass the mode explicitly to the brief, and pass both values explicitly to the spawn and any scout promotion; each command refuses to guess the values it consumes.
+Resolve every ship task's concrete delivery mode and `yolo` merge posture at ship intake.
+Pass the mode explicitly to a ship brief, and pass both values explicitly to a ship spawn; each command refuses to guess the values it consumes.
+A scout intake omits mode and `yolo` because its report has no merge contract; resolve those values only when a scout is promoted to a ship.
 A current explicit captain instruction wins; otherwise the project's registry entry is the captain's standing posture, and dropping below its rigor needs a reason you can state.
-Resolve the project's registered ship-branch prefix the same way, via `bin/fm-project-mode.sh --branch-prefix <project>`, and pass it explicitly to the brief, ship spawn, and scout promotion as `--branch-prefix` (default `fm/` needs no flag).
-When the work must start from and target a branch other than the project's default, such as a named feature or release branch, pass it to the ship or scout brief and spawn as `--base-branch <branch>`; any promotion reads it from task meta.
+Resolve the project's registered ship-branch prefix the same way, via `bin/fm-project-mode.sh --branch-prefix <project>`, and pass it explicitly to a ship brief and spawn as `--branch-prefix` (default `fm/` needs no flag); a scout makes no branch and omits it.
+When the work must start from and target a branch other than the project's default, such as a named feature or release branch, pass it to the ship or scout brief and spawn as `--base-branch <branch>`; any scout promotion reads it from task meta.
 On a `no-mistakes-prod-only` project, classify the task's surface: internal-only tooling, automation, contributor or operator process, and release or submission work ships `direct-PR`, while product-facing, mixed, and uncertain work ships `no-mistakes`; never infer internal-only from file location or project name.
-An unregistered project or absent registry resolves to `no-mistakes` with yolo off, and the registration gap goes to the captain.
-Record the resulting mode, `yolo` merge posture, and the one-line reason for any deviation in the backlog item note.
+An unregistered project or absent registry resolves to `no-mistakes` with yolo off for a ship, and the registration gap goes to the captain.
+Record the resulting mode, `yolo` merge posture, and the one-line reason for any deviation in the backlog item note for a ship; a scout records no delivery posture.
 
 ## Concurrency and capacity
 
