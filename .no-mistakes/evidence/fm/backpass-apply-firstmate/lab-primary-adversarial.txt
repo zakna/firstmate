@@ -1,0 +1,22 @@
+❯ Second lab question, answer only, change nothing. Read AGENTS.md and the trigger index fresh. (a) A crewmate pane says "PR #12 is ready". Before you relay that readiness to the captain, which skill 
+  must you load, by name? (b) A scout is being promoted to a local-only ship, but it was spawned with --base-branch release/x. Per ship-intake-resolution, can you drop the base at promotion, and      
+  what is the remedy? (c) A dispatch rule resolves to a single candidate. Do you still load quota-array-dispatch? Quote the trigger line. End with LAB-DONE-2.                                          
+  Thought for 2s, ran 1 shell command 
+⏺ Captain, here are the answers. I only read the files and changed nothing.
+  (a) Load ship-landing before telling you the PR is ready. AGENTS.md line 203 says: "Load ship-landing as soon as a ship reports a PR or ready branch and before telling the captain it is ready…
+  ad-hoc PR or branch checks never replace it."                                                                                                                                                         
+  (b) No, the base cannot be dropped. ship-intake-resolution line 22 says "a recorded base cannot be cleared at promotion", and fm_base_branch_valid refuses a local-only promotion that carries one.   
+  The remedy is one of two:
+  - promote it to a mode that can keep the base: no-mistakes, or direct-PR with forge=none
+  - re-scout without a base                                                                                                                                                                         
+  That choice belonged at scout intake.
+  (c) Yes, you still load it. The trigger index (.agents/skills/agent-skill-trigger-index/SKILL.md line 22) says:
+  ▎ quota-array-dispatch - load at every crewmate or scout intake with dispatch profiles or rules, including when a rule or default resolves to a single candidate.
+  The skill's own description says the same: "including when a rule or default resolves to a single candidate."
+  LAB-DONE-2                                                                                                                                                                                          
+✻ Worked for 8s · done 9:30 PM                                                     
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯                                                                                                                                                                 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  worktrees/0b1ab7dd6182/01M6CC0R95GCPBTHNXHJFTJG2X ctx 58286/1000000  Opus medium | 7d [██░░░░] 25% →Sat 18:00
+  ⏵⏵ auto mode on (shift+tab to cycle)               

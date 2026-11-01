@@ -1,0 +1,32 @@
+ ▐▛███▛█   Claude Code v2.1.316
+▝▜██████▀  Opus 5.5 with medium effort · Claude Ultra
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/0b1ab7dd6182/01M6CC0R95GCPBTHNXHJFTJG2X
+▎ Your Ultra plan includes $200 a month in API credits to power your apps and agents. Claim them at https://clau.de/api-credits
+❯ Lab validation question, answer only, do not spawn, brief, promote, or change anything. Using only AGENTS.md and the skills it routes you to (read them), answer each with the exact skill name and   
+  file path you loaded: (1) the captain asks you to ship a fix in a project — which skill resolves delivery mode, yolo, branch prefix and base branch? (2) which skill owns filling the ship brief      
+  subsections? (3) at a crewmate intake with dispatch profile rules, which skill owns resolution, and per that skill what do you do when bin/fm-dispatch-resolve.sh returns clear, and when it exits 2? 
+  (4) which skill owns choosing the runtime backend and steering a running worker? End with the line LAB-DONE.                                                                                          
+  Thought for 5s, ran 3 shell commands     
+⏺ Captain, here are the answers. I only read files and changed nothing.
+  1. ship-intake-resolution (.agents/skills/ship-intake-resolution/SKILL.md) resolves delivery mode, yolo, branch prefix and base branch for a ship.
+     - Delivery mode and yolo: a current explicit captain instruction wins. Otherwise the project's registry entry decides. An unregistered project defaults to no-mistakes with yolo off.
+     - Branch prefix: comes from bin/fm-project-mode.sh --branch-prefix <project>.
+     - Base branch: --base-branch is allowed only for no-mistakes, or for direct-PR with forge=none.
+  2. crewmate-brief-authoring (.agents/skills/crewmate-brief-authoring/SKILL.md) owns the ship brief subsections. It fills ## Captain's intent with the captain's own ask and ## Firstmate spec with
+     only the build instructions that ask requires. ship-intake-resolution points to it for this.
+  3. quota-array-dispatch (.agents/skills/quota-array-dispatch/SKILL.md) owns resolution. Run bin/fm-dispatch-resolve.sh directly on the written brief in the same turn, with no preflight, and capture
+     its exit status.
+     - Exit 0 with clear: pass its profile: line to fm-spawn unless you state a reason to override.
+     - Exit 2 (unreadable brief or rules file, or missing jq): this is a configuration or usage failure. Stop and report it, and never select around it. The same applies to any nonzero exit.
+     - For comparison, ambiguous, escalate, error or resolver-off all fall back to the full existing intake procedure, unchanged.
+  4. harness-adapters (.agents/skills/harness-adapters/SKILL.md) owns both.
+     - Runtime backend: dispatch only on a backend that fm-spawn validates as spawn-capable. If a backend is refused, treat it as a blocker and never silently retry on another one.
+     - Steering: send steers through bin/fm-send.sh into the task's steering inbox. Use --resolve-key when the steer answers an open decision.
+     - Interrupt, exit and relaunch: use bin/fm-control.sh.
+  LAB-DONE
+✻ Brewed for 17s · done 9:30 PM
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯                                                                                                                
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ➜  01M6CC0R95GCPBTHNXHJFTJG2X/.agents/skills ctx 55804/1000000  Opus medium | 7d [██░░░░] 25% →Sat 18:00        
+  ⏵⏵ auto mode on (shift+tab to cycle)               
