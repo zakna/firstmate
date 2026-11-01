@@ -17,6 +17,8 @@ set -u
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # shellcheck source=bin/fm-timeout-lib.sh
 . "$ROOT/bin/fm-timeout-lib.sh"
+# shellcheck source=bin/fm-remote-job-lib.sh
+. "$ROOT/bin/fm-remote-job-lib.sh"
 
 PF="$ROOT/bin/fm-public-followup.sh"
 EMIT="$ROOT/bin/fm-public-followup-emit.sh"
@@ -42,7 +44,8 @@ EOF
 }
 
 # The remote-route cases drive the real remote job worker, which outlives the
-# command that staged its job. Stop it before the shared fixture cleanup runs,
+# command that staged its job. Stop its whole tree (including the restart
+# supervisor) before the shared fixture cleanup runs,
 # and keep that cleanup (tests/lib.sh owns it) rather than replacing the trap.
 # The recorded pid is the serving child, not its restart supervisor, so stop
 # and wait out the whole worker tree: a respawned worker still writing into the
@@ -56,11 +59,7 @@ pf_test_cleanup() {
   fi
   if [ -f "$pid_file" ]; then
     pid=$(cat "$pid_file" 2>/dev/null) || pid=
-    if [ -n "$pid" ]; then
-      # shellcheck source=bin/fm-remote-job-lib.sh
-      . "$ROOT/bin/fm-remote-job-lib.sh"
-      fm_remote_job_stop_worker_tree "$pid" 2>/dev/null || true
-    fi
+    [ -z "$pid" ] || fm_remote_job_stop_worker_tree "$pid" || true
   fi
   fm_test_cleanup
 }
@@ -3948,8 +3947,14 @@ test_a_retained_refusal_repeats_its_wake_rather_than_a_new_one() {
   pass "a refusal whose event was retained repeats its wake instead of a new one"
 }
 
-# CI's stock macOS Bash lane sets FM_TEST_ONLY to run just the bash-3.2 empty-lock
-# register regression. The rest of this file is not a 3.2 snapshot suite.
+# CI's stock macOS Bash lane sets FM_TEST_STOCK_BASH=1 to run just the bash-3.2
+# empty-lock register regression. The rest of this file is not a 3.2 snapshot
+# suite. Adding another stock-bash case means adding it to this list, not to
+# ci.yml.
+if [ -n "${FM_TEST_STOCK_BASH:-}" ]; then
+  fm_test_run test_first_register_succeeds_with_empty_lock_list_under_bash32
+  exit 0
+fi
 if [ -n "${FM_TEST_ONLY:-}" ]; then
   "$FM_TEST_ONLY"
   exit 0
