@@ -472,9 +472,13 @@ cmd_steering() {
 }
 
 cmd_retire() {
-  local id=$1 force=${2:-}
+  local id=$1 force=${2:-} rc
   validate_id "$id"
-  validate_home "$id"
+  validate_home "$id" yes || rc=$?
+  if [ "${rc:-0}" -eq 2 ]; then
+    printf 'already-retired: %s\n' "$id"
+    return 0
+  fi
   [ -z "$force" ] || [ "$force" = --force ] || usage
   remote_endpoint_require "$id"
   FM_HOME="$TARGET_HOME" FM_ROOT_OVERRIDE="$FM_ROOT" FM_STATE_OVERRIDE="$TARGET_HOME/state" \
