@@ -1776,7 +1776,8 @@ assert_grep 'teardown ios complete (remote ' "$TMP_ROOT/remote-noop.out" "no-op 
 cmp -s "$TMP_ROOT/remote-cursor.expected" "$PARENT/state/.status-presentation-cursor" \
   || fail "remote no-op rewrote the neighboring cursor"
 assert_present "$PARENT/state/.status-presentation-lock" "remote no-op acquired another presenter's lock"
-assert_absent "$PARENT/data/ios" "remote no-op created an empty archive directory"
+# data/ios/ itself exists: teardown always keeps the task record there.
+assert_absent "$PARENT/data/ios/status.log" "remote no-op created an empty archive directory"
 assert_absent "$PARENT/state/ios.meta" "remote no-op retained stale parent metadata"
 assert_absent "$REMOTE_HOME" "remote no-op recreated the retired remote home"
 pass "remote missing-status retirement remains lock-free with archival enabled"

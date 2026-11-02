@@ -49,6 +49,7 @@ make_isolated_checkpoint() {  # <home> <tool...>
   mkdir -p "$home/root/bin" "$home/fixture-bin"
   cp "$CHECKPOINT" "$home/root/bin/fm-watch-checkpoint.sh"
   cp "$ROOT/bin/fm-supervision-engine-lib.sh" "$home/root/bin/fm-supervision-engine-lib.sh"
+  cp "$ROOT/bin/fm-timeout-lib.sh" "$home/root/bin/fm-timeout-lib.sh"
   for tool in "$@"; do
     tool_path=$(command -v "$tool") || fail "could not locate $tool for the isolated checkpoint fixture"
     ln -s "$tool_path" "$home/fixture-bin/$tool"
