@@ -226,7 +226,8 @@ test_flag_on_briefs_carry_feed_and_decisions_clause() {
   pass "with the flag on, ship and scout briefs carry the feed and ask for the decisions file"
 }
 
-# Fake tmux for a launch: answers the pane-path query and logs every sent text.
+# Fake tmux for a launch: answers the pane-path query, lists the windows it
+# opened, and logs every sent text.
 make_spawn_fakebin() {
   local fakebin
   fakebin=$(fm_fakebin "$1")
@@ -238,6 +239,15 @@ case "$*" in
 esac
 case "${1:-}" in
   display-message) printf 'firstmate\n'; exit 0 ;;
+  # The tmux backend proves a window exists before it sends a key, so the
+  # windows this fake opened are listed back.
+  new-window)
+    prev=
+    for a in "$@"; do
+      [ "$prev" != -n ] || printf '%s\n' "$a" >> "$FM_FAKE_LAUNCH_LOG.windows"
+      prev=$a
+    done ;;
+  list-windows) [ ! -f "$FM_FAKE_LAUNCH_LOG.windows" ] || cat "$FM_FAKE_LAUNCH_LOG.windows"; exit 0 ;;
   send-keys)
     for a in "$@"; do
       case "$a" in

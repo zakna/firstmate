@@ -1850,7 +1850,7 @@ write_response "$RESPONSE" rule_4 0.9
 TYPESAFE_API_KEY=$KEY run code out err "$BRIEF" --project pager
 expect_code 0 "$code" "shared-quota clear exits 0"
 assert_contains "$out" '  status: clear' "shared-quota clear status"
-assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'high'" "shared-quota picks the first declared profile, not the argmax winner"
+assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'medium'" "shared-quota picks the first declared profile, not the argmax winner"
 assert_not_contains "$out" 'spendPriority=' "shared-quota prints no quota evidence"
 assert_not_contains "$out" '  remaining=' "shared-quota prints no remaining percentages"
 assert_not_contains "$out" '  runway=' "shared-quota prints no runway gates"
@@ -1895,7 +1895,7 @@ pass "shared-quota bypasses an unmet profile-level floor: the first declared pro
 # The matched rule declares claude first, then two codex-family profiles; the
 # home prefers codex, so the first declared codex profile wins.
 jq '.shared_quota = true | .preferred_provider = "codex" | .rules[3].use = [
-  {harness:"claude",model:"sonnet",effort:"high"},
+  {harness:"claude",model:"sonnet",effort:"medium"},
   {harness:"pi",model:"openai-codex/gpt-5.6-sol",provider:"codex"},
   {harness:"codex",model:"gpt-5.6-sol"}]' "$BASE_RULES" > "$RULES"
 reset_log

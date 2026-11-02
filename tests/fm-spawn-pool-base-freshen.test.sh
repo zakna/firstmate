@@ -1275,7 +1275,9 @@ test_opt_in_base_follows_the_delivery_and_the_review_follows_the_base() {
   local shape contract publishes id rec out status head expected review base_line review_start landings
   for shape in leading diverged trailing; do
     for contract in no-mistakes direct-PR local-only scout; do
-      id="pool-opt-in-$shape-$contract-r1"
+      # The id avoids the contract's own name: a brief that names no-mistakes
+      # is refused by the spawn's intent scrub.
+      id="pool-opt-in-$shape-${contract/no-mistakes/nm}-r1"
       publishes=0
       case $contract in no-mistakes | direct-PR) publishes=1 ;; esac
       landings=2

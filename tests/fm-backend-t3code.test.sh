@@ -1519,7 +1519,7 @@ test_spawn_leases_slot_creates_thread_and_starts_launch_turn() {
   out=$( HOME="$SPAWN_HOME" CLAUDE_CONFIG_DIR='' PATH="$fb:$PATH" FM_T3_TREEHOUSE_LOG="$LOG" FM_T3_TREEHOUSE_WT="$wt" \
     FM_ROOT_OVERRIDE="$ROOT" FM_HOME="$CASE_DIR/home" FM_STATE_OVERRIDE="$state" FM_DATA_OVERRIDE="$data" FM_CONFIG_OVERRIDE="$CONFIG" \
     FM_PROJECTS_OVERRIDE="$CASE_DIR/unused-projects" FM_SPAWN_NO_GUARD=1 \
-    "$ROOT/bin/fm-spawn.sh" "$id" "$proj" claude --mode no-mistakes --yolo off --model claude-sonnet-5 --effort high --backend t3code 2>&1 )
+    "$ROOT/bin/fm-spawn.sh" "$id" "$proj" claude --mode no-mistakes --yolo off --model claude-sonnet-5 --effort medium --backend t3code 2>&1 )
   expect_code 0 $? "fm-spawn.sh --backend t3code should succeed against the fake T3 server"$'\n'"$out"
   assert_contains "$out" "spawned $id harness=claude kind=ship mode=no-mistakes yolo=off window=fm-$id worktree=$wt" \
     "spawn output missing the T3 window alias and worktree summary"
@@ -1540,14 +1540,15 @@ test_spawn_leases_slot_creates_thread_and_starts_launch_turn() {
   [ "$(t3_request "$create" 'r.arguments.workspaceStrategy.branch')" = "fm/$id" ] || fail "the launch must carry the slot's branch"
   [ "$(t3_request "$create" 'r.arguments.title')" = "fm-$id" ] || fail "the launch title should be the window alias"
   [ "$(t3_request "$create" 'r.arguments.runtimeMode')" = full-access ] || fail "the launch must run full-access"
-  [ "$(t3_request "$create" 'r.arguments.modelSelection')" = '{"instanceId":"claudeAgent","model":"claude-sonnet-5","options":[{"id":"effort","value":"high"}]}' ] \
+  [ "$(t3_request "$create" 'r.arguments.modelSelection')" = '{"instanceId":"claudeAgent","model":"claude-sonnet-5","options":[{"id":"effort","value":"medium"}]}' ] \
     || fail "the launch must carry --model/--effort as the model selection"
   [ "$(t3_request "$turn" 'r.arguments.threadId')" = "$thread" ] || fail "the brief must go to the launched thread"
   assert_contains "$(t3_request "$turn" 'r.arguments.message')" "FIRSTMATE_OP: v1 launch-brief:" "the first message must carry the encoded launch brief"
   assert_contains "$(t3_request "$turn" 'r.arguments.message')" "Verify the T3 lifecycle behavior under test." "the first message must carry the brief body"
   assert_present "$wt/.claude/settings.local.json" "spawn must still arm the Claude busy hooks in the worktree before the launch turn"
   local settings="$wt/.claude/settings.local.json"
-  [ "$(t3_json_field "$settings" 'Object.keys(d.hooks).sort().join(" ")')" = "SessionEnd Stop StopFailure UserPromptSubmit" ] \
+  # SessionStart is the compaction refocus hook a Claude ship also arms.
+  [ "$(t3_json_field "$settings" 'Object.keys(d.hooks).sort().join(" ")')" = "SessionEnd SessionStart Stop StopFailure UserPromptSubmit" ] \
     || fail "the env merge must keep the busy hooks, got hooks '$(t3_json_field "$settings" 'Object.keys(d.hooks || {})')'"
   [ "$(t3_json_field "$settings" 'd.env.GOTMPDIR')" = "/tmp/fm-$id/gotmp" ] || fail "settings env must carry GOTMPDIR, got '$(t3_json_field "$settings" 'd.env')'"
   [ "$(t3_json_field "$settings" 'd.env.FM_TASK_ID')" = "$id" ] || fail "a ship worker's settings env must carry FM_TASK_ID"
