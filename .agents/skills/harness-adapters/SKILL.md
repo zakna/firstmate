@@ -1,9 +1,8 @@
 ---
 name: harness-adapters
 description: >-
-  Agent-only reference for firstmate harness operations.
-  Use before spawning or recovering a crewmate or secondmate, choosing a runtime backend, handling a trust dialog, sending a harness-specific skill invocation, steering a worker, answering or resending a steer, interrupting or exiting an agent, resuming an exited agent, or verifying a new harness adapter.
-  Contains verified facts for claude, codex, opencode, pi, pi-signed, grok, kimi, cursor, gemini, muse, rovo, omp, agy, devin, and the opt-in pi-durable pilot.
+  Load before spawning or recovering a crewmate or secondmate, choosing a runtime backend, handling a trust dialog, sending a harness-specific skill invocation, steering a worker, answering or resending a steer, interrupting or exiting an agent, resuming an exited agent, or verifying a new harness adapter.
+  Contains verified facts for claude, codex, opencode, pi, pi-signed, grok, kimi, cursor, gemini, muse, rovo, omp, agy, devin, and the opt-in pi-durable pilot, plus Command Code, Polytoken, Cortex, and Kiro.
 user-invocable: false
 metadata:
   internal: true
@@ -36,7 +35,7 @@ For a local task, deliver lifecycle actions only through `../../../bin/fm-contro
 A remotely placed secondmate is refused by local `fm-control.sh`: use `../../../bin/fm-remote-secondmate-relaunch.sh` for relaunch and the `secondmate-provisioning` remote-liveness recovery path; remote interrupt and exit have no local route.
 Never type an interrupt key or exit command through `fm-send`, where routing-marked lifecycle text becomes chat.
 Trust handling is complete only when inspection proves the target started processing its instructions; delivery success alone is not proof.
-Muse, Gemini, AGY, Devin, and the pi-durable pilot are verified only for crewmate and scout work, never a secondmate or primary.
+Muse, Gemini, Devin, Command Code, Polytoken, Cortex, Kiro, and the pi-durable pilot are verified only for crewmate and scout work, never a secondmate or primary.
 
 ## Detection
 
@@ -46,7 +45,7 @@ Only `FM_PI_HARNESS=pi-signed` at the launch boundary together with `PI_CODING_A
 omp publishes no marker of its own; `FM_OMP_HARNESS=omp` is Firstmate's launch marker and the anchored process name `omp` is its ancestry evidence, as `references/harness/omp.md` records.
 `../../../bin/fm-spawn.sh` owns worker marker establishment, while the README launch command owns the signed-primary boundary.
 `../../../bin/fm-harness.sh crew` resolves `config/crew-harness`, where absent or `default` means firstmate's own harness.
-`../../../bin/fm-harness.sh secondmate` resolves `config/secondmate-harness` -> `config/crew-harness` -> firstmate's own harness.
+[`docs/configuration.md`](../../../docs/configuration.md#choose-the-secondmate-harness) owns secondmate pin resolution, including per-mate overrides; [`bin/fm-harness.sh`](../../../bin/fm-harness.sh) owns the resolver commands.
 `../../../bin/fm-spawn.sh` re-resolves on every spawn, and an explicit per-spawn argument wins for that spawn.
 A new adapter's verified marker and command name must land in `../../../bin/fm-harness.sh`.
 
@@ -120,7 +119,11 @@ A new tool remains undispatchable until the `verify` plan, its harness entry, ev
     "omp": "references/harness/omp.md",
     "agy": "references/harness/agy.md",
     "devin": "references/harness/devin.md",
-    "pi-durable": "references/harness/pi-durable.md"
+    "pi-durable": "references/harness/pi-durable.md",
+    "commandcode": "references/harness/commandcode.md",
+    "polytoken": "references/harness/polytoken.md",
+    "cortex": "references/harness/cortex.md",
+    "kiro": "references/harness/kiro.md"
   }
 }
 ```

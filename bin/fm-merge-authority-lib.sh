@@ -231,11 +231,11 @@ fm_merge_external_read() {  # <provider> <path> <number> [<host>]
       # shellcheck disable=SC2016  # The inner script expands after bash -c receives positional args.
       record=$(fm_run_timed 10 bash -c '
         . "$1"
-        fm_pr_github_read_record "$2" "$3" "$4" || exit 1
+        fm_pr_github_read_record "$2" "$3" "$4" "$5" || exit 1
         [ "$FM_PR_RECORD_MERGED" = true ] || exit 1
         printf "%s\n" "$FM_PR_RECORD_MERGE_COMMIT" "$FM_PR_RECORD_MERGE_PARENTS" \
           "$FM_PR_RECORD_MERGE_ACTOR" "$FM_PR_RECORD_MERGED_AT"
-      ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "${path%%/*}" "${path#*/}" "$number" \
+      ' _ "$_FM_MERGE_AUTHORITY_LIB_DIR/fm-pr-lib.sh" "${host:-github.com}" "${path%%/*}" "${path#*/}" "$number" \
         </dev/null 2>/dev/null) || return 0
       ;;
     gitlab)
