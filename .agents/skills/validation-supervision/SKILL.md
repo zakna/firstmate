@@ -27,7 +27,7 @@ Require the matching `resolved` event, forbid `--yes`, and require the worker to
 Resume fleet supervision immediately after the decision lands.
 
 When approved review remedies must be covered by a later validation run, whether or not a PR exists, make that run's intent carry them so its review can check them; `bin/fm-dod-lib.sh` owns the mechanics.
-Append captain-approved remedies to the brief's `## Captain's intent` under the `AGENTS.md` section 7 mid-task rule; never put remedies firstmate approves under `ask-user-authority` there.
+Append captain-approved remedies to the brief's `## Captain's intent` under the `harness-adapters` mid-task ask rule; never put remedies firstmate approves under `ask-user-authority` there.
 Firstmate's re-validation order must tell the worker to write every firstmate-approved remedy in its own words to a file, pass it with `--resolved` to `bin/fm-intent-check.sh check` when building the new intent, and confirm before re-running that the new intent contains every remedy in that file word for word.
 
 The `document` step runs after the review step approves a head, so its commits reach the PR without any review round.

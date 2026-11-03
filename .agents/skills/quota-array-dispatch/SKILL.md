@@ -4,7 +4,8 @@ description: >-
   Agent-only decision procedure for resolving a matched crew-dispatch profile
   array from quota-axi's default TOON, ranking by spendPriority after three
   orthogonal gates.
-  Load when a dispatch rule or default resolves to more than one profile candidate.
+  Load at every crewmate or scout intake with dispatch profiles or rules, including
+  when a rule or default resolves to a single candidate.
 user-invocable: false
 metadata:
   internal: true
@@ -12,8 +13,8 @@ metadata:
 
 # quota-array-dispatch
 
-This skill is the single owner of the completion-aware profile-array selection procedure.
-`AGENTS.md` section 4 owns the always-loaded intake boundary, load trigger, malformed-config refusal, every-candidate accounting, and strongest-reasoning/tie safety rules.
+This skill is the single owner of the completion-aware profile-array selection and matched dispatch-resolution procedure.
+`AGENTS.md` section 4 owns only the always-loaded intake boundary and load trigger.
 `harness-adapters` owns harness verification, model/provider discovery, and effort fallback.
 `quota-axi` remains data-only: it publishes `spendPriority` as a comparable scalar and never recommends, selects, ranks, or infers a route.
 Do not add a daemon, opaque composite score, routing wrapper, hard-coded model-specific policy, or producer-side route recommendation.
@@ -29,7 +30,7 @@ An `exhausted_now` runway vetoes the candidate.
 The helper selects a candidate only when its applicable quota has a known `effectivePercentRemaining` greater than zero.
 This is an optional narrow helper with a known limitation: it maps each harness to one primary provider family only, so a candidate whose established provider differs from that primary family is checked against the wrong quota row.
 omp has no primary family, so the helper keys an `omp:` candidate on its model prefix, mapping only `openai-codex/` and `claude-bridge/` and refusing every other prefix; the helper's header owns that mapping.
-Authoritative multi-provider routing - including provider discovery from the harness catalog and quota matching by that explicit provider - stays owned by this skill's intake procedure above and AGENTS.md section 4, not by the helper.
+Authoritative multi-provider routing - including provider discovery from the harness catalog and quota matching by that explicit provider - stays owned by this skill's intake procedure, not by the helper.
 Use it only when the brief already fixed the candidate order and every candidate's provider is the harness's primary family.
 It does not replace the reasoning-class, runway-feasibility, or authentication gates above.
 Firstmate can optionally arm `bin/fm-procevent-quota.sh` for a recurring mid-task check that wakes when the tracked provider drops below its configured threshold or its runway becomes `exhausted_now`.
@@ -132,3 +133,14 @@ Report duplicate concrete profiles as a configuration error.
 Account for every candidate visibly before selecting or escalating, naming its catalog evidence, provider relation, applicable quota and authentication facts, remaining uncertainty, fit and reasoning class, `spendPriority`, and runway-versus-horizon result.
 A blocked credential report must name `harness`, `model`, authentication surface, and concrete failure evidence; never emit a bare `Grok unauthenticated` statement.
 Never conclude with an unexplained "best quota" label.
+
+## Dispatch resolution contract (moved from AGENTS.md section 4)
+
+`docs/configuration.md` owns dispatch-profile schemas, `bin/fm-harness.sh` owns static harness resolution, and `bin/fm-spawn.sh` owns concrete launch flags and validation.
+When dispatch profiles exist, consult them at every crewmate or scout intake and pass the resolved concrete profile required by `fm-spawn`.
+Routing precedence is an explicit per-task captain override, then the best-fit configured rule, then the configured default, then the static crewmate harness.
+For a matched profile array, use the canonical selection and candidate-accounting sections above; never guess or fall back silently.
+Run `bin/fm-dispatch-resolve.sh` directly on the written brief in the same turn, with no preflight, and capture its exit status.
+Any nonzero status—currently exit 2 for an unreadable brief or rules file, or missing `jq`—is an actionable configuration or usage failure: stop and report it, never select around it.
+On exit 0 with `clear`, pass its `profile:` line to `fm-spawn` unless you state a reason to override; `ambiguous`, `escalate`, `error`, and off all mean the full existing intake, unchanged (contract: `docs/configuration.md` "Typed dispatch resolution").
+`quota-axi` owns how model or product windows relate to bounding account windows and remains data-only.
