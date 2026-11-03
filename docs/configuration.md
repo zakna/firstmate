@@ -1724,7 +1724,7 @@ Per-machine Cursor `cli-config.json` attribution-off is not this contract: it do
 ## Project capacity (config/project-capacity)
 
 The optional local, gitignored `config/project-capacity` tells Firstmate how many workers a project can run at once on this machine, for a project whose machine-local resource - a heavy test suite, a local editor stack, a device - only serves a few workers at a time.
-Without it, dispatch stays uncapped as `AGENTS.md` section 7 describes, and a surplus worker is launched only to spend full-context turns waiting for the resource.
+Without it, dispatch stays uncapped as the `ship-intake-resolution` skill describes, and a surplus worker is launched only to spend full-context turns waiting for the resource.
 The file lives in the machine's root Firstmate home, so every local secondmate home reads the same limit, and it holds one line per project:
 
 ```text
@@ -2011,7 +2011,7 @@ Every result above exits 0.
 
 **Firstmate retains the dispatch decision**
 
-The tool never replaces firstmate's judgment, `quota-array-dispatch`, the captain-approval gate, or `fm-spawn.sh` validation; `AGENTS.md` section 4 owns what firstmate does with each outcome.
+The tool never replaces firstmate's judgment, `quota-array-dispatch`, the captain-approval gate, or `fm-spawn.sh` validation; the `quota-array-dispatch` skill owns what firstmate does with each outcome.
 By accepted design, a `clear` result does not enforce catalog/authentication, reasoning-class, or completion-runway gates.
 Firstmate still applies those gates before dispatch, including when `preferred_provider` is present.
 Explicit captain overrides retain precedence over the resolver's suggestion.

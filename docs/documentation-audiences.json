@@ -150,6 +150,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/crewmate-brief-authoring/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/diagnostic-reasoning/SKILL.md",
       "audience": "agent-runtime"
     },
@@ -679,6 +683,10 @@
     },
     {
       "path": ".agents/skills/session-start-recovery/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/ship-intake-resolution/SKILL.md",
       "audience": "agent-runtime"
     },
     {
