@@ -549,7 +549,7 @@ test_steered_captain_held_worker_stays_on_the_long_cadence() {
     printf 'captain-held [key=route]: tracked by held-decision-route\n' > "$statusf"
     [ "$back" -eq 0 ] || set_mtime "$(( $(date +%s) - back ))" "$statusf"
     sig=$(seen_sig "$statusf"); printf '%s' "$sig" > "$state/.seen-held_status"
-    key=$(printf '%s' "$window" | tr ':/.' '___')
+    key=$(watch_window_key "$window")
     throttle="$state/.paused-resurfaced-$key"
     printf 'held, idle' > "$capture_file"
     printf '%s' "$(hash_text 'held, idle')" > "$state/.hash-$key"
