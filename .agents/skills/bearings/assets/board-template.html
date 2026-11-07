@@ -10,48 +10,51 @@
    Carried over: hierarchy, system typography, semantic colour roles, grouped
    backgrounds, spacing, dark appearance, increased contrast, reduced motion
    and reduced transparency. Native-only specifics do not apply here.
-   Light is the default appearance. The header toggle switches to a mid-dark
-   appearance that never uses a near-black background, and the page remembers
-   that choice; the owner asked for this in-page toggle even though Apple
-   prefers following the system setting. Every text pair below meets WCAG AA
-   (4.5:1 or better) in both appearances.
+   Mid-dark is the default appearance, per the owner's accessibility rule: a
+   grey-blue background (reference One Dark #282C34) with soft off-white text
+   (#ABB2BF body), never near-black and never pure white on dark. The header
+   toggle offers the light variant, and the page remembers that choice; the
+   owner asked for this in-page toggle even though Apple prefers following the
+   system setting. Every text pair below meets WCAG AA (4.5:1 or better) in
+   both appearances while staying comfortable rather than maximal.
    No web fonts: the system font stack keeps the board fully offline.
    ============================================================ */
+/* mid-dark appearance (default): dim grey-blue surfaces, soft off-white labels */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
   /* grouped backgrounds: page, then card, then a group inside a card */
-  --bg-page: #f2f2f7;
-  --surface-card: #ffffff;
-  --surface-card-warm: #ffffff;
-  --surface-group: #f2f2f7;
-  --surface-hover: #e9e9ee;
-  --nav-material: rgba(242, 242, 247, 0.82);
+  --bg-page: #282c34;
+  --surface-card: #30343d;
+  --surface-card-warm: #30343d;
+  --surface-group: #383d47;
+  --surface-hover: #3b404b;
+  --nav-material: rgba(40, 44, 52, 0.86);
 
   /* labels: primary, secondary, tertiary */
-  --text-strong: #1d1d1f;
-  --text-body: #3a3a3c;
-  --text-muted: #5e5e63;
-  --text-faint: #636368;
+  --text-strong: #d7dae0;
+  --text-body: #abb2bf;
+  --text-muted: #a7aebb;
+  --text-faint: #9fa7b5;
 
-  --border-default: #d1d1d6;
-  --border-soft: #e5e5ea;
-  --border-strong: #8e8e93;
+  --border-default: #4b515d;
+  --border-soft: #3e4451;
+  --border-strong: #6b7280;
 
   /* accent drives interactive elements only */
-  --accent: #0a5fd6;
-  --accent-hover: #0850b5;
-  --accent-text: #ffffff;
-  --accent-soft: #e3eefd;
-  --link: #0a5fd6;
+  --accent: #61afef;
+  --accent-hover: #7dbdf2;
+  --accent-text: #1e2228;
+  --accent-soft: #2f4256;
+  --link: #7cc0f5;
 
   /* status: tinted fill plus strong text, never colour alone */
-  --status-online: #0a6b2c; --status-online-soft: #e2f4e7; --status-online-line: #a9dcb6;
-  --status-warn: #8a4500;   --status-warn-soft: #fdeedd;   --status-warn-line: #f2c48f;
-  --status-danger: #b3121f; --status-danger-soft: #fde6e7; --status-danger-line: #f3aeb2;
-  --status-info: #0a55c2;   --status-info-soft: #e3eefd;   --status-info-line: #a9c8f5;
-  --status-neutral: #3a3a3c; --status-neutral-soft: #e9e9ee; --status-neutral-line: #c7c7cc;
-  --status-solid: #ffffff;  --status-solid-bg: #4f43d6;
+  --status-online: #98c379; --status-online-soft: #33402f; --status-online-line: #4f6a43;
+  --status-warn: #e5c07b;   --status-warn-soft: #463d2c;   --status-warn-line: #7a6742;
+  --status-danger: #ee9aa0; --status-danger-soft: #4a3236; --status-danger-line: #7d4b52;
+  --status-info: #8cc4f2;   --status-info-soft: #2f4256;   --status-info-line: #4b6c8c;
+  --status-neutral: #abb2bf; --status-neutral-soft: #3a3f4a; --status-neutral-line: #565c69;
+  --status-solid: #282c34;  --status-solid-bg: #c3a6f0;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -67,54 +70,54 @@
   --fs-2xs: 0.75rem;      /* 12px caption */
 
   --radius-xs: 6px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 14px; --radius-pill: 999px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.07);
-  --focus-ring: 0 0 0 3px rgba(10, 95, 214, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(0, 0, 0, 0.18);
+  --focus-ring: 0 0 0 3px rgba(97, 175, 239, 0.55);
   --control-min: 32px;
   --container-app: 1180px;
   --transition: 150ms ease;
 }
 
-/* mid-dark appearance: dim backgrounds, bright labels, no near-black */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg-page: #3a3c43;
-  --surface-card: #464951;
-  --surface-card-warm: #464951;
-  --surface-group: #50535b;
-  --surface-hover: #55585f;
-  --nav-material: rgba(58, 60, 67, 0.84);
+/* light appearance: the toggle's alternative */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-page: #f2f2f7;
+  --surface-card: #ffffff;
+  --surface-card-warm: #ffffff;
+  --surface-group: #f2f2f7;
+  --surface-hover: #e9e9ee;
+  --nav-material: rgba(242, 242, 247, 0.82);
 
-  --text-strong: #f5f5f7;
-  --text-body: #ececf0;
-  --text-muted: #e0e0e6;
-  --text-faint: #cfcfd6;
+  --text-strong: #1d1d1f;
+  --text-body: #3a3a3c;
+  --text-muted: #5e5e63;
+  --text-faint: #636368;
 
-  --border-default: #62656e;
-  --border-soft: #585b63;
-  --border-strong: #9a9da6;
+  --border-default: #d1d1d6;
+  --border-soft: #e5e5ea;
+  --border-strong: #8e8e93;
 
-  --accent: #8fc2ff;
-  --accent-hover: #a9d0ff;
-  --accent-text: #10233f;
-  --accent-soft: #3d4f6b;
-  --link: #b0d4ff;
+  --accent: #0a5fd6;
+  --accent-hover: #0850b5;
+  --accent-text: #ffffff;
+  --accent-soft: #e3eefd;
+  --link: #0a5fd6;
 
-  --status-online: #a6f0b8; --status-online-soft: #3d5a47; --status-online-line: #5e8a6c;
-  --status-warn: #ffd2a6;   --status-warn-soft: #5e4a39;   --status-warn-line: #8f6f52;
-  --status-danger: #ffc1c3; --status-danger-soft: #61403f; --status-danger-line: #946160;
-  --status-info: #c4defd;   --status-info-soft: #3d4f6b;   --status-info-line: #5f7aa3;
-  --status-neutral: #ececf0; --status-neutral-soft: #55585f; --status-neutral-line: #767982;
-  --status-solid: #1a1747;  --status-solid-bg: #b5b0ff;
+  --status-online: #0a6b2c; --status-online-soft: #e2f4e7; --status-online-line: #a9dcb6;
+  --status-warn: #8a4500;   --status-warn-soft: #fdeedd;   --status-warn-line: #f2c48f;
+  --status-danger: #b3121f; --status-danger-soft: #fde6e7; --status-danger-line: #f3aeb2;
+  --status-info: #0a55c2;   --status-info-soft: #e3eefd;   --status-info-line: #a9c8f5;
+  --status-neutral: #3a3a3c; --status-neutral-soft: #e9e9ee; --status-neutral-line: #c7c7cc;
+  --status-solid: #ffffff;  --status-solid-bg: #4f43d6;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.16);
-  --focus-ring: 0 0 0 3px rgba(143, 194, 255, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 18px rgba(0, 0, 0, 0.07);
+  --focus-ring: 0 0 0 3px rgba(10, 95, 214, 0.45);
 }
 
 /* Increase Contrast: stronger labels and separators in either appearance */
 @media (prefers-contrast: more) {
-  :root, :root[data-theme="dark"] {
+  :root, :root[data-theme="light"] {
     --text-body: var(--text-strong); --text-muted: var(--text-strong); --text-faint: var(--text-body);
     --border-default: var(--border-strong); --border-soft: var(--border-strong);
   }
@@ -291,6 +294,32 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
 .bb-ctx__row { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 10px; align-items: baseline; }
 .bb-ctx__k { font-size: var(--fs-xs); font-weight: 600; color: var(--text-faint); white-space: nowrap; }
 .bb-ctx__v { font-size: var(--fs-sm); color: var(--text-body); line-height: 1.45; min-width: 0; }
+/* detail: the full context behind the call, open by default and collapsible */
+.bb-detail { border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-group); }
+.bb-detail__sum {
+  display: flex; align-items: center; gap: 8px; min-height: var(--control-min); padding: 6px 14px;
+  font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted); cursor: pointer; list-style: none;
+}
+.bb-detail__sum::-webkit-details-marker { display: none; }
+.bb-detail__sum::before { content: "\25B8"; font-size: 0.9em; transition: transform var(--transition); }
+.bb-detail[open] > .bb-detail__sum::before { transform: rotate(90deg); }
+.bb-detail__sum:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-md); }
+.bb-detail__body { margin: 0; padding: 0 14px 12px; font-size: var(--fs-sm); color: var(--text-body); line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+/* questions: one numbered row per question a consolidated card carries */
+.bb-qs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bb-q { display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 10px; padding: 10px 14px;
+  background: var(--surface-group); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+.bb-q__n { display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs); font-weight: 700; color: var(--accent-text); background: var(--accent); font-variant-numeric: tabular-nums; }
+.bb-q__body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.bb-q__text { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text-strong); line-height: 1.4; overflow-wrap: anywhere; }
+.bb-q__opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.bb-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-body);
+  background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-pill); padding: 2px 10px; }
+.bb-chip--rec { border-color: var(--status-online-line); }
+.bb-chip__rec { font-size: var(--fs-2xs); font-weight: 600; color: var(--status-online); }
+.bb-q__rec { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.4; }
+.bb-q__rec strong { color: var(--status-online); font-weight: 600; }
 .bb-decision__link { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--link); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 /* One rhythm owner: the answer form is a flex column with the same gap as
    the card pad, and the foot rides margin-top:auto so every Queue answer button
@@ -403,13 +432,13 @@ a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4
       <span class="bb-brand__wm">bearings</span>
     </span>
     <div class="bb-theme" role="group" aria-label="Appearance">
-      <button type="button" class="bb-theme__btn" id="bb-theme-light" data-theme-choice="light" aria-pressed="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        Light
-      </button>
-      <button type="button" class="bb-theme__btn" id="bb-theme-dark" data-theme-choice="dark" aria-pressed="false">
+      <button type="button" class="bb-theme__btn" id="bb-theme-dark" data-theme-choice="dark" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
         Mid-dark
+      </button>
+      <button type="button" class="bb-theme__btn" id="bb-theme-light" data-theme-choice="light" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        Light
       </button>
     </div>
   </div>
@@ -505,9 +534,9 @@ __FM_BEARINGS_BOARD_DATA__
 (function () {
   "use strict";
 
-  /* Appearance: light unless the owner picked mid-dark here before. The choice
-     is remembered per browser; any storage or DOM failure leaves the page light
-     and never blocks the board from rendering. */
+  /* Appearance: mid-dark unless the owner picked light here before. The choice
+     is remembered per browser; any storage or DOM failure leaves the page
+     mid-dark and never blocks the board from rendering. */
   (function setupTheme() {
     var KEY = "fm-bearings-board.theme";
     var root = document.documentElement;
@@ -515,11 +544,11 @@ __FM_BEARINGS_BOARD_DATA__
     var darkBtn = document.getElementById("bb-theme-dark");
     function apply(theme) {
       if (root && root.setAttribute) {
-        if (theme === "dark") root.setAttribute("data-theme", "dark");
+        if (theme === "light") root.setAttribute("data-theme", "light");
         else if (root.removeAttribute) root.removeAttribute("data-theme");
       }
-      lightBtn.setAttribute("aria-pressed", theme === "dark" ? "false" : "true");
-      darkBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      lightBtn.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+      darkBtn.setAttribute("aria-pressed", theme === "light" ? "false" : "true");
     }
     function choose(theme) {
       apply(theme);
@@ -528,10 +557,10 @@ __FM_BEARINGS_BOARD_DATA__
     var stored = null;
     try { stored = window.localStorage.getItem(KEY); } catch (e) { stored = null; }
     try {
-      apply(stored === "dark" ? "dark" : "light");
+      apply(stored === "light" ? "light" : "dark");
       lightBtn.addEventListener("click", function () { choose("light"); });
       darkBtn.addEventListener("click", function () { choose("dark"); });
-    } catch (e) { /* toggle unavailable; the board stays light */ }
+    } catch (e) { /* toggle unavailable; the board stays mid-dark */ }
   })();
 
   /* Fail closed: a board with unreadable or wrong-schema data says so plainly
@@ -645,26 +674,65 @@ __FM_BEARINGS_BOARD_DATA__
       top.appendChild(badge("online", "checks green"));
       top.appendChild(badge(item.risk === "low" ? "neutral" : "warn", "risk " + item.risk));
     } else {
-      top.appendChild(badge("solid", "decision"));
-      top.appendChild(el("span", "bb-decision__repo", item.repo));
+      top.appendChild(badge("solid", item.type === "credential" ? "credential" : "decision"));
+      if (item.repo) top.appendChild(el("span", "bb-decision__repo", item.repo));
     }
     pad.appendChild(top);
 
     pad.appendChild(el("h3", "bb-decision__title", item.title));
 
-    if (item.type === "merge") {
-      if (item.detail) pad.appendChild(el("p", "bb-decision__detail", item.detail));
-      if (item.pr_url) {
-        var pr = el("a", "bb-decision__link", item.pr_url);
-        pr.href = item.pr_url; pr.target = "_blank"; pr.rel = "noopener";
-        pad.appendChild(pr);
-      }
-    } else {
-      /* the rec marker on the option itself carries the recommendation */
+    /* Every card type shows all the context it carries - about, decide, the
+       full detail, and each consolidated question - so the owner can decide
+       from the board alone. The rec marker on the option itself carries the
+       card-level recommendation. */
+    if (item.about || item.decide) {
       var ctx = el("div", "bb-ctx");
       if (item.about) ctx.appendChild(ctxRow("about", item.about));
       if (item.decide) ctx.appendChild(ctxRow("decide", item.decide));
       pad.appendChild(ctx);
+    }
+    if (Array.isArray(item.questions) && item.questions.length) {
+      var qs = el("ol", "bb-qs");
+      qs.setAttribute("aria-label", "Questions in this call");
+      item.questions.forEach(function (qn, qi) {
+        var li = el("li", "bb-q");
+        li.appendChild(el("span", "bb-q__n", String(qi + 1)));
+        var qb = el("div", "bb-q__body");
+        qb.appendChild(el("p", "bb-q__text", qn.text));
+        var qopts = Array.isArray(qn.options) ? qn.options : [];
+        var recShown = false;
+        if (qopts.length) {
+          var chips = el("div", "bb-q__opts");
+          qopts.forEach(function (label) {
+            var isRec = qn.recommend != null && qn.recommend === label;
+            var chip = el("span", "bb-chip" + (isRec ? " bb-chip--rec" : ""), label);
+            if (isRec) { chip.appendChild(el("span", "bb-chip__rec", "rec")); recShown = true; }
+            chips.appendChild(chip);
+          });
+          qb.appendChild(chips);
+        }
+        if (qn.recommend && !recShown) {
+          var rl = el("p", "bb-q__rec");
+          rl.appendChild(el("strong", null, "rec "));
+          rl.appendChild(el("span", null, qn.recommend));
+          qb.appendChild(rl);
+        }
+        li.appendChild(qb);
+        qs.appendChild(li);
+      });
+      pad.appendChild(qs);
+    }
+    if (item.detail) {
+      var det = el("details", "bb-detail");
+      det.setAttribute("open", "");
+      det.appendChild(el("summary", "bb-detail__sum", "Details"));
+      det.appendChild(el("p", "bb-detail__body", item.detail));
+      pad.appendChild(det);
+    }
+    if (item.pr_url) {
+      var pr = el("a", "bb-decision__link", item.pr_url);
+      pr.href = item.pr_url; pr.target = "_blank"; pr.rel = "noopener";
+      pad.appendChild(pr);
     }
 
     var form = document.createElement("form");

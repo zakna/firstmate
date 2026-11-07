@@ -74,6 +74,11 @@
 #
 # Every Underway row likewise carries a non-empty `name`: the durable task name
 # when known, otherwise its durable identifier.
+# A Captain's Call item MAY carry `questions`, an array of objects for a card
+# that consolidates several questions: each has a non-empty `text`, an optional
+# `options` array of non-empty label strings, and an optional `recommend`
+# string. The rows are context only; the card's own `options` and freeform note
+# remain its one keyed answer, so a payload without the field renders as before.
 # A Charted Next row MAY carry `filed`, the durable filed date (YYYY-MM-DD, or
 # that date with a UTC timestamp) the template orders the section by, newest
 # first; a row with no comparable date keeps its payload order after every dated
@@ -141,6 +146,15 @@ validate_payload() {  # <data.json>
           and (keys | sort) == ["artifact", "version"]
           and (.artifact | slug(128))
           and (.version | version));
+    def question_item:
+      type == "object"
+      and (.text | nonempty_string)
+      and ((has("options") | not)
+        or ((.options | type == "array") and ([.options[] | nonempty_string] | all)))
+      and optional_string("recommend");
+    def optional_questions:
+      (has("questions") | not)
+      or ((.questions | type == "array") and ([.questions[] | question_item] | all));
     def call_item:
       type == "object"
       and (.key | slug(128))
@@ -157,6 +171,7 @@ validate_payload() {  # <data.json>
       and (optional_string("about"))
       and (optional_string("decide"))
       and (optional_string("detail"))
+      and optional_questions
       and (optional_https_url("pr_url"))
       and optional_subject
       and (if has("subject") then .type == "decision" else true end)

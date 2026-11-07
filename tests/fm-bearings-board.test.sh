@@ -278,6 +278,15 @@ test_build_refuses_malformed_payloads_before_touching_the_board() {
     [ "$rc" -ne 0 ] || fail "an invalid filed date was accepted: $invalid_filed"
   done
 
+  for invalid_questions in '"two questions"' '[{"options":["a"]}]' '[{"text":""}]' \
+    '[{"text":"Q","options":"a"}]' '[{"text":"Q","options":[""]}]' '[{"text":"Q","recommend":1}]'; do
+    write_valid_payload "$data"
+    jq --argjson q "$invalid_questions" '.captains_call[0].questions = $q' "$data" > "$data.tmp" \
+      && mv "$data.tmp" "$data"
+    set +e; out=$(run_board "$home" build "$data" 2>&1); rc=$?; set -e
+    [ "$rc" -ne 0 ] || fail "a malformed questions list was accepted: $invalid_questions"
+  done
+
   write_valid_payload "$data"
   jq '.captains_call[0].allow_freeform = "yes"' "$data" > "$data.tmp" && mv "$data.tmp" "$data"
   set +e; out=$(run_board "$home" build "$data" 2>&1); rc=$?; set -e
@@ -511,6 +520,25 @@ test_charted_kind_is_optional_and_accepts_both_values() {
   pass "charted kind is optional and accepts queued and warning"
 }
 
+test_questions_are_optional_and_carried_into_the_board() {
+  local home data
+  home=$(make_home questions)
+  data="$home/payload.json"
+  write_valid_payload "$data"
+  jq '.captains_call[0].questions = [
+        {"text":"Which theme opens first?","options":["Mid-dark","Light"],"recommend":"Mid-dark"},
+        {"text":"Anything else?"}
+      ] | .captains_call[0].detail = "Full context for the call"' "$data" > "$data.tmp" && mv "$data.tmp" "$data"
+  run_board "$home" build "$data" >/dev/null \
+    || fail "a decision card with a valid questions list was refused"
+  extract_payload "$home/.lavish/bearings-board.html" | jq -e '
+    (.captains_call[0].questions | length) == 2
+      and .captains_call[0].questions[0].recommend == "Mid-dark"
+      and .captains_call[0].detail == "Full context for the call"
+      and (.captains_call[1] | has("questions") | not)
+  ' >/dev/null || fail "the built board did not carry the questions list it was given"
+  pass "questions are optional and carried into the built board"
+}
 
 # --- part 1: never arm a poll on an ended session ---------------------------
 
@@ -772,6 +800,7 @@ test_build_refuses_a_nondecision_reconcile_value() {
 test_path_is_stable_and_home_scoped
 test_build_refuses_malformed_payloads_before_touching_the_board
 test_charted_kind_is_optional_and_accepts_both_values
+test_questions_are_optional_and_carried_into_the_board
 test_build_injects_binds_then_arms
 test_registration_cannot_consume_before_any_origin_binding
 test_build_does_not_bind_or_arm_when_session_start_fails

@@ -91,7 +91,7 @@ For a contribution wake or linked-issue filing, go directly to Contribution foll
 
 ## Lavish board mode
 
-`/bearings lavish` adds one deliverable beside the unchanged chat digest: the interactive fleet board, a Lavish page styled after Apple's Human Interface Guidelines (light by default, with a remembered mid-dark toggle; `assets/board-template.html` owns the appearance rules) where the captain answers Captain's Call items directly instead of replying in chat.
+`/bearings lavish` adds one deliverable beside the unchanged chat digest: the interactive fleet board, a Lavish page styled after Apple's Human Interface Guidelines (mid-dark by default, with a remembered light toggle; `assets/board-template.html` owns the appearance rules) where the captain answers Captain's Call items directly instead of replying in chat.
 `bin/fm-bearings-board.sh` owns every board mechanic - the stable board path, fm-bearings-board.v1 payload validation, template injection, live Lavish session verification and ended-session reopening, the any-origin answer binding, and listener registration - so the per-invocation work is composing the payload and running its `build`.
 
 Compose the payload from the same snapshot with the same ranking judgment as the chat digest, plus these board rules:
@@ -101,6 +101,8 @@ Compose the payload from the same snapshot with the same ranking judgment as the
 - Never author a `reconcile` option on any card. `build` gives every decision card the standard reconcile choice itself, and the payload validator reserves that value across all card types; recommendations must name an authored option.
 - Compose exactly one decision card per captain-held task id. When one task carries multiple questions, consolidate all of them and their options into that card; never emit duplicate cards with the same task-id key.
 - Decision cards carry agent-authored copy: a short noun-phrase title, one-line `about` and `decide` context rows, and option labels with hints, with the recommended option marked.
+  Put the question's full context - the evidence and consequence the captain needs to decide from the board alone - in `detail`, which every card type shows open; credential cards carry the same fields.
+  When a consolidated card carries several questions, also list each in `questions` (`bin/fm-bearings-board.sh` owns the field shape) so the board shows one row per question; those rows are context only, so make the card's options or freeform note able to answer every listed question.
 - Card `type` (decision, merge, credential) is your composing judgment from the row's content; no backlog field types a card for you.
 - When the card's task is a captain-gated WORK item (the answer should free it to proceed rather than complete it), set the card's `close: "release"` so the answer lifts the hold instead of closing the task; question-shaped items omit it.
 - A Charted Next row's optional `kind` separates work from alarms: omit it (or set `"queued"`) for real queued work, and set `"warning"` on every action-free fleet-integrity notice - the `(main-inventory)` gate, the `(return-catchup)` gate, an unavailable secondmate home, and an inventory-mismatch repair notice. The board badges a warning row `needs repair` instead of `waiting` and leaves it out of the Charted Next count, so those rows never read as dispatchable queued work.

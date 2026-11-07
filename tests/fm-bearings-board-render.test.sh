@@ -276,47 +276,52 @@ theme_of() {  # <render-json>
   printf '%s' "$1" | jq -c '.theme'
 }
 
-test_a_fresh_board_opens_light() {
+DARK_THEME='{"attribute":null,"light_pressed":"false","dark_pressed":"true","stored":null}'
+
+test_a_fresh_board_opens_mid_dark() {
   local home out
   home=$(make_home theme-fresh)
   out=$(BOARD_RENDER_STORED_THEME='' render "$home" '[]')
-  [ "$(theme_of "$out")" = '{"attribute":null,"light_pressed":"true","dark_pressed":"false","stored":null}' ] \
-    || fail "a board with no remembered appearance did not open light: $out"
-  pass "a board with no remembered appearance opens light"
+  [ "$(theme_of "$out")" = "$DARK_THEME" ] \
+    || fail "a board with no remembered appearance did not open mid-dark: $out"
+  pass "a board with no remembered appearance opens mid-dark"
 }
 
-test_a_remembered_mid_dark_choice_is_restored() {
+test_a_remembered_light_choice_is_restored() {
   local home out
   home=$(make_home theme-restore)
-  out=$(BOARD_RENDER_STORED_THEME=dark render "$home" '[]')
-  [ "$(theme_of "$out")" = '{"attribute":"dark","light_pressed":"false","dark_pressed":"true","stored":"dark"}' ] \
-    || fail "a remembered mid-dark choice was not restored: $out"
+  out=$(BOARD_RENDER_STORED_THEME=light render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":"light","light_pressed":"true","dark_pressed":"false","stored":"light"}' ] \
+    || fail "a remembered light choice was not restored: $out"
   out=$(BOARD_RENDER_STORED_THEME=neon render "$home" '[]')
-  printf '%s' "$out" | jq -e '.theme.attribute == null and .theme.light_pressed == "true"' >/dev/null \
-    || fail "an unknown remembered appearance did not fall back to light: $out"
-  pass "a remembered mid-dark choice is restored and anything else opens light"
+  printf '%s' "$out" | jq -e '.theme.attribute == null and .theme.dark_pressed == "true"' >/dev/null \
+    || fail "an unknown remembered appearance did not fall back to mid-dark: $out"
+  out=$(BOARD_RENDER_STORED_THEME=dark render "$home" '[]')
+  printf '%s' "$out" | jq -e '.theme.attribute == null and .theme.dark_pressed == "true"' >/dev/null \
+    || fail "a remembered mid-dark choice did not stay mid-dark: $out"
+  pass "a remembered light choice is restored and anything else opens mid-dark"
 }
 
 test_the_toggle_switches_and_remembers_the_appearance() {
   local home out
   home=$(make_home theme-toggle)
-  out=$(BOARD_RENDER_CLICK=bb-theme-dark render "$home" '[]')
-  [ "$(theme_of "$out")" = '{"attribute":"dark","light_pressed":"false","dark_pressed":"true","stored":"dark"}' ] \
-    || fail "choosing mid-dark did not switch and remember it: $out"
-  out=$(BOARD_RENDER_STORED_THEME=dark BOARD_RENDER_CLICK=bb-theme-light render "$home" '[]')
-  [ "$(theme_of "$out")" = '{"attribute":null,"light_pressed":"true","dark_pressed":"false","stored":"light"}' ] \
-    || fail "choosing light did not switch back and remember it: $out"
+  out=$(BOARD_RENDER_CLICK=bb-theme-light render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":"light","light_pressed":"true","dark_pressed":"false","stored":"light"}' ] \
+    || fail "choosing light did not switch and remember it: $out"
+  out=$(BOARD_RENDER_STORED_THEME=light BOARD_RENDER_CLICK=bb-theme-dark render "$home" '[]')
+  [ "$(theme_of "$out")" = '{"attribute":null,"light_pressed":"false","dark_pressed":"true","stored":"dark"}' ] \
+    || fail "choosing mid-dark did not switch back and remember it: $out"
   pass "the appearance toggle switches and remembers the choice"
 }
 
 test_unavailable_storage_never_blocks_the_board() {
   local home out
   home=$(make_home theme-nostorage)
-  out=$(BOARD_RENDER_NO_STORAGE=1 BOARD_RENDER_CLICK=bb-theme-dark render "$home" '[
+  out=$(BOARD_RENDER_NO_STORAGE=1 BOARD_RENDER_CLICK=bb-theme-light render "$home" '[
     {"id":"queued","repo":"sample","title":"Queued work","reason":"queued","dispatchable":true}
   ]')
   printf '%s' "$out" | jq -e '.error == "" and (.charted | length) == 1
-      and .theme.attribute == "dark" and .theme.stored == null' >/dev/null \
+      and .theme.attribute == "light" and .theme.stored == null' >/dev/null \
     || fail "unavailable storage broke the board or the toggle: $out"
   pass "unavailable browser storage still renders the board and switches for the visit"
 }
@@ -367,10 +372,82 @@ test_a_credential_card_shows_its_context_and_detail() {
   pass "a credential card shows about, decide, and its detail"
 }
 
+test_a_card_with_several_questions_renders_one_row_per_question() {
+  local home out
+  home=$(make_home call-questions)
+  out=$(render_calls "$home" '[
+    {"key":"sample-multi","type":"decision","repo":"sample","title":"Board follow-ups",
+     "about":"Two open questions from the review",
+     "decide":"Answer both questions",
+     "questions":[
+       {"text":"Which theme should open first?","options":["Mid-dark","Light"],"recommend":"Mid-dark"},
+       {"text":"Should landed rows link their PR?","recommend":"Yes, when a PR exists"},
+       {"text":"Anything else to change?"}
+     ],
+     "options":[{"value":"as-recommended","label":"Take both recommendations"}],
+     "allow_freeform":true}
+  ]')
+  printf '%s' "$out" | jq -e '.calls[0].questions
+    | length == 3
+      and (.[0] | .n == "1" and .text == "Which theme should open first?"
+        and .options == ["Mid-dark", "Light"] and .rec_option == ["Mid-dark"] and .rec_line == null)
+      and (.[1] | .n == "2" and .text == "Should landed rows link their PR?"
+        and .options == [] and .rec_line == "rec Yes, when a PR exists")
+      and (.[2] | .n == "3" and .options == [] and .rec_line == null)
+  ' >/dev/null || fail "a multi-question card did not render one row per question: $out"
+  printf '%s' "$out" | jq -e '.calls[0].options == ["as-recommended", "reconcile"]' >/dev/null \
+    || fail "question rows changed the card answer options: $out"
+  pass "a card with several questions renders one row per question and keeps one keyed answer"
+}
+
+test_an_old_payload_card_still_renders() {
+  local home out
+  home=$(make_home call-legacy)
+  out=$(render_calls "$home" '[
+    {"key":"legacy-decision","type":"decision","repo":"sample","title":"Legacy call",
+     "about":"Composed before detail and questions reached decision cards",
+     "decide":"Adopt it?",
+     "options":[{"value":"yes","label":"Adopt","hint":"recommended"},{"value":"no","label":"Keep current"}],
+     "allow_freeform":true},
+    {"key":"merge.legacy-task","type":"merge","repo":"sample","title":"Merge: legacy change",
+     "detail":"validation green","pr_url":"https://github.com/example/sample/pull/1","risk":"low",
+     "options":[{"value":"merge","label":"Merge now"}]}
+  ]')
+  printf '%s' "$out" | jq -e '.error == "" and (.calls | length) == 2
+    and (.calls[0] | .title == "Legacy call" and (.ctx | length) == 2
+      and .questions == [] and .detail == null and .options == ["yes", "no", "reconcile"])
+    and (.calls[1] | ([.badges[] | .text] == ["checks green", "risk low"])
+      and .detail.body == "validation green"
+      and .pr == "https://github.com/example/sample/pull/1"
+      and .options == ["merge"])
+  ' >/dev/null || fail "an old payload did not render as before: $out"
+  pass "an old payload without questions still renders its decision and merge cards"
+}
+
+test_card_detail_and_questions_render_as_text_not_markup() {
+  local home out
+  home=$(make_home call-escape)
+  out=$(render_calls "$home" '[
+    {"key":"escape-decision","type":"decision","repo":"sample","title":"Escape",
+     "detail":"</script><b>bold</b>",
+     "questions":[{"text":"<img src=x onerror=alert(1)>","options":["</script>"]}],
+     "options":[{"value":"ok","label":"OK"}]}
+  ]')
+  printf '%s' "$out" | jq -e '.error == ""
+    and .calls[0].detail.body == "</script><b>bold</b>"
+    and .calls[0].questions[0].text == "<img src=x onerror=alert(1)>"
+    and .calls[0].questions[0].options == ["</script>"]
+  ' >/dev/null || fail "card detail or question text did not survive as literal text: $out"
+  pass "card detail and question text render as literal text"
+}
+
 test_a_decision_card_shows_about_decide_and_its_full_detail
 test_a_credential_card_shows_its_context_and_detail
-test_a_fresh_board_opens_light
-test_a_remembered_mid_dark_choice_is_restored
+test_a_card_with_several_questions_renders_one_row_per_question
+test_an_old_payload_card_still_renders
+test_card_detail_and_questions_render_as_text_not_markup
+test_a_fresh_board_opens_mid_dark
+test_a_remembered_light_choice_is_restored
 test_the_toggle_switches_and_remembers_the_appearance
 test_unavailable_storage_never_blocks_the_board
 test_an_underway_row_leads_with_the_task_name_and_keeps_its_run_status
