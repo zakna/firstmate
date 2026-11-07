@@ -35,7 +35,7 @@ For a local task, deliver lifecycle actions only through `../../../bin/fm-contro
 A remotely placed secondmate is refused by local `fm-control.sh`: use `../../../bin/fm-remote-secondmate-relaunch.sh` for relaunch and the `secondmate-provisioning` remote-liveness recovery path; remote interrupt and exit have no local route.
 Never type an interrupt key or exit command through `fm-send`, where routing-marked lifecycle text becomes chat.
 Trust handling is complete only when inspection proves the target started processing its instructions; delivery success alone is not proof.
-Muse, Gemini, Devin, Command Code, Polytoken, Cortex, Kiro, and the pi-durable pilot are verified only for crewmate and scout work, never a secondmate or primary.
+Muse, Gemini, Devin, Command Code, Polytoken, Cortex, Kiro, Hermes, and the pi-durable pilot are verified only for crewmate and scout work, never a secondmate or primary.
 
 ## Detection
 
@@ -123,7 +123,8 @@ A new tool remains undispatchable until the `verify` plan, its harness entry, ev
     "commandcode": "references/harness/commandcode.md",
     "polytoken": "references/harness/polytoken.md",
     "cortex": "references/harness/cortex.md",
-    "kiro": "references/harness/kiro.md"
+    "kiro": "references/harness/kiro.md",
+    "hermes": "references/harness/hermes.md"
   }
 }
 ```

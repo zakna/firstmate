@@ -8,7 +8,7 @@
 //   BOARD_RENDER_NO_STORAGE=1  browser storage is unavailable
 //   BOARD_RENDER_CLICK=<id>    click that element once the page has rendered
 // Prints one JSON document:
-//   { stats:[{n,label}], underway:[{title,sub,badges}],
+//   { stats:[{n,label}], captains_call:[text], underway:[{title,sub,badges}],
 //     charted:[{title,sub,badges,pickable}], empty, more, error,
 //     calls:[{key,badges,title,ctx:[{k,v}],questions:[{n,text,options,
 //       rec_option,rec_line}],detail:{open,summary,body}|null,pr,options,
@@ -140,6 +140,9 @@ const rowsOf = (container) =>
 
 const uw = byId.get("bb-underway") || new Node("div");
 const underway = rowsOf(uw);
+const captains_call = (byId.get("bb-call") || new Node("div")).children
+  .filter((n) => n.className.split(/\s+/).includes("bb-decision"))
+  .map((n) => n.textContent);
 
 const ch = byId.get("bb-charted") || new Node("div");
 const charted = rowsOf(ch);
@@ -199,4 +202,4 @@ const theme = {
 };
 
 process.stdout.write(
-  JSON.stringify({ stats, underway, charted, empty, more, error: errorText, calls, theme }) + "\n");
+  JSON.stringify({ stats, captains_call, underway, charted, empty, more, error: errorText, calls, theme }) + "\n");

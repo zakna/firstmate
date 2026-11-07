@@ -88,10 +88,10 @@ Load `session-start-recovery` when the digest reports unfinished checks, actiona
 ## 4. Harness and runtime dispatch
 
 - Load `harness-adapters` before every spawn or recovery, runtime-backend selection, trust handling, skill invocation, interrupt, exit, resume, steering, or adapter verification.
-- The verified harnesses are `claude`, `codex`, `opencode`, `pi`, `pi-signed`, `grok`, `kimi`, `cursor`, `omp`, and `agy`, plus `muse`, `gemini`, `rovo`, `devin`, `commandcode` (Command Code), `polytoken`, `cortex`, `kiro`, and the opt-in `pi-durable` pilot for crewmates and scouts only; never dispatch on an unverified adapter.
+- The verified harnesses are `claude`, `codex`, `opencode`, `pi`, `pi-signed`, `grok`, `kimi`, `cursor`, `omp`, and `agy`, plus `muse`, `gemini`, `rovo`, `devin`, `commandcode` (Command Code), `polytoken`, `cortex`, `kiro`, `hermes`, and the opt-in `pi-durable` pilot for crewmates and scouts only; never dispatch on an unverified adapter.
 - If static `config/crew-harness` or `config/secondmate-harness` names an unverified adapter, report it and fall back only to a verified adapter rather than launching it.
-- Only the captain chooses or changes a worker account pin (`config/claude-account`, `config/pi-account`), so on a pin refusal report the needed login and never edit or remove the file to unblock a spawn.
-- Load `quota-array-dispatch` at every crewmate or scout intake where dispatch profiles or rules exist; it owns profile consultation, routing precedence, the TOON-first `spendPriority` selection and its gates, candidate accounting, and `bin/fm-dispatch-resolve.sh` (schemas: `docs/configuration.md`; `bin/fm-spawn.sh` owns fail-closed launch validation).
+- Only the captain chooses or changes a worker account pin or declared account list (`config/claude-account`, `config/pi-account`, `config/claude-accounts`), so on a pin refusal report the needed login and never edit or remove the file to unblock a spawn.
+- Load `quota-array-dispatch` at every crewmate or scout intake where dispatch profiles or rules exist, and before choosing a Claude spawn's declared accounts; it owns profile consultation, routing precedence, the TOON-first `spendPriority` selection and its gates, candidate accounting, and `bin/fm-dispatch-resolve.sh` (schemas: `docs/configuration.md`; `bin/fm-spawn.sh` owns fail-closed launch validation).
 
 ## 5. Recovery
 
