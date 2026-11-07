@@ -10,6 +10,9 @@
 // Prints one JSON document:
 //   { stats:[{n,label}], underway:[{title,sub,badges}],
 //     charted:[{title,sub,badges,pickable}], empty, more, error,
+//     calls:[{key,badges,title,ctx:[{k,v}],questions:[{n,text,options,
+//       rec_option,rec_line}],detail:{open,summary,body}|null,pr,options,
+//       freeform}],
 //     theme:{attribute,light_pressed,dark_pressed,stored} }
 import { readFileSync } from "node:fs";
 
@@ -33,6 +36,13 @@ class Node {
     this.classList = {
       add: (c) => { this.className = (this.className + " " + c).trim(); },
       contains: (c) => this.className.split(/\s+/).includes(c),
+      remove: (c) => { this.className = this.className.split(/\s+/).filter((x) => x && x !== c).join(" "); },
+      toggle: (c, on) => {
+        const want = on === undefined ? !this.classList.contains(c) : !!on;
+        if (want && !this.classList.contains(c)) this.classList.add(c);
+        if (!want) this.classList.remove(c);
+        return want;
+      },
     };
   }
   get textContent() {
@@ -142,6 +152,45 @@ const errorText = [...byId.entries()]
 const empty = ch.children.filter((c) => c.className.includes("bb-empty")).map((c) => c.textContent);
 const more = ch.children.filter((c) => c.className.includes("bb-morechip")).map((c) => c.textContent);
 
+// Captain's Call cards, read from the deck exactly as the renderer built them.
+const findAll = (n, cls) => {
+  const out = [];
+  const walk = (x) => { for (const c of x.children) { if (c.className.split(/\s+/).includes(cls)) out.push(c); walk(c); } };
+  walk(n);
+  return out;
+};
+const findOne = (n, cls) => findAll(n, cls)[0];
+const deck = byId.get("bb-call") || new Node("div");
+const calls = deck.children
+  .filter((c) => c.className.split(/\s+/).includes("bb-decision"))
+  .map((card) => {
+    const form = findAll(card, "bb-opts")[0]?.parentNode;
+    const det = findOne(card, "bb-detail");
+    return {
+      key: form?.getAttribute("data-lavish-question") ?? null,
+      badges: badgesOf(findOne(card, "bb-decision__top") || new Node("div")),
+      title: findOne(card, "bb-decision__title")?.textContent ?? "",
+      ctx: findAll(card, "bb-ctx__row").map((r) => ({
+        k: findOne(r, "bb-ctx__k")?.textContent, v: findOne(r, "bb-ctx__v")?.textContent })),
+      questions: findAll(card, "bb-q").map((q) => ({
+        n: findOne(q, "bb-q__n")?.textContent,
+        text: findOne(q, "bb-q__text")?.textContent,
+        // a chip keeps its label as its own text; a rec chip appends a marker child
+        options: findAll(q, "bb-chip").map((c) => c._text),
+        rec_option: findAll(q, "bb-chip--rec").map((c) => c._text),
+        rec_line: findOne(q, "bb-q__rec")?.textContent ?? null,
+      })),
+      detail: det ? {
+        open: det.getAttribute("open") !== null,
+        summary: findOne(det, "bb-detail__sum")?.textContent,
+        body: findOne(det, "bb-detail__body")?.textContent,
+      } : null,
+      pr: findOne(card, "bb-decision__link")?.textContent ?? null,
+      options: findAll(card, "bb-opt").map((o) => o.children.find((c) => c.tagName === "input")?.value),
+      freeform: findAll(card, "bb-freeform").length > 0,
+    };
+  });
+
 const theme = {
   attribute: root.getAttribute("data-theme"),
   light_pressed: byId.get("bb-theme-light")?.getAttribute("aria-pressed") ?? null,
@@ -150,4 +199,4 @@ const theme = {
 };
 
 process.stdout.write(
-  JSON.stringify({ stats, underway, charted, empty, more, error: errorText, theme }) + "\n");
+  JSON.stringify({ stats, underway, charted, empty, more, error: errorText, calls, theme }) + "\n");

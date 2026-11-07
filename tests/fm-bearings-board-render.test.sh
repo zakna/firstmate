@@ -93,13 +93,14 @@ require_listener_reached_poll() {  # <home>
 }
 
 # Build the board from <underway-json> plus <charted-json> and return what the
-# renderer produced.
+# renderer produced. BOARD_RENDER_CALLS, when set, is the Captain's Call array.
 render_board() {  # <home> <underway-json> <charted-json> [charted_more] [charted_warning_more]
   local home=$1 underway=$2 charted=$3 more=${4:-0} warning_more=${5:-0} data="$1/payload.json"
   jq -n --argjson underway "$underway" --argjson charted "$charted" \
-    --argjson more "$more" --argjson warning_more "$warning_more" '{
+    --argjson more "$more" --argjson warning_more "$warning_more" \
+    --argjson calls "${BOARD_RENDER_CALLS:-[]}" '{
     schema:"fm-bearings-board.v1", home:"render-home", generated:"2026-08-26T00:00Z",
-    prs_live:false, captains_call:[], underway:$underway, landed:[],
+    prs_live:false, captains_call:$calls, underway:$underway, landed:[],
     charted:$charted, charted_more:$more, charted_warning_more:$warning_more}' > "$data"
   PATH="$home/fakebin:$PATH" FM_HOME="$home" \
     FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
@@ -114,6 +115,11 @@ render_board() {  # <home> <underway-json> <charted-json> [charted_more] [charte
 # Build the board from <charted-json> alone and return what the renderer produced.
 render() {  # <home> <charted-json> [charted_more] [charted_warning_more]
   render_board "$1" '[]' "$2" "${3:-0}" "${4:-0}"
+}
+
+# Build the board from a Captain's Call array alone and return what rendered.
+render_calls() {  # <home> <captains-call-json>
+  BOARD_RENDER_CALLS=$2 render_board "$1" '[]' '[]'
 }
 
 charted_next_count() {  # <render-json>
@@ -315,6 +321,54 @@ test_unavailable_storage_never_blocks_the_board() {
   pass "unavailable browser storage still renders the board and switches for the visit"
 }
 
+test_a_decision_card_shows_about_decide_and_its_full_detail() {
+  local home out
+  home=$(make_home call-detail)
+  out=$(render_calls "$home" '[
+    {"key":"sample-decision","type":"decision","repo":"sample","title":"Retention window",
+     "about":"How long landed work stays on the board",
+     "decide":"Pick the retention window",
+     "detail":"The board keeps 20 landed rows today.\nOwners lose sight of older work after a busy week.",
+     "options":[{"value":"keep","label":"Keep 20"},{"value":"raise","label":"Raise to 50"}],
+     "recommend_value":"raise"}
+  ]')
+  printf '%s' "$out" | jq -e '.error == "" and (.calls | length) == 1' >/dev/null \
+    || fail "the decision card did not render: $out"
+  printf '%s' "$out" | jq -e '.calls[0]
+    | .key == "sample-decision"
+      and ([.badges[] | .text] == ["decision"])
+      and .ctx == [{"k":"about","v":"How long landed work stays on the board"},
+                   {"k":"decide","v":"Pick the retention window"}]
+      and .detail.open == true
+      and .detail.summary == "Details"
+      and .detail.body == "The board keeps 20 landed rows today.\nOwners lose sight of older work after a busy week."
+      and .options == ["keep", "raise", "reconcile"]
+  ' >/dev/null || fail "a decision card dropped its about, decide, or detail: $out"
+  pass "a decision card shows about, decide, and its full detail open"
+}
+
+test_a_credential_card_shows_its_context_and_detail() {
+  local home out
+  home=$(make_home call-credential)
+  out=$(render_calls "$home" '[
+    {"key":"sample-credential","type":"credential","repo":"sample","title":"Registry token",
+     "about":"The release job needs a registry token",
+     "decide":"Provide or defer the token",
+     "detail":"Create a scoped publish token and store it as the release secret.",
+     "options":[{"value":"provided","label":"Provided"}],"allow_freeform":true}
+  ]')
+  printf '%s' "$out" | jq -e '.calls[0]
+    | ([.badges[] | .text] == ["credential"])
+      and ([.ctx[] | .k] == ["about", "decide"])
+      and .detail.open == true
+      and .detail.body == "Create a scoped publish token and store it as the release secret."
+      and .freeform == true
+  ' >/dev/null || fail "a credential card dropped its context or detail: $out"
+  pass "a credential card shows about, decide, and its detail"
+}
+
+test_a_decision_card_shows_about_decide_and_its_full_detail
+test_a_credential_card_shows_its_context_and_detail
 test_a_fresh_board_opens_light
 test_a_remembered_mid_dark_choice_is_restored
 test_the_toggle_switches_and_remembers_the_appearance
