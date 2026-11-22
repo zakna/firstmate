@@ -571,13 +571,13 @@ test_ledger_report_names_a_replacement_pr() {
   : > "$MATE/config/pr-register-scan"
   write_replacement_children
   FM_FAKE_CREW_STATE='unknown' run_reconcile "$MATE"
-  assert_child_report replaced "child replaced done: PR https://example.test/owner/repo/pull/22 checks green pr=https://example.test/owner/repo/pull/22 mode=no-mistakes yolo=off" \
+  assert_child_report replaced "child replaced done: PR https://example.test/owner/repo/pull/22 checks green pr=https://example.test/owner/repo/pull/22 mode=direct-PR yolo=off" \
     "the report kept the replaced PR"
-  assert_child_report kept "child kept done: PR https://example.test/owner/repo/pull/23 checks green pr=https://example.test/owner/repo/pull/1 mode=no-mistakes yolo=off" \
+  assert_child_report kept "child kept done: PR https://example.test/owner/repo/pull/23 checks green pr=https://example.test/owner/repo/pull/1 mode=direct-PR yolo=off" \
     "the report overrode a PR the log never named"
-  assert_child_report gitlab "child gitlab done: PR https://gitlab.example/group/sub/project/-/merge_requests/8 checks green pr=https://gitlab.example/group/sub/project/-/merge_requests/8 mode=no-mistakes yolo=off" \
+  assert_child_report gitlab "child gitlab done: PR https://gitlab.example/group/sub/project/-/merge_requests/8 checks green pr=https://gitlab.example/group/sub/project/-/merge_requests/8 mode=direct-PR yolo=off" \
     "the report kept the recorded PR instead of the GitLab replacement"
-  assert_child_report unrecorded "child unrecorded done: PR https://gitlab.example/group/sub/project/-/merge_requests/9 checks green pr=https://gitlab.example/group/sub/project/-/merge_requests/9 mode=no-mistakes yolo=off" \
+  assert_child_report unrecorded "child unrecorded done: PR https://gitlab.example/group/sub/project/-/merge_requests/9 checks green pr=https://gitlab.example/group/sub/project/-/merge_requests/9 mode=direct-PR yolo=off" \
     "the report dropped an unrecorded GitLab ready PR"
   pass "with the scan opt-in, a child report names a replacement or forge PR and keeps a recorded PR the log never named"
 }
@@ -589,13 +589,13 @@ test_ledger_report_without_scan_opt_in_keeps_recorded_pr() {
   make_world ledger-no-replacement; bind_secondmate local
   write_replacement_children
   FM_FAKE_CREW_STATE='unknown' run_reconcile "$MATE"
-  assert_child_report replaced "child replaced done: PR https://example.test/owner/repo/pull/22 checks green pr=https://example.test/owner/repo/pull/1 mode=no-mistakes yolo=off" \
+  assert_child_report replaced "child replaced done: PR https://example.test/owner/repo/pull/22 checks green pr=https://example.test/owner/repo/pull/1 mode=direct-PR yolo=off" \
     "a newer ready line replaced the recorded PR without the opt-in"
-  assert_child_report kept "child kept done: PR https://example.test/owner/repo/pull/23 checks green pr=https://example.test/owner/repo/pull/1 mode=no-mistakes yolo=off" \
+  assert_child_report kept "child kept done: PR https://example.test/owner/repo/pull/23 checks green pr=https://example.test/owner/repo/pull/1 mode=direct-PR yolo=off" \
     "the report overrode the recorded PR without the opt-in"
-  assert_child_report gitlab "child gitlab done: PR https://gitlab.example/group/sub/project/-/merge_requests/8 checks green pr=https://example.test/owner/repo/pull/1 mode=no-mistakes yolo=off" \
+  assert_child_report gitlab "child gitlab done: PR https://gitlab.example/group/sub/project/-/merge_requests/8 checks green pr=https://example.test/owner/repo/pull/1 mode=direct-PR yolo=off" \
     "a GitLab ready line replaced the recorded PR without the opt-in"
-  assert_child_report unrecorded "child unrecorded done: PR https://gitlab.example/group/sub/project/-/merge_requests/9 checks green mode=no-mistakes yolo=off" \
+  assert_child_report unrecorded "child unrecorded done: PR https://gitlab.example/group/sub/project/-/merge_requests/9 checks green mode=direct-PR yolo=off" \
     "a GitLab ready line carried a PR without the opt-in"
   pass "without the scan opt-in, a child report keeps the recorded PR and accepts only a GitHub-shaped ready line"
 }

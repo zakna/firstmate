@@ -914,4 +914,26 @@ test_large_task_body_parses_under_pipefail() {
 
 test_large_task_body_parses_under_pipefail
 
+# A ready report keeps its PR when it carries an evidence tail fm_dod_block
+# prescribes, and prose around a URL still claims no PR.
+test_ready_note_url_accepts_prescribed_evidence_tails() {
+  local url=https://github.com/example/repo/pull/7 note got
+  for note in "PR $url" "PR $url checks green" "PR $url published for review" \
+    "PR $url checks green: Full suite, Lint 1; read changed files: yes" \
+    "PR $url checks green: Full suite; read changed files: unknown; held: no automated review on abc1234" \
+    "PR $url no CI: test step 3/3 scenarios live; untested: none" \
+    "PR $url held: review pending"; do
+    got=$(fm_dod_ready_note_url "$note") || fail "a prescribed ready report was refused: $note"
+    [ "$got" = "$url" ] || fail "the ready report named the wrong URL: '$got' from '$note'"
+  done
+  for note in "PR $url is the old one" "PR $url, then $url" "see PR $url" "PR"; do
+    if got=$(fm_dod_ready_note_url "$note"); then
+      fail "prose was read as a ready report: '$note' -> '$got'"
+    fi
+  done
+  pass "fm_dod_ready_note_url accepts prescribed evidence tails and refuses prose"
+}
+
+test_ready_note_url_accepts_prescribed_evidence_tails
+
 echo "all fm-dod-lib tests passed"
