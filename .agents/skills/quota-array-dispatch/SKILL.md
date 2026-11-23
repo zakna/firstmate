@@ -170,5 +170,5 @@ Routing precedence is an explicit per-task captain override, then the best-fit c
 For a matched profile array, use the canonical selection and candidate-accounting sections above; never guess or fall back silently.
 Run `bin/fm-dispatch-resolve.sh` directly on the written brief in the same turn, with no preflight, and capture its exit status.
 Any nonzero status—currently exit 2 for an unreadable brief or rules file, or missing `jq`—is an actionable configuration or usage failure: stop and report it, never select around it.
-On exit 0 with `clear`, pass its `profile:` line to `fm-spawn` unless you state a reason to override; `ambiguous`, `escalate`, `error`, and off all mean the full existing intake, unchanged (contract: `docs/configuration.md` "Typed dispatch resolution").
+On exit 0 with `clear`, pass its `profile:` line to `fm-spawn`, or pass your reason to override as `--dispatch-override <reason>`, because `fm-spawn` refuses other flags without it; `ambiguous`, `escalate`, `error`, and off all mean the full existing intake, unchanged (contract: `docs/configuration.md` "Typed dispatch resolution").
 `quota-axi` owns how model or product windows relate to bounding account windows and remains data-only.

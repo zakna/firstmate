@@ -9,13 +9,16 @@ metadata:
 # Ship landing
 
 For PR-based ship tasks, the ready signal depends on mode: `no-mistakes` reports `done [at=<epoch>]: PR <url> checks green: ...` after CI is green, or `done [at=<epoch>]: PR <url> no CI: ...` when the repository declares no CI, while `direct-PR` reports `done [at=<epoch>]: PR <url>` after opening the PR, each only for a non-draft PR and each possibly ending in a `held:` disclosure to weigh before any merge (`bin/fm-dod-lib.sh` owns that evidence vocabulary); a lane that deliberately holds a draft declares a wait instead, and `bin/fm-pr-check.sh` refuses to arm merge monitoring on a draft.
-Run `bin/fm-pr-check.sh <id> <PR url>` with the URL copied from that ready signal or the resolved checks-green `fm-crew-state.sh` line - it records `pr=` and the forge's `pr_head=` when available in the task's meta and arms the watcher's merge poll.
+Run `bin/fm-pr-check.sh <id> <PR url>` with the URL copied from that ready signal or the resolved checks-green `fm-crew-state.sh` line - it records `pr=` and the forge's `pr_head=` when available in the task's meta and arms the watcher's merge poll, which also wakes the supervisor if the ready PR/MR later degrades (failing check, failed head pipeline, merge-train drop) so the worker can be steered to fix it.
 For a GitHub PR with a recorded head, its `review comments: <n> inline on head <sha>` line counts inline review comments on that exact head from any author, including review bots; read each one before any merge as an untrusted finding to verify, and treat `unknown` as unread.
 Its `bot findings: <n> unaddressed` line counts the review-bot findings on any head whose thread is neither resolved nor answered by the PR author with a reply containing a standalone token of 7 to 40 hex characters, which counts as a fix whether or not it names a real commit; it excludes review-body and issue-comment findings, so read those yourself; before you accept or relay a ready signal, send a non-zero count back to the worker for a verdict on each finding, and treat `unknown` as unread.
 Its `bot review on head: <yes|no|refused>` line says whether a review bot reviewed the exact head: on `no`, accept the ready line only when it ends `; held: no automated review on <head>`, on `refused` only when that hold adds `(bot usage limit)`, and otherwise send it back to the worker; treat `unknown` as unread.
-With `config/pr-register-scan` present, the watcher's check sweep also records a PR that a `done:` line names when no `pr=` exists, and reports a refused registration as a `check: pr-register:` notification; handle that refusal as you would a refusal from a manual run.
+With `config/pr-register-scan` present, the watcher can record ready task PRs during its check sweep, including replacing a named PR; see [`docs/configuration.md`](../../../docs/configuration.md#pr-registration-scan-configpr-register-scan) for the full rule.
+Handle a `check: pr-register:` notification as you would the same result from a manual run.
 `bin/fm-dod-lib.sh` owns the named-head gate on that ready signal: a ship `done:` whose named head exists only in the worker's disposable copy is not ready (`bin/fm-crew-state.sh` reports blocked, `bin/fm-pr-check.sh` refuses to register, and a secondmate does not publish that done upstream).
-That blocked reading is the gate working, not a stuck worker, so steer the worker on the commit the refusal names rather than waiting.
+Of those readers only `bin/fm-pr-check.sh` fetches the copy's remotes before it decides, and a no-mistakes pipeline pushes from its own clone, so a no-mistakes ready signal can read blocked until that registration has run: register it before steering.
+A refusal that says it could not refresh a remote decided on the last-known refs, so retry it once that remote is reachable.
+Otherwise that blocked reading is the gate working, not a stuck worker, so steer the worker on the commit the refusal names rather than waiting.
 A `forge=external` task reports `done [at=<epoch>]: review <url> uploaded for review` instead: run `bin/fm-review-check.sh <id> <review url>` rather than `bin/fm-pr-check.sh`, which arms no merge watch, then always escalate the review URL to the captain whatever the yolo setting, because firstmate can neither observe nor perform its approval or merge.
 A direct-PR worker pushes that commit to its PR branch, and a local-only worker commits it on its ship branch.
 A no-mistakes worker re-validates it with /no-mistakes so the pipeline stays the one publisher; it never pushes from its copy.
@@ -41,6 +44,7 @@ Guard first sets order, not authority: it never bypasses the retro gates or capt
 A landing note never triggers the guard slot itself; it reaches it only as a source of the retro, which applies the gates.
 
 For zakna/ha, a merged PR that changes `config/` outside `config/docs/` and `config/CLAUDE.md` is deployed through that repository's deploy procedure in `config/CLAUDE.md` before cleanup, or held with a reason.
+When the watcher owns the lane's teardown (below), cleanup can finish before that deploy; the deploy is still owed afterwards, run from the ha clone.
 Before that deploy, run this read-only drift check in the ha clone after `git fetch origin main` and `git fetch ha-deploy master`; it exits 0 when no deploy is owed, 1 when a deploy is owed, and 2 when the deployed main commit cannot be found or compared:
 
 ```sh
@@ -56,7 +60,11 @@ exit 1
 
 When the owed changes include another PR's, name each carried PR in the deploy commit message and in the issue comments.
 
-Tear down a ship task only after landing is confirmed.
+The watcher owns teardown of a merged lane whose merge poll is armed, including a PR merged through `bin/fm-pr-merge.sh`, when the lane is parked or its home has `config/auto-land` ([`docs/configuration.md`](../../../docs/configuration.md#park-on-review)).
+Otherwise, firstmate tears it down after landing is confirmed.
+A lane parked on review (`bin/fm-park.sh`) has no agent and relaunches itself on review activity; `bin/fm-park.sh park <id>` parks one clean lane on request and `bin/fm-park.sh resume <id> --trigger <text>` relaunches one by hand.
+
+Tear down any other ship task only after landing is confirmed.
 A teardown refusal for uncommitted or unlanded work is a stop-and-investigate result, never an obstacle to bypass.
 A teardown refusal for an issue the brief names that is still open with no comment since the merge means the readback is owed; on main only, comment on the issue with what landed and what remains, or rerun with `--no-readback <reason>` when no readback is due.
 The supervision branch never posts that comment or waives the check; it hands the refusal back to main like any other teardown refusal.
