@@ -1,0 +1,8 @@
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1] -> https://github.com/zakna/firstmate/pull/1
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1 checks green] -> https://github.com/zakna/firstmate/pull/1
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1 checks green: ci; held: fresh review] -> https://github.com/zakna/firstmate/pull/1
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1 no CI: none] -> https://github.com/zakna/firstmate/pull/1
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1 held: x] -> https://github.com/zakna/firstmate/pull/1
+ACCEPT [PR https://github.com/zakna/firstmate/pull/1 published for review] -> https://github.com/zakna/firstmate/pull/1
+REFUSE [PR https://github.com/zakna/firstmate/pull/1 checks green; held: x]
+REFUSE [PR https://github.com/zakna/firstmate/pull/1 looks good to me]

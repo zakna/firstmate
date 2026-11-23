@@ -1,0 +1,10 @@
+++ env -u NO_MISTAKES_GATE -u FM_STATE_OVERRIDE -u FM_ROOT_OVERRIDE -u FM_DATA_OVERRIDE -u FM_CONFIG_OVERRIDE -u FM_PROJECTS_OVERRIDE FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab-smoke bin/fm-park.sh list
+++ echo rc=0
+rc=0
+++ env -u FM_STATE_OVERRIDE FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab-smoke bin/fm-park.sh tick
+++ echo rc=0
+rc=0
+++ env -u FM_STATE_OVERRIDE FM_HOME=/var/folders/hk/lxr6ppq904ng8dxkxskjs5180000gn/T//fm-lab-smoke bin/fm-park.sh park nosuch
+fm-park: refusing to park nosuch: no task record
+++ echo rc=1
+rc=1
