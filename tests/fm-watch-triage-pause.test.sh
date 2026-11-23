@@ -2083,7 +2083,7 @@ make_superseded_pause_case() {  # <name> <status-line> [armed|unarmed]
   printf 'window=%s\nkind=ship\nharness=grok\nbackend=tmux\n' "$window" > "$state/paused.meta"
   printf '%s\n' "$status_line" > "$state/paused.status"
   sig=$(seen_sig "$state/paused.status"); printf '%s' "$sig" > "$state/.seen-paused_status"
-  key=$(printf '%s' "$window" | tr ':/.' '___')
+  key=$(watch_window_key "$window")
   printf '%s' "$(hash_text 'idle at declared wait')" > "$state/.hash-$key"
   printf '1\n' > "$state/.count-$key"
   printf '%s\n' "$dir"
@@ -2119,7 +2119,7 @@ test_declared_wait_surfaces_superseding_state() {
   superseded_pause_round "$dir" \
     'state: parked · source: run-step · ask-user: authority decision · run: R' exit \
     || fail "idle paused run parked at an unreported human gate did not surface"
-  grep -F "stale: $window (paused wait superseded: run R is parked at a human-owed gate with no open decision)" \
+  grep -F "stale: $window task=paused (paused wait superseded: run R is parked at a human-owed gate with no open decision)" \
     "$dir/watch.out" >/dev/null || fail "gate wake did not identify the run and missing decision"
   ack_stopped_cycle "$state" || fail "could not acknowledge the idle gate wake"
   superseded_pause_round "$dir" \

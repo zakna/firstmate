@@ -298,8 +298,12 @@ case " $* " in
     fi
     [ -z "${FM_TEST_GLAB_STATE_AFTER:-}" ] || [ ! -e "$FM_TEST_GLAB_LOG.train" ] || FM_TEST_GLAB_STATE=$FM_TEST_GLAB_STATE_AFTER
     # The merged-record fields (merge commit, actor, time) serve the merged
-    # poll's landing record; FM_TEST_GLAB_RECORD_FAIL fails that read.
-    [ "${FM_TEST_GLAB_RECORD_FAIL:-0}" = 0 ] || exit 1
+    # poll's landing record. The poll's own state read comes first and reads
+    # the same record, so FM_TEST_GLAB_RECORD_FAIL fails only the later reads.
+    if [ "${FM_TEST_GLAB_RECORD_FAIL:-0}" != 0 ]; then
+      [ ! -e "$FM_TEST_GLAB_LOG.record-read" ] || exit 1
+      : > "$FM_TEST_GLAB_LOG.record-read"
+    fi
     printf '%s\n' "{\"state\":\"${FM_TEST_GLAB_STATE:-opened}\",\"detailed_merge_status\":\"${FM_TEST_GLAB_DETAIL:-mergeable}\",\"sha\":\"11568153bd75a30fd956da9ba7c1172ae556ada7\",\"head_pipeline\":{\"id\":${FM_TEST_GLAB_PIPELINE_ID:-941},\"status\":\"${FM_TEST_GLAB_PIPELINE:-success}\",\"sha\":\"37cf1cd139d2810616986b103feb45fead258fe4\"},\"merge_commit_sha\":\"${FM_TEST_GLAB_MERGE_COMMIT-93c689e0123456789abcdef0123456789abcdef0}\",\"merged_by\":{\"username\":\"${FM_TEST_GLAB_MERGE_ACTOR-jane.doe_x}\"},\"merged_at\":\"${FM_TEST_GLAB_MERGED_AT-2026-09-20T10:00:00.123Z}\"}"
     ;;
   *" api "*)
