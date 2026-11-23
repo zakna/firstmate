@@ -570,7 +570,7 @@ park_preflight() {  # <id>
   [ -z "$(git -C "$wt" status --porcelain 2>/dev/null)" ] || { echo "the local copy has uncommitted changes"; return 1; }
   agent_quiet "$id" || return 1
   line=$(last_crew_status_line "$STATE/$id.status")
-  if [ "$(status_line_verb "$line")" = done ]; then
+  if [ "$(status_line_verb "$line")" = "done" ]; then
     case "$(status_line_note "$line")" in
       *' held:'*) echo "the ready report carries a held: disclosure the merge authority must keep seeing"; return 1 ;;
     esac
