@@ -702,11 +702,13 @@ test_park_refuses_a_ready_report_that_discloses_a_hold() {
 
 # bin/fm-control.sh exit refuses, choosing Stay, when the agent has background
 # work its exit would stop. Nothing was stopped, so the lane is not left
-# parking, and the tick does not retry the exit until the PR head moves.
-test_background_work_refusal_skips_parking_until_the_head_moves() {
-  local w out rc=0 wt head
+# parking while that work runs, and a later tick parks it at the same head once
+# the work has ended.
+test_background_work_refusal_skips_parking_while_it_runs() {
+  local w out rc=0 head
   w=$(make_world park-background "$GL_URL")
   gl_fixture "$w"
+  head=$(cat "$w/head")
   : > "$w/config/park-on-review"
   cat > "$w/fakebin/fm-control.sh" <<SH
 #!/usr/bin/env bash
@@ -716,25 +718,21 @@ SH
   chmod +x "$w/fakebin/fm-control.sh"
   : > "$w/control.background"
   out=$(run_park "$w" park lane 2>&1) || rc=$?
-  case "$rc:$out" in 1:*"background work"*"until its PR head moves"*) ;; *) fail "background: $rc $out" ;; esac
+  case "$rc:$out" in 1:*"background work its exit would stop"*) ;; *) fail "background: $rc $out" ;; esac
   [ ! -e "$w/state/lane.review-park" ] || fail "background: a pending park record outlived a refused stop"
-  ! grep -q "parked on review" "$w/state/lane.status" || fail "background: a parked line was appended"
   rm -f "$w/control.log"
   out=$(run_park "$w" tick 2>&1)
   [ -z "$out" ] || fail "background: the tick printed: $out"
-  for _ in $(seq 1 30); do [ ! -e "$w/control.log" ] || break; sleep 0.1; done
-  [ ! -e "$w/control.log" ] || fail "background: the tick retried the exit on the same head: $(cat "$w/control.log")"
+  for _ in $(seq 1 100); do [ ! -e "$w/control.log" ] || break; sleep 0.1; done
+  [ -e "$w/control.log" ] || fail "background: the tick did not check the lane again"
+  for _ in $(seq 1 100); do [ -d "$w/state/.review-park-lane.lock" ] || break; sleep 0.1; done
+  [ ! -d "$w/state/.review-park-lane.lock" ] || fail "background: the tick's park attempt did not finish"
+  [ ! -e "$w/state/lane.review-park" ] || fail "background: the lane was left parking while its background work runs"
+  ! grep -q "parked on review" "$w/state/lane.status" || fail "background: a parked line was appended"
   rm -f "$w/control.background"
-  wt=$(fm_meta_get_test "$w" worktree)
-  printf 'more\n' > "$wt/more.txt"
-  git -C "$wt" add more.txt
-  git -C "$wt" commit -q -m more
-  head=$(git -C "$wt" rev-parse HEAD)
-  printf '%s\n' "$head" > "$w/head"
-  gl_fixture "$w"
   out=$(tick_and_report "$w" background)
-  case "$out" in "parked lane: PR $GL_URL clean at ${head:0:12}"*) ;; *) fail "background: no park on the new head: $out" ;; esac
-  pass "a stop refused for background work leaves no parking record, and the tick parks again only once the PR head moves"
+  case "$out" in "parked lane: PR $GL_URL clean at ${head:0:12}"*) ;; *) fail "background: no park at the same head once the work ended: $out" ;; esac
+  pass "a stop refused for background work leaves the lane unparked while that work runs, and a later tick parks it at the same head once the work ends"
 }
 
 fm_meta_get_test() {  # <world> <key>
@@ -1275,7 +1273,7 @@ fm_test_run \
   test_park_preflight_refusals_leave_the_agent_running \
   test_repark_reuses_its_own_lease_and_refuses_a_foreign_one \
   test_park_refuses_a_ready_report_that_discloses_a_hold \
-  test_background_work_refusal_skips_parking_until_the_head_moves \
+  test_background_work_refusal_skips_parking_while_it_runs \
   test_each_relaunch_trigger_relaunches_a_fresh_worker \
   test_edited_comment_beyond_first_hundred_triggers_relaunch \
   test_behind_base_does_not_relaunch \

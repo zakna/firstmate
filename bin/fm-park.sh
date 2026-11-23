@@ -72,9 +72,9 @@
 # parking. Each tick promotes a pending record to parked once its agent is
 # confirmed dead and drops it only if still alive after the stop timeout.
 # When the stop is refused because the agent has background work its exit
-# would stop, nothing was stopped: park drops the pending record at once and
-# records the head in state/.review-park-background-<id>, and the tick does not
-# park the lane again until its PR head moves.
+# would stop, nothing was stopped: park drops the pending record at once, so
+# the lane is not parked while that work runs, and each later tick checks again
+# and parks it once the work has ended.
 #
 # resume writes a note naming the PR, the parked head and the trigger, then runs
 # bin/fm-control.sh relaunch --note-file, which starts a fresh agent of the
@@ -272,7 +272,6 @@ agent_quiet() {  # <id>
 task_id_ok() { [ -n "$1" ] && fm_pr_task_id_valid "$1"; }
 
 record_path() { printf '%s/%s.review-park' "$STATE" "$1"; }
-background_path() { printf '%s/.review-park-background-%s' "$STATE" "$1"; }
 record_get() { fm_meta_get "$(record_path "$1")" "$2"; }
 
 record_write() {  # <id> <key=value>...
@@ -657,8 +656,7 @@ cmd_park() {
     case "$out" in
       *"has background work its exit would stop"*)
         rm -f -- "$(record_path "$id")"
-        printf 'head=%s\n' "$head" > "$(background_path "$id")" || true
-        die "refusing to park $id: the agent has background work its exit would stop, so it keeps running and parking is skipped until its PR head moves" ;;
+        die "refusing to park $id: the agent has background work its exit would stop, so it keeps running unparked; the next tick checks again" ;;
     esac
     die "refusing to park $id: the agent could not be stopped: $(printf '%s\n' "$out" | tail -1); the next tick settles its pending park record"
   fi
@@ -828,7 +826,6 @@ watch_unparked() {  # <id>
   state=$(printf '%s' "$snap" | jq -r .state)
   [ "$state" != closed ] || { closed_once "$id" "$pr"; return 0; }
   [ "$state" = open ] && [ -e "$CONFIG/park-on-review" ] || return 0
-  [ "$(fm_meta_get "$(background_path "$id")" head)" != "$(printf '%s' "$snap" | jq -r .head)" ] || return 0
   ! lane_busy "$id" || return 0
   local idle_secs
   idle_secs=$(step_secs "$READ_SECS") || return 0
