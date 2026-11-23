@@ -5384,7 +5384,7 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
   meta="$state/task-a.meta"
   write_poll_meta "$state" task-a "$url"
   seed_canonical_poll "$dir" task-a "$url"
-  FM_TEST_GLAB_LOG="$dir/glab.log" FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 \
+  FM_TEST_GLAB_LOG="$dir/glab.log" FM_TEST_GLAB_STATE=merged \
     run_merged_poll_cycle "$dir"
   [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
     || fail "gitlab details: external merge outcome changed: $(merged_ledger_row "$state" task-a)"
@@ -5406,7 +5406,7 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
   meta="$state/task-a.meta"
   write_poll_meta "$state" task-a "$url"
   seed_canonical_poll "$dir" task-a "$url"
-  FM_TEST_GLAB_RECORD_FAIL=1 FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  FM_TEST_GLAB_RECORD_FAIL=1 FM_TEST_GLAB_STATE=merged run_merged_poll_cycle "$dir"
   [ "$(merged_ledger_row "$state" task-a)" = "check: merge landed: task-a $url external" ] \
     || fail "gitlab unreadable: a failed detail read changed the outcome"
   expected=$(printf '%s\n' merge_origin=external merge_commit=unknown merge_parents=unknown \
@@ -5419,7 +5419,7 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
   meta="$state/task-a.meta"
   write_poll_meta "$state" task-a "$url"
   seed_canonical_poll "$dir" task-a "$url"
-  FM_TEST_GLAB_COMMIT_FAIL=1 FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  FM_TEST_GLAB_COMMIT_FAIL=1 FM_TEST_GLAB_STATE=merged run_merged_poll_cycle "$dir"
   if ! { grep -qxF merge_parents=unknown "$meta" && grep -qxF merge_actor=jane.doe_x "$meta" \
     && grep -qxF merge_commit=93c689e0123456789abcdef0123456789abcdef0 "$meta"; }; then
     fail "gitlab commit unreadable: only the parents should be unknown: $(cat "$meta")"
@@ -5431,7 +5431,7 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
   write_poll_meta "$state" task-a "$url"
   seed_canonical_poll "$dir" task-a "$url"
   FM_TEST_GLAB_MERGE_ACTOR='bad actor' FM_TEST_GLAB_MERGED_AT='yesterday' \
-    FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+    FM_TEST_GLAB_STATE=merged run_merged_poll_cycle "$dir"
   if ! { grep -qxF merge_actor=unknown "$meta" && grep -qxF merged_at=unknown "$meta" \
     && grep -qxF merge_parents=2 "$meta"; }; then
     fail "gitlab invalid: forge values were not validated field by field: $(cat "$meta")"
@@ -5442,7 +5442,7 @@ test_gitlab_external_merge_records_the_forge_merge_details() {
   meta="$state/task-a.meta"
   write_poll_meta "$state" task-a "$url"
   seed_canonical_poll "$dir" task-a "$url"
-  FM_TEST_GLAB_MERGE_ACTOR=_svc FM_TEST_GLAB_STATE=merged FM_TEST_GLAB_JSON=1 run_merged_poll_cycle "$dir"
+  FM_TEST_GLAB_MERGE_ACTOR=_svc FM_TEST_GLAB_STATE=merged run_merged_poll_cycle "$dir"
   grep -qxF merge_actor=_svc "$meta" \
     || fail "gitlab underscore actor: a valid GitLab username was not recorded: $(cat "$meta")"
 
