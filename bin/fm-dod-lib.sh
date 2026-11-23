@@ -1294,7 +1294,7 @@ fm_dod_ready_note_url() {  # <note>
   case "$url" in 'PR '*) url=${url#PR } ;; *) return 1 ;; esac
   case "$url" in *' '*) tail=${url#* }; url=${url%% *} ;; esac
   case "$tail" in
-    ''|'checks green'|'checks green: '*|'checks green; held: '*|'no CI: '*|'published for review'|'held: '*) ;;
+    ''|'checks green'|'checks green: '*|'no CI: '*|'published for review'|'held: '*) ;;
     *) return 1 ;;
   esac
   case "$url" in ''|*[[:space:]]*) return 1 ;; esac

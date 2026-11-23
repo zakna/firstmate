@@ -926,7 +926,8 @@ test_ready_note_url_accepts_prescribed_evidence_tails() {
     got=$(fm_dod_ready_note_url "$note") || fail "a prescribed ready report was refused: $note"
     [ "$got" = "$url" ] || fail "the ready report named the wrong URL: '$got' from '$note'"
   done
-  for note in "PR $url is the old one" "PR $url, then $url" "see PR $url" "PR"; do
+  for note in "PR $url is the old one" "PR $url, then $url" "see PR $url" "PR" \
+    "PR $url checks green; held: review pending"; do
     if got=$(fm_dod_ready_note_url "$note"); then
       fail "prose was read as a ready report: '$note' -> '$got'"
     fi

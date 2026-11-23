@@ -44,6 +44,7 @@ Guard first sets order, not authority: it never bypasses the retro gates or capt
 A landing note never triggers the guard slot itself; it reaches it only as a source of the retro, which applies the gates.
 
 For zakna/ha, a merged PR that changes `config/` outside `config/docs/` and `config/CLAUDE.md` is deployed through that repository's deploy procedure in `config/CLAUDE.md` before cleanup, or held with a reason.
+When the watcher owns the lane's teardown (below), cleanup can finish before that deploy; the deploy is still owed afterwards, run from the ha clone.
 Before that deploy, run this read-only drift check in the ha clone after `git fetch origin main` and `git fetch ha-deploy master`; it exits 0 when no deploy is owed, 1 when a deploy is owed, and 2 when the deployed main commit cannot be found or compared:
 
 ```sh

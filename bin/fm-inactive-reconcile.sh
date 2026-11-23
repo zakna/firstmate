@@ -387,8 +387,10 @@ state_line_note() { # <state-line>
 # Enforce the header's same-record pull-request contract. A scout never delivers
 # a PR, so it never carries one, exactly as pr_for_task rules for the
 # ledger-first path. Otherwise a status-log state carries a PR only in a mode's
-# ready-signal shape (`PR <url>`, `PR <url> checks green`, or Gerrit's
-# `PR <url> published for review`) naming a review URL bin/fm-pr-lib.sh parses,
+# ready-signal shape (`PR <url>`, `PR <url> checks green`, Gerrit's
+# `PR <url> published for review`, or `PR <url>` followed by an evidence tail
+# fm_dod_block prescribes: `checks green: ...`, `no CI: ...`, or `held: ...`)
+# naming a review URL bin/fm-pr-lib.sh parses,
 # so a PR a worker merely mentioned in prose is never the delivery.
 terminal_outcome_pr() { # <state-line> <kind>
   local line=$1 kind=${2:-} value

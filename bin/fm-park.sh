@@ -51,8 +51,10 @@
 # refuses unless: the task is a ship with pr= and an armed merge poll
 # (state/<id>.check.sh); its backend can prove a stop and launch a replacement;
 # its local copy is clean with HEAD equal to the forge
-# head; bin/fm-crew-state.sh reads done or paused; the agent is idle; the
-# steering inbox holds no unhandled message; and the gate is clean. It then
+# head; bin/fm-crew-state.sh reads done or paused; a done ready report carries
+# no held: disclosure, which parking would hide from crew state; the agent is
+# idle; the steering inbox holds no unhandled message; and the gate is clean.
+# It then
 # durably leases a Treehouse slot to the task (treehouse lease, state-only, so a
 # later get never hands the copy out and prune never removes it even if the
 # endpoint shell dies; bin/fm-teardown.sh's treehouse return releases it),
@@ -69,6 +71,10 @@
 # confirmed, because a relaunch replaces the agent, and crew state reads it as
 # parking. Each tick promotes a pending record to parked once its agent is
 # confirmed dead and drops it only if still alive after the stop timeout.
+# When the stop is refused because the agent has background work its exit
+# would stop, nothing was stopped: park drops the pending record at once and
+# records the head in state/.review-park-background-<id>, and the tick does not
+# park the lane again until its PR head moves.
 #
 # resume writes a note naming the PR, the parked head and the trigger, then runs
 # bin/fm-control.sh relaunch --note-file, which starts a fresh agent of the
@@ -266,6 +272,7 @@ agent_quiet() {  # <id>
 task_id_ok() { [ -n "$1" ] && fm_pr_task_id_valid "$1"; }
 
 record_path() { printf '%s/%s.review-park' "$STATE" "$1"; }
+background_path() { printf '%s/.review-park-background-%s' "$STATE" "$1"; }
 record_get() { fm_meta_get "$(record_path "$1")" "$2"; }
 
 record_write() {  # <id> <key=value>...
@@ -541,7 +548,7 @@ cmd_gate() {
 # copy at the forge head, a worker that finished its turn and reported, and no
 # instruction waiting for it. Prints the first refusal and returns 1.
 park_preflight() {  # <id>
-  local id=$1 meta kind pr wt crew secs backend
+  local id=$1 meta kind pr wt crew secs backend line
   meta="$STATE/$id.meta"
   [ -f "$meta" ] || { echo "no task record"; return 1; }
   backend=$(fm_backend_of_meta "$meta")
@@ -563,6 +570,12 @@ park_preflight() {  # <id>
   [ -n "$wt" ] && [ -d "$wt" ] || { echo "the local copy is missing"; return 1; }
   [ -z "$(git -C "$wt" status --porcelain 2>/dev/null)" ] || { echo "the local copy has uncommitted changes"; return 1; }
   agent_quiet "$id" || return 1
+  line=$(last_crew_status_line "$STATE/$id.status")
+  if [ "$(status_line_verb "$line")" = done ]; then
+    case "$(status_line_note "$line")" in
+      *' held:'*) echo "the ready report carries a held: disclosure the merge authority must keep seeing"; return 1 ;;
+    esac
+  fi
   secs=$(step_secs 60) || { echo "the tick ran out of time"; return 1; }
   crew=$(FM_HOME=$FM_HOME FM_STATE_OVERRIDE=$STATE fm_run_timed "$secs" "$CREW_STATE_BIN" "$id" 2>/dev/null | head -1 || true)
   case "$crew" in
@@ -641,6 +654,12 @@ cmd_park() {
     || die "refusing to park $id: its park record could not be written"
   out=$(FM_HOME=$FM_HOME fm_run_timed "$ACTION_SECS" "$CONTROL_BIN" "$id" exit 2>&1) || rc=$?
   if [ "$rc" -ne 0 ]; then
+    case "$out" in
+      *"has background work its exit would stop"*)
+        rm -f -- "$(record_path "$id")"
+        printf 'head=%s\n' "$head" > "$(background_path "$id")" || true
+        die "refusing to park $id: the agent has background work its exit would stop, so it keeps running and parking is skipped until its PR head moves" ;;
+    esac
     die "refusing to park $id: the agent could not be stopped: $(printf '%s\n' "$out" | tail -1); the next tick settles its pending park record"
   fi
   record_write "$id" "pr=$pr" "head=$head" "parked_at=$parked_at" "slot_leased=$lease" \
@@ -809,6 +828,7 @@ watch_unparked() {  # <id>
   state=$(printf '%s' "$snap" | jq -r .state)
   [ "$state" != closed ] || { closed_once "$id" "$pr"; return 0; }
   [ "$state" = open ] && [ -e "$CONFIG/park-on-review" ] || return 0
+  [ "$(fm_meta_get "$(background_path "$id")" head)" != "$(printf '%s' "$snap" | jq -r .head)" ] || return 0
   ! lane_busy "$id" || return 0
   local idle_secs
   idle_secs=$(step_secs "$READ_SECS") || return 0

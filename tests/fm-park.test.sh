@@ -680,6 +680,63 @@ test_repark_reuses_its_own_lease_and_refuses_a_foreign_one() {
   pass "a lane re-parked after a relaunch keeps its own durable lease, and a slot leased to another holder refuses the park"
 }
 
+# The fork's ready report may disclose a hold; crew state shows it to the merge
+# authority until merge, and a parked lane's crew state would show the park
+# line instead, so park refuses while the newest ready report holds.
+test_park_refuses_a_ready_report_that_discloses_a_hold() {
+  local w out rc note
+  w=$(make_world park-held "$GH_URL")
+  gh_fixture "$w/gh.1.json"
+  for note in "checks green: ci; read changed files: no; held: fresh review still required" \
+    "held: fresh independent review still required on the final head"; do
+    printf 'done [at=2]: PR %s %s\n' "$GH_URL" "$note" >> "$w/state/lane.status"
+    rc=0; out=$(run_park "$w" park lane 2>&1) || rc=$?
+    case "$rc:$out" in 1:*"held: disclosure"*) ;; *) fail "held ($note): $rc $out" ;; esac
+    [ ! -e "$w/control.log" ] || fail "held ($note): the agent was stopped: $(cat "$w/control.log")"
+    [ ! -e "$w/state/lane.review-park" ] || fail "held ($note): a park record was written"
+  done
+  printf 'done [at=3]: PR %s checks green\n' "$GH_URL" >> "$w/state/lane.status"
+  out=$(run_park "$w" park lane 2>&1) || fail "held: a later ready report without a hold was refused: $out"
+  pass "park refuses while the newest ready report discloses a hold, and parks once a later one does not"
+}
+
+# bin/fm-control.sh exit refuses, choosing Stay, when the agent has background
+# work its exit would stop. Nothing was stopped, so the lane is not left
+# parking, and the tick does not retry the exit until the PR head moves.
+test_background_work_refusal_skips_parking_until_the_head_moves() {
+  local w out rc=0 wt head
+  w=$(make_world park-background "$GL_URL")
+  gl_fixture "$w"
+  : > "$w/config/park-on-review"
+  cat > "$w/fakebin/fm-control.sh" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$w/control.log"
+[ ! -e "$w/control.background" ] || { echo "error: task lane's claude agent has background work its exit would stop: no-mistakes drive. Chose Stay, so the agent keeps running and nothing was stopped." >&2; exit 1; }
+SH
+  chmod +x "$w/fakebin/fm-control.sh"
+  : > "$w/control.background"
+  out=$(run_park "$w" park lane 2>&1) || rc=$?
+  case "$rc:$out" in 1:*"background work"*"until its PR head moves"*) ;; *) fail "background: $rc $out" ;; esac
+  [ ! -e "$w/state/lane.review-park" ] || fail "background: a pending park record outlived a refused stop"
+  ! grep -q "parked on review" "$w/state/lane.status" || fail "background: a parked line was appended"
+  rm -f "$w/control.log"
+  out=$(run_park "$w" tick 2>&1)
+  [ -z "$out" ] || fail "background: the tick printed: $out"
+  for _ in $(seq 1 30); do [ ! -e "$w/control.log" ] || break; sleep 0.1; done
+  [ ! -e "$w/control.log" ] || fail "background: the tick retried the exit on the same head: $(cat "$w/control.log")"
+  rm -f "$w/control.background"
+  wt=$(fm_meta_get_test "$w" worktree)
+  printf 'more\n' > "$wt/more.txt"
+  git -C "$wt" add more.txt
+  git -C "$wt" commit -q -m more
+  head=$(git -C "$wt" rev-parse HEAD)
+  printf '%s\n' "$head" > "$w/head"
+  gl_fixture "$w"
+  out=$(tick_and_report "$w" background)
+  case "$out" in "parked lane: PR $GL_URL clean at ${head:0:12}"*) ;; *) fail "background: no park on the new head: $out" ;; esac
+  pass "a stop refused for background work leaves no parking record, and the tick parks again only once the PR head moves"
+}
+
 fm_meta_get_test() {  # <world> <key>
   sed -n "s/^$2=//p" "$1/state/lane.meta" | tail -1
 }
@@ -1217,6 +1274,8 @@ fm_test_run \
   test_failed_park_record_write_leaves_the_agent_running \
   test_park_preflight_refusals_leave_the_agent_running \
   test_repark_reuses_its_own_lease_and_refuses_a_foreign_one \
+  test_park_refuses_a_ready_report_that_discloses_a_hold \
+  test_background_work_refusal_skips_parking_until_the_head_moves \
   test_each_relaunch_trigger_relaunches_a_fresh_worker \
   test_edited_comment_beyond_first_hundred_triggers_relaunch \
   test_behind_base_does_not_relaunch \
